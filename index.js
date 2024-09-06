@@ -198,4 +198,23 @@ Okay, here it is:
 
 window.addEventListener('load', typeIntroduction);
 
+const yesButton = document.getElementById('yes-button');
+const noButton = document.getElementById('no-button');
+const resultDiv = document.getElementById('button-result');
 
+// Add click event listener to the "Yes" button
+yesButton.addEventListener('click', function() {
+    // redirect to /puzzles
+    window.location.href = "/puzzles";
+});
+
+// Add click event listener to the "No" button
+noButton.addEventListener('click', function() {
+    resultDiv.textContent = "Then why exactly did you click this?";
+});
+
+const doSomething = document.getElementById('do-something-button');
+
+doSomething.addEventListener('click', function() {
+    console.log("Okay, well this is good.");
+});
