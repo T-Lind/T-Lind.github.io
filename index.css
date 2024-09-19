@@ -465,6 +465,33 @@ label input {
   color: white;
   animation: blink 0.7s infinite;
 }
+.pdf-window {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.pdf-header {
+  background-color: #f5f5f5;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccc;
+}
+
+.pdf-header span {
+  font-weight: bold;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
 
 @keyframes blink {
   0% { opacity: 1; }
