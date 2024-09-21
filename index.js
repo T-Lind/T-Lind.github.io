@@ -121,7 +121,7 @@ function onDebugToggle() {
 // debugToggle.addEventListener("change", onDebugToggle);
 
 const delays = [
-    1000,
+    600,
     900,
     1000,
     1100,
@@ -133,34 +133,23 @@ const delays = [
     1000,
 ]
 
-
 function typeIntroduction() {
     const container = document.getElementById('typing-container');
-    const text = `Hi there.
+    const text = `Well hi there!
 
-This is where some of my stuff is.
+This site has all sorts of stuff about me because, I don't know, I felt like it?
 
-And seeing as how I have nothing, it's empty.
+It includes my profile & a few patent-pending inventions and research papers I've written.
 
-What else did you expect?
-
-Okay technically I have plenty of stuff, but *you* don't get to see it. Or, you already know where you can find my stuff, so you don't need this page. Either way, that begs the question: why did you click on this site?
-
-*Fine.* You really want my stuff?
-
-Here it is, I guess, so you can cyberstalk me. I hope you're happy.
-
-You *are* happy, right?
-
-CAUSE I SURE WANT YOU TO BE HAPPY!
-
-Okay, here it is:
-
+There's also some other interesting stuff here. Have fun exploring!
 
 `;
 
     let index = 0;
     let newLineIndex = 0;
+
+    // Add the ">" symbol at the beginning
+    container.innerHTML = '&gt; ';
 
     function typeNextCharacter() {
         if (index < text.length) {
@@ -187,34 +176,38 @@ Okay, here it is:
             } else {
                 setTimeout(typeNextCharacter, Math.random() * 10 + 9);
             }
-        }
-        else {
-          container.innerHTML += '<span class="cursor"></span>';
+        } else {
+            container.innerHTML += '<span class="cursor">\|</span>';
         }
     }
 
-    typeNextCharacter();
+    if (!localStorage.getItem('typingEffectShown')) {
+        typeNextCharacter();
+        localStorage.setItem('typingEffectShown', 'true');
+    } else {
+        container.innerHTML = '&gt; ' + text.replace(/\n/g, '<br>') + '<span class="cursor">\|</span>';
+    }
 }
 
 window.addEventListener('load', typeIntroduction);
 
-const yesButton = document.getElementById('yes-button');
-const noButton = document.getElementById('no-button');
-const resultDiv = document.getElementById('button-result');
-
-// Add click event listener to the "Yes" button
-yesButton.addEventListener('click', function() {
-    // redirect to /puzzles
-    window.location.href = "/puzzles";
-});
-
-// Add click event listener to the "No" button
-noButton.addEventListener('click', function() {
-    resultDiv.textContent = "Then why exactly did you click this?";
-});
-
-const doSomething = document.getElementById('do-something-button');
-
-doSomething.addEventListener('click', function() {
-    console.log("Okay, well this is good.");
-});
+// const yesButton = document.getElementById('yes-button');
+// const noButton = document.getElementById('no-button');
+// const resultDiv = document.getElementById('button-result');
+//
+// // Add click event listener to the "Yes" button
+// yesButton.addEventListener('click', function() {
+//     // redirect to /puzzles
+//     window.location.href = "/puzzles";
+// });
+//
+// // Add click event listener to the "No" button
+// noButton.addEventListener('click', function() {
+//     resultDiv.textContent = "Then why exactly did you click this?";
+// });
+//
+// const doSomething = document.getElementById('do-something-button');
+//
+// doSomething.addEventListener('click', function() {
+//     console.log("Okay, well this is good.");
+// });
