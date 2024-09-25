@@ -683,3 +683,44 @@ label input {
 .project-tag[data-color="pink"]::before {
     background-color: #EE4B7E;
 }
+/* Style for the site directory */
+#TOC {
+    margin: 20px 0;
+    padding: 10px;
+    border: 1px solid var(--text-color-alt);
+    border-radius: 8px;
+    background-color: var(--background-color);
+}
+
+#TOC h2 {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    margin-top: 7px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+#TOC ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#TOC li {
+    margin: 10px 0;
+}
+
+#TOC a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: var(--font-weight-medium);
+    padding: 5px 10px;
+    display: block;
+    border-radius: 4px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#TOC a:hover {
+    background-color: var(--background-color-alt);
+    color: var(--text-color-alt);
+}
