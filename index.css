@@ -500,3 +500,95 @@ label input {
   50% { opacity: 0; }
   100% { opacity: 1; }
 }
+.projects-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  align-content: end;
+  gap: 20px;
+  padding: 20px;
+  grid-auto-rows: 1fr;
+}
+
+.project-card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 300px;
+}
+
+.project-card:hover {
+  transform: scale(1.05);
+}
+
+
+.project-title {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.project-description {
+  margin-bottom: 10px;
+}
+
+
+
+.project-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: flex-end;
+}
+
+.project-tag {
+  background-color: #333;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.9em;
+  color: #fff;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.project-tag::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: var(--tag-color, #000);
+  border-radius: 2px;
+  margin-right: 5px;
+}
+
+.project-tag[data-color="purple"]::before {
+  background-color: purple;
+}
+
+.project-tag[data-color="blue"]::before {
+  background-color: #4370A6;
+}
+
+.project-tag[data-color="green"]::before {
+  background-color: green;
+}
+
+.project-tag[data-color="orange"]::before {
+  background-color: orange;
+}
+
+.project-tag[data-color="red"]::before {
+  background-color: red;
+}
+
+.project-tag[data-color="yellow"]::before {
+  background-color: yellow;
+}
+
+.project-tag[data-color="pink"]::before {
+  background-color: #EE4B7E;
+}
