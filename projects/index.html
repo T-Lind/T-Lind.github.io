@@ -10,36 +10,93 @@
     <link rel="stylesheet" href="../index.css"/>
 </head>
 <body>
-<h1>My Projects</h1>
+<table class="header">
+    <tr>
+        <td colspan="2" rowspan="2" class="width-auto">
+            <h1 class="title">My Projects</h1>
+            <span class="subtitle">Personal projects that are not confidential (patents) or research.</span>
+        </td>
+        <th>Version</th>
+        <td class="width-min">v0.0.1</td>
+    </tr>
+    <tr>
+        <th>Updated</th>
+        <td class="width-min">
+            <time style="white-space: pre;">2024-09-25</time>
+        </td>
+    </tr>
+    <tr>
+        <th class="width-min">Author</th>
+        <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
+        <th class="width-min">License</th>
+        <td>MIT</td>
+    </tr>
+</table>
+
 <div class="projects-container">
-    <a href="https://github.com/T-Lind/space-mission-planner.git" class="project-card">
-        <div class="project-title">Highlight:<br>Space Mission Planner</div>
-        <div class="project-description">WIP calculating trajectory calculation and fuel requirements.</div>
+    <a href="https://github.com/T-Lind/kinect-terrain-tracker" class="project-card">
+        <img src="../public/projects/kinect_floor_outlined.png" alt="Project 2">
+        <div class="project-title">kinect-terrain-tracker</div>
+        <div class="project-description">Kinect Terrain Tracker is a fast and efficient floor detection system using raw
+            depth data from the Xbox One Kinect, projecting the detected floor into a bird's-eye view with dynamic
+            calibration.
+        </div>
+        <div class="project-tags">
+            <span class="project-tag" data-color="blue">Python</span>
+        </div>
+    </a>
+    <a href="https://github.com/T-Lind/space-mission-planner" class="project-card-noimg">
+        <div class="project-title">space-mission-planner</div>
+        <div class="project-description">Demo project that calculates trajectories and fuel requirements for different transfers.</div>
         <div class="project-tags">
             <span class="project-tag" data-color="pink">C++</span>
         </div>
     </a>
-    <a href="project2-link.html" class="project-card">
-        <div class="project-title">Project 2</div>
-        <div class="project-description">A brief description of Project 2.</div>
-        <div class="project-tags">
-            <span class="project-tag" data-color="purple">Haskell</span>
-            <span class="project-tag" data-color="blue">Python</span>
-        </div>
-    </a>
     <a href="https://github.com/T-Lind/4d-projection" class="project-card">
-        <div class="project-title">4D to 3D Projector</div>
+        <img src="../public/projects/4d-to-3d.gif" alt="4D to 3D Projector">
+        <div class="project-title">4d-projection</div>
         <div class="project-description">Loads 4D meshes and renders them in 3D using hyperplanar slices.</div>
         <div class="project-tags">
             <span class="project-tag" data-color="blue">Python</span>
         </div>
     </a>
-    <a href="project4-link.html" class="project-card">
-        <div class="project-title">Project 4</div>
-        <div class="project-description">A brief description of Project 4.</div>
+    <a href="https://github.com/T-Lind/TuringMachineLanguage" class="project-card-noimg">
+        <div class="project-title">turing-machine-language</div>
+        <div class="project-description">An instructional language based on Alan Turing's original conception of a Turing
+            machine, consisting of pages and awareness.
+        </div>
         <div class="project-tags">
-            <span class="project-tag" data-color="purple">Haskell</span>
+            <span class="project-tag" data-color="orange">Java</span>
+        </div>
+    </a>
+    <a href="https://github.com/T-Lind/chess-3d-dev" class="project-card">
+        <img src="../public/projects/chess-3d-board.png" alt="3D chess board">
+        <div class="project-title">chess-3d</div>
+        <div class="project-description">A true 3D chess game, allowing pieces to move in 3D, w/ toptobes.
+        </div>
+        <div class="project-tags">
+
             <span class="project-tag" data-color="blue">Python</span>
+            <span class="project-tag" data-color="light-blue">Typescript</span>
+        </div>
+    </a>
+
+    <a href="https://github.com/T-Lind/MotorLib" class="project-card">
+        <img src="../public/projects/motor-lib.png" alt="Driver code">
+        <div class="project-title">motor-lib</div>
+        <div class="project-description">A library for PWM-baed control of 12V DC motors in Python.
+        </div>
+        <div class="project-tags">
+            <span class="project-tag" data-color="blue">Python</span>
+        </div>
+    </a>
+    <a href="https://github.com/T-Lind/Coyote" class="project-card">
+<!--        <img src="../public/projects/motor-lib.png" alt="Driver code">-->
+        <div class="project-title">coyote</div>
+        <div class="project-description">A pathing and control library for 2-wheel differential swerve drives.
+        </div>
+        <div class="project-tags">
+            <span class="project-tag" data-color="orange">Java</span>
         </div>
     </a>
 </div>
