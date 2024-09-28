@@ -601,6 +601,11 @@ label input {
     height: 220px;
 }
 
+.project-card-noimg .project-tags {
+    margin-top: auto;
+}
+
+
 .project-card-noimg img {
     width: 100%;
     height: 600px;
