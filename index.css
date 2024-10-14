@@ -729,3 +729,17 @@ label input {
     background-color: var(--background-color-alt);
     color: var(--text-color-alt);
 }
+.portfolio-link a {
+    display: inline-block;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.portfolio-link a:hover {
+    background-color: #f5f5f5;
+    border-color: #999;
+    color: #333;
+}
