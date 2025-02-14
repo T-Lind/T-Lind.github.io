@@ -589,6 +589,18 @@ label input {
     transform: scale(1.05);
 }
 
+.project-card-noimg-tall {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 450px;
+}
+
 .project-card-noimg {
     border: 1px solid #ccc;
     border-radius: 8px;
