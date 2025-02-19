@@ -630,6 +630,10 @@ label input {
     transform: scale(1.05);
 }
 
+.project-card-noimg-tall:hover {
+    transform: scale(1.05);
+}
+
 
 .project-title {
     font-size: 1.5em;
