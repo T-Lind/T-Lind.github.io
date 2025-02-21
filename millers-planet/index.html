@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Your Name" />
+  <meta name="license" content="MIT" />
+  <meta name="description" content="Displays Miller’s-planet elapsed time (with time dilation) since notable events." />
+  <title>Miller’s Planet Relative Time</title>
+  <link rel="stylesheet" href="../reset.css"/>
+  <link rel="stylesheet" href="../index.css"/>
+  <style>
+    @import url('https://fonts.cdnfonts.com/css/jetbrains-mono-2');
+
+    :root {
+      --font-family: "JetBrains Mono", monospace;
+      --line-height: 1.6rem;
+      --border-thickness: 2px;
+      --text-color: #222;
+      --text-color-alt: #666;
+      --background-color: #fff;
+      --background-color-alt: #eee;
+      --font-weight-normal: 500;
+      --font-weight-medium: 600;
+      --font-weight-bold: 800;
+
+      font-family: var(--font-family);
+      font-size: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text-color: #fff;
+        --text-color-alt: #aaa;
+        --background-color: #222;
+        --background-color-alt: #111;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    body {
+      padding: var(--line-height) 2ch;
+      max-width: 80ch;
+      line-height: var(--line-height);
+      width: 100%;
+    }
+
+    /* Header Table */
+    .header {
+      margin-bottom: calc(var(--line-height) * 2);
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .header th,
+    .header td {
+      border: var(--border-thickness) solid var(--text-color);
+      padding: calc(var(--line-height) / 2);
+      text-align: left;
+    }
+    .header h1 {
+      margin: 0;
+      text-transform: uppercase;
+      font-size: 2rem;
+    }
+    .header .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-color-alt);
+    }
+
+    h2 {
+      font-weight: var(--font-weight-bold);
+      margin: calc(var(--line-height) * 2) 0 calc(var(--line-height) / 2);
+      text-transform: uppercase;
+      font-size: 1rem;
+    }
+
+    /* Clocks Section */
+    #clocks {
+      margin-bottom: calc(var(--line-height) * 2);
+      width: 100%;
+    }
+    .clock {
+      margin-bottom: 1rem;
+    }
+    .clock h3 {
+      margin-bottom: 0.3rem;
+      font-size: 1.1rem;
+    }
+    .clock .time {
+      font-size: 1rem;
+      background: var(--background-color-alt);
+      padding: 0.5rem;
+      border: var(--border-thickness) solid var(--text-color);
+      border-radius: 4px;
+    }
+
+    /* Typewriter Introduction */
+    #typing-container {
+      white-space: pre-wrap;
+      background: var(--background-color-alt);
+      border: var(--border-thickness) solid var(--text-color);
+      padding: var(--line-height);
+      border-radius: 4px;
+      margin-bottom: calc(var(--line-height) * 2);
+    }
+    .cursor {
+      font-weight: bold;
+      animation: blink 0.7s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    /* Back Button (white text on dark background) */
+    .back-button {
+      color: white;
+      background: transparent;
+      border: var(--border-thickness) solid white;
+      padding: calc(var(--line-height) / 2) 1ch;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .back-button:hover {
+      background: #333;
+    }
+  </style>
+</head>
+<body>
+<!-- Header Table -->
+<table class="header">
+  <tr>
+    <td colspan="2" rowspan="2" class="width-auto">
+      <h1 class="title">Miller's Planet <br>Relative Time</h1>
+      <span class="subtitle">Elapsed time on Miller's planet since certain events.</span>
+    </td>
+    <th>Version</th>
+    <td class="width-min">v0.0.1</td>
+  </tr>
+  <tr>
+    <th>Updated</th>
+    <td class="width-min">
+      <time style="white-space: pre;">2025-02-20</time>
+    </td>
+  </tr>
+  <tr>
+    <th class="width-min">Author</th>
+    <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
+    <th class="width-min">License</th>
+    <td>MIT</td>
+  </tr>
+</table>
+
+<!-- Clocks Section -->
+<section id="clocks">
+  <h2>Miller’s Time Since Notable Events</h2>
+  <!-- Oldest to Newest (Present always shows 0) -->
+  <div class="clock" id="clock-civilization">
+    <h3>Start of Human Civilization (approx. 3200 BC)</h3>
+    <p class="time">Calculating…</p>
+  </div>
+  <div class="clock" id="clock-pyramids">
+    <h3>Building of the Pyramids (approx. 2560 BC)</h3>
+    <p class="time">Calculating…</p>
+  </div>
+  <div class="clock" id="clock-moon">
+    <h3>Apollo 11 Moon Landing (1969‑07‑20)</h3>
+    <p class="time">Calculating…</p>
+  </div>
+  <div class="clock" id="clock-interstellar">
+    <h3>Interstellar Release (2014‑11‑07)</h3>
+    <p class="time">Calculating…</p>
+  </div>
+</section>
+
+<!-- Typewriter Introduction -->
+<div id="typing-container">&gt; </div>
+
+<!-- Back Button -->
+<button class="back-button" onclick="window.location.href='/'">Back</button>
+
+<script>
+  // Conversion: 1 Miller second = 61320 Earth seconds.
+  const DILATION_FACTOR = 1 / 61320;
+
+  // For a given Earth elapsed time (in seconds), compute the Miller time breakdown.
+  function getMillerComponents(earthElapsedSeconds) {
+    const millerElapsed = earthElapsedSeconds * DILATION_FACTOR; // Miller seconds
+    // Using approximate conversion factors:
+    const secondsPerYear = 365.25 * 24 * 3600;
+    const secondsPerMonth = secondsPerYear / 12;
+    const secondsPerDay = 24 * 3600;
+    const secondsPerHour = 3600;
+    const secondsPerMinute = 60;
+
+    let remaining = millerElapsed;
+    const years = Math.floor(remaining / secondsPerYear);
+    remaining %= secondsPerYear;
+    const months = Math.floor(remaining / secondsPerMonth);
+    remaining %= secondsPerMonth;
+    const days = Math.floor(remaining / secondsPerDay);
+    remaining %= secondsPerDay;
+    const hours = Math.floor(remaining / secondsPerHour);
+    remaining %= secondsPerHour;
+    const minutes = Math.floor(remaining / secondsPerMinute);
+    remaining %= secondsPerMinute;
+    const seconds = Math.floor(remaining);
+    const milliseconds = Math.floor((remaining - seconds) * 1000);
+    return { years, months, days, hours, minutes, seconds, milliseconds };
+  }
+
+  // Define the events (dates are Earth dates).
+  // Note: JavaScript Date uses astronomical year numbering,
+  // so new Date(-3199, 0, 1) represents January 1, 3200 BC.
+  const events = [
+    {
+      id: "clock-civilization",
+      label: "Start of Human Civilization (approx. 3200 BC)",
+      date: new Date(-3199, 0, 1)
+    },
+    {
+      id: "clock-pyramids",
+      label: "Building of the Pyramids (approx. 2560 BC)",
+      date: new Date(-2559, 0, 1)
+    },
+    {
+      id: "clock-moon",
+      label: "Apollo 11 Moon Landing (1969‑07‑20)",
+      date: new Date("1969-07-20T20:17:40Z")
+    },
+    {
+      id: "clock-interstellar",
+      label: "Interstellar Release (2014‑11‑07)",
+      date: new Date("2014-11-07T00:00:00Z")
+    }
+  ];
+
+  // Update each clock with the Miller time difference.
+  function updateClocks() {
+    const now = new Date();
+    events.forEach(ev => {
+      let elapsedEarthSeconds = 0;
+      if (ev.id !== "clock-present") {
+        elapsedEarthSeconds = (now - ev.date) / 1000;
+      }
+      const comp = getMillerComponents(elapsedEarthSeconds);
+      const formatted = `${comp.years} years, ${comp.months} months, ${comp.days} days, ` +
+              `${comp.hours} hours, ${comp.minutes} minutes, ${comp.seconds} seconds, ${comp.milliseconds} ms`;
+      const el = document.querySelector("#" + ev.id + " .time");
+      if (el) el.textContent = formatted;
+    });
+  }
+  updateClocks();
+  setInterval(updateClocks, 50);
+
+  // Faster typewriter effect (20ms per character)
+  function typeIntroduction() {
+    const container = document.getElementById('typing-container');
+    const text = `Welcome to the Miller’s Planet Relative Time display!
+
+This page shows the elapsed Miller’s-planet time (with extreme time dilation) since:
+• The start of human civilization (approx. 3200 BC)
+• The building of the pyramids (approx. 2560 BC)
+• Apollo 11's Moon Landing (1969‑07‑20)
+• The release of Interstellar (2014‑11‑07)
+
+This means that if you only stayed a single month on Miller's planet in 3200 BC, you'd skip past virtually all of human history!
+`;
+    let index = 0;
+    function typeNext() {
+      if (index < text.length) {
+        const char = text.charAt(index);
+        container.innerHTML += (char === "\n") ? "<br>" : char;
+        index++;
+        setTimeout(typeNext, 10);
+      } else {
+        container.innerHTML += '<span class="cursor">|</span>';
+      }
+    }
+    typeNext();
+  }
+  window.addEventListener('load', typeIntroduction);
+</script>
+</body>
+</html>
