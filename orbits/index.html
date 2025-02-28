@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orbital Mechanics Challenge - Upgraded Edition</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 4px;
+        }
+        #controls button, #controls label {
+            margin: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        #status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+<div id="controls">
+    <button id="resetBtn">Reset</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="fsBtn">Full Screen</button>
+    <br>
+    <label>Music Volume:
+        <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="1">
+    </label>
+    <label>SFX Volume:
+        <input type="range" id="sfxVolume" min="0" max="1" step="0.01" value="1">
+    </label>
+    <br>
+    <small>Press "T" to toggle trajectory projection.</small>
+</div>
+<div id="status"></div>
+<canvas id="gameCanvas"></canvas>
+
+<!-- Audio elements (supply your own audio files or update paths) -->
+<audio id="bgMusic" src="bgMusic.mp3" loop></audio>
+<audio id="thrustSound" src="thrust.mp3"></audio>
+<audio id="collisionSound" src="collision.mp3"></audio>
+<audio id="wormholeSound" src="wormhole.mp3"></audio>
+
+<script>
+    // ---------- Helper: Check if two circles overlap ----------
+    function circlesOverlap(x1, y1, r1, x2, y2, r2) {
+        const dx = x1 - x2;
+        const dy = y1 - y2;
+        return Math.sqrt(dx * dx + dy * dy) < (r1 + r2);
+    }
+
+    // ---------- Canvas & Full Screen Setup ----------
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    const resetBtn = document.getElementById("resetBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const fsBtn = document.getElementById("fsBtn");
+    const statusDiv = document.getElementById("status");
+
+    fsBtn.addEventListener("click", () => {
+        if (!document.fullscreenElement) {
+            canvas.requestFullscreen().catch(err => console.error(err));
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    // ---------- Volume Controls ----------
+    const musicVolumeSlider = document.getElementById("musicVolume");
+    const sfxVolumeSlider = document.getElementById("sfxVolume");
+    let sfxVolume = parseFloat(sfxVolumeSlider.value);
+
+    musicVolumeSlider.addEventListener("input", (e) => {
+        bgMusic.volume = e.target.value;
+    });
+    sfxVolumeSlider.addEventListener("input", (e) => {
+        sfxVolume = parseFloat(e.target.value);
+        thrustSound.volume = sfxVolume;
+        collisionSound.volume = sfxVolume;
+        wormholeSound.volume = sfxVolume;
+    });
+
+    // ---------- Audio Elements ----------
+    const bgMusic = document.getElementById("bgMusic");
+    const thrustSound = document.getElementById("thrustSound");
+    const collisionSound = document.getElementById("collisionSound");
+    const wormholeSound = document.getElementById("wormholeSound");
+    document.body.addEventListener("keydown", () => {
+        if (bgMusic.paused) bgMusic.play();
+    }, { once: true });
+
+    // ---------- Global Settings ----------
+    let animationId;
+    let simulationRunning = false;
+    let simulationPaused = false;
+    const dt = 0.1;
+    const G = 0.4;
+    let gameTime = 0;  // Global game time (in seconds)
+    const TRAIL_DURATION = 10;  // How many seconds of trail to show
+    let showTrajectory = true; // Toggle for drawing projected trajectory
+
+    // ---------- Camera ----------
+    const camera = { x: 0, y: 0 };
+
+    // ---------- Procedurally Generated Stars ----------
+    const stars = [];
+    const numStars = 800;
+    for (let i = 0; i < numStars; i++) {
+        stars.push({
+            x: Math.random() * 8000 - 4000,
+            y: Math.random() * 8000 - 4000,
+            radius: Math.random() * 1.5 + 0.5
+        });
+    }
+
+    // ---------- Solar System Objects ----------
+    const sun = { x: 0, y: 0, mass: 50000, radius: 50 };
+    const planetA = {
+        orbitRadius: 300,
+        angle: 0,
+        angularSpeed: 0.002,
+        mass: 10000,
+        radius: 30
+    };
+    const planetB = {
+        orbitRadius: 500,
+        angle: Math.PI / 2,
+        angularSpeed: 0.001,
+        mass: 15000,
+        radius: 40,
+        dockingZone: 60
+    };
+
+    // ---------- Black Hole (with limited influence) ----------
+    const blackHole = { x: -2000, y: -1500, mass: 100000, radius: 40 };
+    const BH_MAX_EFFECT_RADIUS = 800;
+    const BH_TIME_DILATION_THRESHOLD = 200;
+    const bhOrbiter1 = { orbitRadius: 100, angle: 0, angularSpeed: 0.008, mass: 1000, radius: 8, x: 0, y: 0 };
+    const bhOrbiter2 = { orbitRadius: 140, angle: Math.PI/3, angularSpeed: 0.005, mass: 1200, radius: 10, x: 0, y: 0 };
+
+    // ---------- Wormhole (Two-Way) ----------
+    const wormhole = {
+        entry: { x: 600, y: -600, radius: 20 },
+        exit: { x: -600, y: 600, radius: 20 },
+        pulse: 0
+    };
+
+    // ---------- Orbiters for Planets ----------
+    const moon = {
+        orbitRadius: 80,
+        angle: 0,
+        angularSpeed: 0.01,
+        mass: 3000,
+        radius: 15,
+        x: 0,
+        y: 0
+    };
+    const satelliteA = {
+        orbitRadius: 50,
+        angle: 0,
+        angularSpeed: 0.015,
+        mass: 2000,
+        radius: 10,
+        x: 0,
+        y: 0
+    };
+
+    // ---------- Asteroids (Additional Hazards) ----------
+    const asteroids = [];
+    function spawnAsteroids() {
+        asteroids.length = 0;
+        const num = 10;
+        const fixedBodies = [sun, planetA, planetB, blackHole];
+        let attempts = 0;
+        while (asteroids.length < num && attempts < num * 10) {
+            attempts++;
+            let a = {
+                x: sun.x + (Math.random() * 2000 - 1000),
+                y: sun.y + (Math.random() * 2000 - 1000),
+                vx: (Math.random()-0.5) * 0.5,
+                vy: (Math.random()-0.5) * 0.5,
+                radius: Math.random()*15 + 10
+            };
+            let overlapping = false;
+            for (let b of fixedBodies) {
+                if (circlesOverlap(a.x, a.y, a.radius, b.x, b.y, b.radius)) {
+                    overlapping = true;
+                    break;
+                }
+            }
+            for (let ast of asteroids) {
+                if (circlesOverlap(a.x, a.y, a.radius, ast.x, ast.y, ast.radius)) {
+                    overlapping = true;
+                    break;
+                }
+            }
+            if (!overlapping) {
+                asteroids.push(a);
+            }
+        }
+    }
+    function updateAsteroids(dtEff) {
+        for (let i = asteroids.length - 1; i >= 0; i--) {
+            let a = asteroids[i];
+            a.x += a.vx * dtEff;
+            a.y += a.vy * dtEff;
+            const fixedBodies = [sun, planetA, planetB, blackHole];
+            for (let b of fixedBodies) {
+                if (circlesOverlap(a.x, a.y, a.radius, b.x, b.y, b.radius)) {
+                    asteroids.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }
+    function drawAsteroids() {
+        ctx.fillStyle = "#333";
+        for (let a of asteroids) {
+            ctx.beginPath();
+            ctx.arc(a.x - camera.x, a.y - camera.y, a.radius, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+
+    // ---------- The Player's Spaceship ----------
+    let spaceship;
+    function initSpaceship() {
+        spaceship = {
+            x: sun.x + planetA.orbitRadius + 240,
+            y: sun.y + 300,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            fuel: 30,
+            maxFuel: 30, // fuel capacity
+            radius: 8,
+            trail: [],   // each point: {x, y, t}
+            graceTime: 3,
+            disabled: false,
+            disableTime: 0,
+            upgrades: [],
+            thrustMultiplier: 1,
+            rotationMultiplier: 1,
+            shieldTime: 0  // shield timer (in seconds)
+        };
+    }
+
+    // ---------- Collectibles & Upgrades ----------
+    // A collectible always gives 1 point and may grant extra fuel or an upgrade.
+    let collectible = { x: 0, y: 0, radius: 7, type: "score" };
+    function spawnCollectible() {
+        // Determine maximum distance from sun.
+        const wormholeDist = Math.sqrt(wormhole.entry.x**2 + wormhole.entry.y**2);
+        const maxDist = 1.5 * wormholeDist;
+        let angle = Math.random() * 2 * Math.PI;
+        let r = Math.random() * maxDist;
+        collectible.x = r * Math.cos(angle);
+        collectible.y = r * Math.sin(angle);
+        let rnd = Math.random();
+        if (rnd < 0.15) {
+            collectible.type = "upgrade";
+            const upgradeOptions = ["thruster", "fuelTank", "maneuver", "shield"];
+            collectible.upgrade = upgradeOptions[Math.floor(Math.random() * upgradeOptions.length)];
+        } else if (rnd < 0.15 + 0.25) {
+            collectible.type = "fuel";
+        } else {
+            collectible.type = "score";
+        }
+    }
+    function drawCollectible() {
+        ctx.beginPath();
+        if (collectible.type === "fuel") {
+            ctx.fillStyle = "#00f";
+            ctx.arc(collectible.x - camera.x, collectible.y - camera.y, collectible.radius, 0, Math.PI*2);
+            ctx.fill();
+        } else if (collectible.type === "upgrade") {
+            ctx.fillStyle = "#a0f";
+            let size = collectible.radius;
+            let cx = collectible.x - camera.x, cy = collectible.y - camera.y;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                let a = Math.PI/3 * i;
+                let x = cx + size * Math.cos(a);
+                let y = cy + size * Math.sin(a);
+                if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.fillStyle = "#0f0";
+            ctx.arc(collectible.x - camera.x, collectible.y - camera.y, collectible.radius, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+    // ---------- Upgrade System ----------
+    function applyUpgrade(type) {
+        spaceship.upgrades.push(type);
+        if(type === "thruster") {
+            spaceship.thrustMultiplier *= 1.4;
+        } else if(type === "fuelTank") {
+            spaceship.maxFuel += 10;
+            spaceship.fuel = Math.min(spaceship.fuel + 10, spaceship.maxFuel);
+        } else if(type === "maneuver") {
+            spaceship.rotationMultiplier *= 1.2;
+        } else if(type === "shield") {
+            spaceship.shieldTime = 5;
+        }
+    }
+
+    // ---------- Solar Flares (Dynamic Environmental Hazards) ----------
+    let solarFlareTimer = 45; // seconds until next flare burst
+    let solarFlareParticles = []; // each: {x, y, vx, vy, lifetime, radius}
+    // When triggered, the flare burst will be confined to a cone.
+
+    // ---------- Score Tracking ----------
+    let score = 0;
+    let highScore = localStorage.getItem("highScore") || 0;
+
+    // ---------- Keyboard Input ----------
+    const keys = {};
+    window.addEventListener("keydown", (e) => {
+        keys[e.key] = true;
+        if(e.key.toLowerCase() === "t") {
+            showTrajectory = !showTrajectory;
+        }
+    });
+    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+
+    // ---------- Camera Update ----------
+    function updateCamera() {
+        camera.x = spaceship.x - canvas.width / 2;
+        camera.y = spaceship.y - canvas.height / 2;
+    }
+
+    // ---------- Drawing Functions ----------
+    function drawStars() {
+        ctx.fillStyle = "#fff";
+        for (let star of stars) {
+            const sx = star.x - camera.x;
+            const sy = star.y - camera.y;
+            if (sx > -10 && sx < canvas.width+10 && sy > -10 && sy < canvas.height+10) {
+                ctx.beginPath();
+                ctx.arc(sx, sy, star.radius, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+    }
+    function drawBody(body, color) {
+        ctx.beginPath();
+        ctx.arc(body.x - camera.x, body.y - camera.y, body.radius, 0, Math.PI*2);
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+    function drawBlackHole() {
+        const x = blackHole.x - camera.x;
+        const y = blackHole.y - camera.y;
+        const outerRadius = blackHole.radius * 3;
+        const grad = ctx.createRadialGradient(x, y, blackHole.radius * 0.2, x, y, outerRadius);
+        grad.addColorStop(0, "#000");
+        grad.addColorStop(0.5, "#551122");
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath();
+        ctx.arc(x, y, outerRadius, 0, Math.PI*2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, blackHole.radius, 0, Math.PI*2);
+        ctx.fillStyle = "#000";
+        ctx.fill();
+    }
+    function drawWormhole() {
+        wormhole.pulse += 0.05;
+        const pulseR = wormhole.entry.radius + Math.sin(wormhole.pulse) * 3;
+        ctx.beginPath();
+        ctx.arc(wormhole.entry.x - camera.x, wormhole.entry.y - camera.y, pulseR, 0, Math.PI*2);
+        ctx.strokeStyle = "#0ff";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(wormhole.exit.x - camera.x, wormhole.exit.y - camera.y, pulseR, 0, Math.PI*2);
+        ctx.strokeStyle = "#0ff";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+    function drawSpaceship() {
+        // Draw the trail (only points within the TRAIL_DURATION)
+        if (spaceship.trail.length > 1) {
+            ctx.beginPath();
+            for (let i = 0; i < spaceship.trail.length; i++) {
+                let pt = spaceship.trail[i];
+                let alpha = 1 - (gameTime - pt.t) / TRAIL_DURATION;
+                if(i === 0) {
+                    ctx.moveTo(pt.x - camera.x, pt.y - camera.y);
+                } else {
+                    ctx.lineTo(pt.x - camera.x, pt.y - camera.y);
+                }
+                // Optionally, you could use alpha to set strokeStyle for fading trail
+            }
+            ctx.strokeStyle = "#0f0";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        ctx.save();
+        ctx.translate(spaceship.x - camera.x, spaceship.y - camera.y);
+        ctx.rotate(spaceship.angle);
+        // Draw shield if active
+        if (spaceship.shieldTime > 0) {
+            ctx.beginPath();
+            ctx.arc(0, 0, spaceship.radius + 10, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(0,150,255,0.7)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+        // Draw spaceship shape
+        ctx.beginPath();
+        ctx.moveTo(15, 0);
+        ctx.lineTo(-10, 8);
+        ctx.lineTo(-10, -8);
+        ctx.closePath();
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        if(keys["ArrowUp"] && spaceship.fuel > 0 && !spaceship.disabled) {
+            ctx.beginPath();
+            ctx.moveTo(-10, 4);
+            ctx.lineTo(-20, 0);
+            ctx.lineTo(-10, -4);
+            ctx.fillStyle = "orange";
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+    // ---------- HUD Drawing Functions ----------
+    function drawFuelBar() {
+        const barWidth = 200;
+        const barHeight = 20;
+        const x = 20;
+        const y = canvas.height - barHeight - 20;
+        ctx.fillStyle = "#444";
+        ctx.fillRect(x, y, barWidth, barHeight);
+        const fuelRatio = spaceship.fuel / spaceship.maxFuel;
+        ctx.fillStyle = "#0f0";
+        ctx.fillRect(x, y, barWidth * fuelRatio, barHeight);
+        ctx.strokeStyle = "#fff";
+        ctx.strokeRect(x, y, barWidth, barHeight);
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px Arial";
+        ctx.fillText("Fuel", x, y - 5);
+    }
+    function drawShieldBar() {
+        const barWidth = 200;
+        const barHeight = 20;
+        const x = canvas.width - barWidth - 20;
+        const y = canvas.height - barHeight - 20;
+        ctx.fillStyle = "#444";
+        ctx.fillRect(x, y, barWidth, barHeight);
+        const shieldRatio = spaceship.shieldTime / 5;
+        ctx.fillStyle = "#0af";
+        ctx.fillRect(x, y, barWidth * shieldRatio, barHeight);
+        ctx.strokeStyle = "#fff";
+        ctx.strokeRect(x, y, barWidth, barHeight);
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px Arial";
+        ctx.fillText("Shield", x, y - 5);
+    }
+    // ---------- Trajectory Projection ----------
+    // Simulate future positions assuming engines off (only gravitational forces apply)
+    function getTrajectoryPoints(state, duration, dtSim) {
+        let points = [];
+        let simState = { x: state.x, y: state.y, vx: state.vx, vy: state.vy };
+        const steps = duration / dtSim;
+        for(let i = 0; i < steps; i++){
+            // Compute gravitational acceleration from each body
+            let ax = 0, ay = 0;
+            const bodies = [sun, planetA, planetB, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+            // Include black hole if within its effect radius
+            let dBH = Math.hypot(simState.x - blackHole.x, simState.y - blackHole.y);
+            if(dBH < BH_MAX_EFFECT_RADIUS) {
+                bodies.push(blackHole);
+            }
+            for(let body of bodies){
+                let dx = body.x - simState.x;
+                let dy = body.y - simState.y;
+                let distSq = dx*dx + dy*dy;
+                let dist = Math.sqrt(distSq);
+                if(dist > body.radius){
+                    let force = G * body.mass / distSq;
+                    ax += force * dx / dist;
+                    ay += force * dy / dist;
+                }
+            }
+            // Euler integration
+            simState.vx += ax * dtSim;
+            simState.vy += ay * dtSim;
+            simState.x += simState.vx * dtSim;
+            simState.y += simState.vy * dtSim;
+            points.push({x: simState.x, y: simState.y});
+        }
+        return points;
+    }
+    function drawTrajectoryProjection() {
+        const trajPoints = getTrajectoryPoints({ x: spaceship.x, y: spaceship.y, vx: spaceship.vx, vy: spaceship.vy }, 45, 0.1);
+        if(trajPoints.length < 2) return;
+        ctx.save();
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(trajPoints[0].x - camera.x, trajPoints[0].y - camera.y);
+        for(let pt of trajPoints){
+            ctx.lineTo(pt.x - camera.x, pt.y - camera.y);
+        }
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+    function drawSolarFlareParticles() {
+        ctx.fillStyle = "rgba(255,100,0,0.8)";
+        for (let p of solarFlareParticles) {
+            ctx.beginPath();
+            ctx.arc(p.x - camera.x, p.y - camera.y, p.radius, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+    function drawScene() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawStars();
+        drawBody(sun, "#ff0");
+        drawBody(planetA, "#00f");
+        drawBody(planetB, "#f00");
+        drawBlackHole();
+        drawBody(bhOrbiter1, "#888");
+        drawBody(bhOrbiter2, "#888");
+        drawWormhole();
+        drawBody(moon, "#888");
+        drawBody(satelliteA, "#888");
+        drawAsteroids();
+        drawSolarFlareParticles();
+        drawCollectible();
+        // Draw projected trajectory if toggled on
+        if(showTrajectory) {
+            drawTrajectoryProjection();
+        }
+        drawSpaceship();
+        // Draw an indicator if collectible is off-screen
+        const dxInd = collectible.x - spaceship.x;
+        const dyInd = collectible.y - spaceship.y;
+        const distInd = Math.sqrt(dxInd*dxInd + dyInd*dyInd);
+        if (distInd > 300) {
+            const angle = Math.atan2(dyInd, dxInd);
+            const arrowX = spaceship.x + 50 * Math.cos(angle);
+            const arrowY = spaceship.y + 50 * Math.sin(angle);
+            ctx.save();
+            ctx.strokeStyle = "#ff0";
+            ctx.setLineDash([5,5]);
+            ctx.beginPath();
+            ctx.moveTo(spaceship.x - camera.x, spaceship.y - camera.y);
+            ctx.lineTo(arrowX - camera.x, arrowY - camera.y);
+            ctx.stroke();
+            ctx.restore();
+            ctx.save();
+            ctx.fillStyle = "#ff0";
+            ctx.translate(arrowX - camera.x, arrowY - camera.y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0,0);
+            ctx.lineTo(-10,5);
+            ctx.lineTo(-10,-5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+        const dxBH = spaceship.x - blackHole.x;
+        const dyBH = spaceship.y - blackHole.y;
+        const dBH = Math.sqrt(dxBH*dxBH + dyBH*dyBH);
+        if(dBH < 300) {
+            const opacity = 1 - dBH/300;
+            ctx.fillStyle = "rgba(50,0,50,"+(opacity*0.5)+")";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        drawFuelBar();
+        drawShieldBar();
+        ctx.restore();
+    }
+
+    // ---------- Physics ----------
+    function computeGravity(body, x, y) {
+        const dx = body.x - x;
+        const dy = body.y - y;
+        const distSq = dx*dx + dy*dy;
+        const dist = Math.sqrt(distSq);
+        if(dist < body.radius) return { ax: 0, ay: 0 };
+        const force = G * body.mass / distSq;
+        return { ax: force * dx / dist, ay: force * dy / dist };
+    }
+
+    // ---------- Update Game Objects ----------
+    function updateGame() {
+        const dxBH = spaceship.x - blackHole.x;
+        const dyBH = spaceship.y - blackHole.y;
+        const dBH = Math.sqrt(dxBH*dxBH + dyBH*dyBH);
+        let dtEff = dt;
+        if(dBH < BH_TIME_DILATION_THRESHOLD) {
+            let factor = dBH / BH_TIME_DILATION_THRESHOLD;
+            if(factor < 0.2) factor = 0.2;
+            dtEff = dt * factor;
+            bgMusic.playbackRate = factor;
+        } else {
+            bgMusic.playbackRate = 1;
+        }
+        gameTime += dtEff;
+        // Update spaceship controls if not disabled.
+        if(!spaceship.disabled) {
+            if(keys["ArrowLeft"]) { spaceship.angle -= 0.05 * (spaceship.rotationMultiplier || 1); }
+            if(keys["ArrowRight"]) { spaceship.angle += 0.05 * (spaceship.rotationMultiplier || 1); }
+            if(keys["ArrowUp"] && spaceship.fuel > 0) {
+                const thrust = 0.2 * (spaceship.thrustMultiplier || 1);
+                spaceship.vx += thrust * Math.cos(spaceship.angle) * dtEff;
+                spaceship.vy += thrust * Math.sin(spaceship.angle) * dtEff;
+                spaceship.fuel -= 0.05 * dtEff;
+                if(spaceship.fuel < 0) spaceship.fuel = 0;
+                if(thrustSound.paused) { thrustSound.play().catch(()=>{}); }
+            } else {
+                thrustSound.pause();
+                thrustSound.currentTime = 0;
+            }
+        }
+        // Record current position with timestamp; only keep points within TRAIL_DURATION.
+        spaceship.trail.push({ x: spaceship.x, y: spaceship.y, t: gameTime });
+        spaceship.trail = spaceship.trail.filter(pt => (gameTime - pt.t) <= TRAIL_DURATION);
+
+        // Update orbiting bodies.
+        planetA.angle += planetA.angularSpeed * dtEff;
+        planetA.x = sun.x + planetA.orbitRadius * Math.cos(planetA.angle);
+        planetA.y = sun.y + planetA.orbitRadius * Math.sin(planetA.angle);
+
+        planetB.angle += planetB.angularSpeed * dtEff;
+        planetB.x = sun.x + planetB.orbitRadius * Math.cos(planetB.angle);
+        planetB.y = sun.y + planetB.orbitRadius * Math.sin(planetB.angle);
+
+        moon.angle += moon.angularSpeed * dtEff;
+        moon.x = planetB.x + moon.orbitRadius * Math.cos(moon.angle);
+        moon.y = planetB.y + moon.orbitRadius * Math.sin(moon.angle);
+
+        satelliteA.angle += satelliteA.angularSpeed * dtEff;
+        satelliteA.x = planetA.x + satelliteA.orbitRadius * Math.cos(satelliteA.angle);
+        satelliteA.y = planetA.y + satelliteA.orbitRadius * Math.sin(satelliteA.angle);
+
+        bhOrbiter1.angle += bhOrbiter1.angularSpeed * dtEff;
+        bhOrbiter1.x = blackHole.x + bhOrbiter1.orbitRadius * Math.cos(bhOrbiter1.angle);
+        bhOrbiter1.y = blackHole.y + bhOrbiter1.orbitRadius * Math.sin(bhOrbiter1.angle);
+
+        bhOrbiter2.angle += bhOrbiter2.angularSpeed * dtEff;
+        bhOrbiter2.x = blackHole.x + bhOrbiter2.orbitRadius * Math.cos(bhOrbiter2.angle);
+        bhOrbiter2.y = blackHole.y + bhOrbiter2.orbitRadius * Math.sin(bhOrbiter2.angle);
+
+        updateAsteroids(dtEff);
+
+        // Update spaceship physics by summing gravitational effects.
+        const gravSun = computeGravity(sun, spaceship.x, spaceship.y);
+        const gravPlanetA = computeGravity(planetA, spaceship.x, spaceship.y);
+        const gravPlanetB = computeGravity(planetB, spaceship.x, spaceship.y);
+        let gravBlackHole = { ax: 0, ay: 0 };
+        if(dBH < BH_MAX_EFFECT_RADIUS) {
+            gravBlackHole = computeGravity(blackHole, spaceship.x, spaceship.y);
+        }
+        const gravMoon = computeGravity(moon, spaceship.x, spaceship.y);
+        const gravSat = computeGravity(satelliteA, spaceship.x, spaceship.y);
+        const gravBhOrb1 = computeGravity(bhOrbiter1, spaceship.x, spaceship.y);
+        const gravBhOrb2 = computeGravity(bhOrbiter2, spaceship.x, spaceship.y);
+        const ax = gravSun.ax + gravPlanetA.ax + gravPlanetB.ax + gravBlackHole.ax + gravMoon.ax + gravSat.ax + gravBhOrb1.ax + gravBhOrb2.ax;
+        const ay = gravSun.ay + gravPlanetA.ay + gravPlanetB.ay + gravBlackHole.ay + gravMoon.ay + gravSat.ay + gravBhOrb1.ay + gravBhOrb2.ay;
+        spaceship.vx += ax * dtEff;
+        spaceship.vy += ay * dtEff;
+        spaceship.x += spaceship.vx * dtEff;
+        spaceship.y += spaceship.vy * dtEff;
+
+        if(spaceship.graceTime > 0) spaceship.graceTime -= dtEff;
+
+        // Check collectible collection.
+        const dxC = spaceship.x - collectible.x;
+        const dyC = spaceship.y - collectible.y;
+        if(Math.sqrt(dxC*dxC + dyC*dyC) < spaceship.radius + collectible.radius) {
+            score++;
+            if(collectible.type === "fuel") {
+                spaceship.fuel += 5;
+            } else if(collectible.type === "upgrade") {
+                applyUpgrade(collectible.upgrade);
+            }
+            spawnCollectible();
+        }
+        if(spaceship.fuel > spaceship.maxFuel) {
+            spaceship.fuel = spaceship.maxFuel;
+        }
+        // Wormhole teleport with proper exit offset.
+        const dxEntry = spaceship.x - wormhole.entry.x;
+        const dyEntry = spaceship.y - wormhole.entry.y;
+        const dEntry = Math.sqrt(dxEntry*dxEntry + dyEntry*dyEntry);
+        const dxExit = spaceship.x - wormhole.exit.x;
+        const dyExit = spaceship.y - wormhole.exit.y;
+        const dExit = Math.sqrt(dxExit*dxExit + dyExit*dyExit);
+        if(dEntry < wormhole.entry.radius + spaceship.radius) {
+            wormholeSound.play().catch(()=>{});
+            let angle = Math.atan2(spaceship.vy, spaceship.vx);
+            if(isNaN(angle)) angle = spaceship.angle;
+            const offset = wormhole.exit.radius + spaceship.radius + 10;
+            spaceship.x = wormhole.exit.x + offset * Math.cos(angle);
+            spaceship.y = wormhole.exit.y + offset * Math.sin(angle);
+            spaceship.fuel += 3;
+        } else if(dExit < wormhole.exit.radius + spaceship.radius) {
+            wormholeSound.play().catch(()=>{});
+            let angle = Math.atan2(spaceship.vy, spaceship.vx);
+            if(isNaN(angle)) angle = spaceship.angle;
+            const offset = wormhole.entry.radius + spaceship.radius + 10;
+            spaceship.x = wormhole.entry.x + offset * Math.cos(angle);
+            spaceship.y = wormhole.entry.y + offset * Math.sin(angle);
+            spaceship.fuel += 3;
+        }
+        // ---------- Solar Flares ----------
+        solarFlareTimer -= dtEff;
+        if(solarFlareTimer <= 0) {
+            let baseAngle = Math.random() * 2 * Math.PI;
+            let spread = (5 + Math.random() * 15) * Math.PI / 180;
+            let halfSpread = spread / 2;
+            for (let i = 0; i < 30; i++) {
+                let angle = baseAngle + (Math.random() * spread - halfSpread);
+                let speed = 8 + Math.random() * 4;
+                solarFlareParticles.push({
+                    x: sun.x,
+                    y: sun.y,
+                    vx: speed * Math.cos(angle),
+                    vy: speed * Math.sin(angle),
+                    lifetime: 60,
+                    radius: 3
+                });
+            }
+            solarFlareTimer = 30;
+        }
+        for (let j = solarFlareParticles.length - 1; j >= 0; j--) {
+            let p = solarFlareParticles[j];
+            p.x += p.vx * dtEff;
+            p.y += p.vy * dtEff;
+            p.lifetime -= dtEff;
+            if(p.lifetime <= 0) {
+                solarFlareParticles.splice(j, 1);
+            }
+        }
+        for (let p of solarFlareParticles) {
+            const dx = spaceship.x - p.x;
+            const dy = spaceship.y - p.y;
+            if(Math.sqrt(dx*dx+dy*dy) < spaceship.radius + p.radius) {
+                spaceship.disabled = true;
+                spaceship.disableTime = 20;
+                break;
+            }
+        }
+        if(spaceship.disabled) {
+            spaceship.disableTime -= dtEff;
+            if(spaceship.disableTime <= 0) {
+                spaceship.disabled = false;
+                spaceship.disableTime = 0;
+            }
+        }
+        if(spaceship.shieldTime > 0) {
+            spaceship.shieldTime -= dtEff;
+            if(spaceship.shieldTime < 0) spaceship.shieldTime = 0;
+        }
+        updateCamera();
+    }
+
+    function updateStatus() {
+        const speed = Math.sqrt(spaceship.vx**2 + spaceship.vy**2).toFixed(2);
+        let txt = `Fuel: ${spaceship.fuel.toFixed(2)}/${spaceship.maxFuel} | Speed: ${speed} | Score: ${score} | High Score: ${highScore}`;
+        if(spaceship.graceTime > 0) txt += ` | Safe: ${spaceship.graceTime.toFixed(1)}s`;
+        if(spaceship.disabled) txt += ` | DISABLED: ${spaceship.disableTime.toFixed(1)}s`;
+        if(spaceship.upgrades.length > 0) txt += ` | Upgrades: ${spaceship.upgrades.join(", ")}`;
+        const dxBH = spaceship.x - blackHole.x;
+        const dyBH = spaceship.y - blackHole.y;
+        const dBH = Math.sqrt(dxBH*dxBH+dyBH*dyBH);
+        if(dBH < 200) txt += " | Time Dilation!";
+        statusDiv.textContent = txt;
+    }
+
+    // ---------- Collision Detection ----------
+    function checkCollisions() {
+        if(spaceship.shieldTime > 0) return false;
+        const bodies = [sun, planetA, planetB, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+        for(let body of bodies) {
+            const dx = spaceship.x - body.x;
+            const dy = spaceship.y - body.y;
+            if(Math.sqrt(dx*dx+dy*dy) < body.radius + spaceship.radius) {
+                if(score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", score);
+                }
+                simulationRunning = false;
+                cancelAnimationFrame(animationId);
+                collisionSound.play().catch(()=>{});
+                statusDiv.textContent = "Game Over! You collided with a celestial body.";
+                return true;
+            }
+        }
+        for(let a of asteroids) {
+            const dx = spaceship.x - a.x;
+            const dy = spaceship.y - a.y;
+            if(Math.sqrt(dx*dx+dy*dy) < spaceship.radius + a.radius) {
+                if(score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", score);
+                }
+                simulationRunning = false;
+                cancelAnimationFrame(animationId);
+                collisionSound.play().catch(()=>{});
+                statusDiv.textContent = "Game Over! You collided with an asteroid.";
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function animate() {
+        animationId = requestAnimationFrame(animate);
+        if(simulationPaused) {
+            drawScene();
+            ctx.save();
+            ctx.setTransform(1,0,0,1,0,0);
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#fff";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Paused", canvas.width/2, canvas.height/2);
+            ctx.restore();
+            return;
+        }
+        updateGame();
+        drawScene();
+        updateStatus();
+        if(checkCollisions()) return;
+    }
+
+    resetBtn.addEventListener("click", () => {
+        cancelAnimationFrame(animationId);
+        simulationRunning = false;
+        simulationPaused = false;
+        pauseBtn.textContent = "Pause";
+        initSpaceship();
+        score = 0;
+        spawnCollectible();
+        spawnAsteroids();
+        solarFlareTimer = 30;
+        solarFlareParticles = [];
+        gameTime = 0;
+        animationId = null;
+        simulationRunning = true;
+        animate();
+    });
+
+    pauseBtn.addEventListener("click", () => {
+        simulationPaused = !simulationPaused;
+        pauseBtn.textContent = simulationPaused ? "Resume" : "Pause";
+        if(!simulationPaused) animate();
+    });
+
+    // ---------- Start Game ----------
+    initSpaceship();
+    spawnCollectible();
+    spawnAsteroids();
+    simulationRunning = true;
+    animate();
+</script>
+</body>
+</html>
