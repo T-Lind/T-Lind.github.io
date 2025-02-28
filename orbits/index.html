@@ -146,30 +146,30 @@
     }
 
     // ---------- Solar System Objects ----------
-    const sun = { x: 0, y: 0, mass: 100000, radius: 50 };
+    const sun = { x: 0, y: 0, mass: 120000, radius: 110 };
     const planetA = {
-        orbitRadius: 300,
+        orbitRadius: 500,
         angle: 0,
         angularSpeed: 0.002,
         mass: 10000,
         radius: 30
     };
     const planetB = {
-        orbitRadius: 500,
-        angle: Math.PI / 2,
+        orbitRadius: 650,
+        angle: 4 * Math.PI / 3,
         angularSpeed: 0.001,
-        mass: 15000,
+        mass: 25000,
         radius: 40,
         dockingZone: 60
     };
 
     // SHEILD DURATION
-    const SHIELD_DURATION = 30;  // ticks
+    const SHIELD_DURATION = 100;  // ticks
 
 
     // ---------- Black Hole (with limited influence) ----------
-    const blackHole = { x: -300, y: -1900, mass: 300000, radius: 40 };
-    const BH_MAX_EFFECT_RADIUS = 800;
+    const blackHole = { x: -600, y: -2300, mass: 3000000, radius: 140 };
+    const BH_MAX_EFFECT_RADIUS = 1200;
     const BH_TIME_DILATION_THRESHOLD = 200;
     const bhOrbiter1 = { orbitRadius: 100, angle: 0, angularSpeed: 0.008, mass: 1000, radius: 8, x: 0, y: 0 };
     const bhOrbiter2 = { orbitRadius: 140, angle: Math.PI/3, angularSpeed: 0.005, mass: 1200, radius: 10, x: 0, y: 0 };
@@ -671,7 +671,6 @@
         if(dBH < BH_TIME_DILATION_THRESHOLD) {
             let factor = dBH / BH_TIME_DILATION_THRESHOLD;
             if(factor < 0.2) factor = 0.2;
-            dtEff = dt * factor;
             bgMusic.playbackRate = factor;
         } else {
             bgMusic.playbackRate = 1;
@@ -794,7 +793,7 @@
             let halfSpread = spread / 2;
             for (let i = 0; i < 30; i++) {
                 let angle = baseAngle + (Math.random() * spread - halfSpread);
-                let speed = 8 + Math.random() * 4;
+                let speed = 28 + Math.random() * 10;
                 solarFlareParticles.push({
                     x: sun.x,
                     y: sun.y,
