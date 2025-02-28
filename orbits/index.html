@@ -127,46 +127,6 @@
     const TRAIL_DURATION = 10;  // How many seconds of trail to show
     let showTrajectory = true; // Toggle for drawing projected trajectory
 
-    // ---------- Intro Screen ----------
-    let introActive = true;
-    function drawIntroScreen() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "rgba(0,0,0,0.8)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.font = "48px Arial";
-        ctx.fillText("Welcome to Orbits", canvas.width/2, canvas.height/2 - 150);
-        ctx.font = "24px Arial";
-        ctx.fillText("Controls:", canvas.width/2, canvas.height/2 - 100);
-        ctx.font = "20px Arial";
-        ctx.fillText("• W or Up Arrow: Thrust forward", canvas.width/2, canvas.height/2 - 70);
-        ctx.fillText("• A or Left Arrow: Rotate left", canvas.width/2, canvas.height/2 - 40);
-        ctx.fillText("• D or Right Arrow: Rotate right", canvas.width/2, canvas.height/2 - 10);
-        ctx.fillText("• S: Reverse thrust (brake)", canvas.width/2, canvas.height/2 + 20);
-        ctx.fillText("• T: Toggle trajectory projection", canvas.width/2, canvas.height/2 + 50);
-        ctx.fillText("Other shapes:", canvas.width/2, canvas.height/2 + 90);
-        ctx.fillText("• Yellow circle: Sun", canvas.width/2, canvas.height/2 + 120);
-        ctx.fillText("• Blue/Red circles: Planets", canvas.width/2, canvas.height/2 + 150);
-        ctx.fillText("• Yellow Arrow: Signifies direction of consumable", canvas.width/2, canvas.height/2 + 180);
-        ctx.fillText("• Magenta hexagon: Upgrade collectible (+1 score)", canvas.width/2, canvas.height/2 + 210);
-        ctx.fillText("• Green circle: Score collectible (+1 score)", canvas.width/2, canvas.height/2 + 240);
-        ctx.font = "22px Arial";
-        ctx.fillText("Click anywhere or press Enter/Space to start", canvas.width/2, canvas.height/2 + 300);
-    }
-
-    // Start game on click or Enter/Space if intro is active
-    window.addEventListener("keydown", (e) => {
-        if (introActive && (e.key === "Enter" || e.key === " ")) {
-            introActive = false;
-        }
-    });
-    canvas.addEventListener("click", () => {
-        if (introActive) {
-            introActive = false;
-        }
-    });
-
     // ---------- Camera ----------
     const camera = { x: 0, y: 0 };
 
@@ -314,8 +274,10 @@
     }
 
     // ---------- Collectibles & Upgrades ----------
+    // A collectible always gives 1 point and may grant extra fuel or an upgrade.
     let collectible = { x: 0, y: 0, radius: 7, type: "score" };
     function spawnCollectible() {
+        // Determine maximum distance from sun.
         const wormholeDist = Math.sqrt(wormhole.entry.x**2 + wormhole.entry.y**2);
         const maxDist = 1.5 * wormholeDist;
         let angle = Math.random() * 2 * Math.PI;
@@ -374,8 +336,10 @@
     }
 
     // ---------- Solar Flares (Dynamic Environmental Hazards) ----------
-    let solarFlareTimer = 45;
-    let solarFlareParticles = [];
+    let solarFlareTimer = 45; // seconds until next flare burst
+    let solarFlareParticles = []; // each: {x, y, vx, vy, lifetime, radius}
+    // When triggered, the flare burst will be confined to a cone.
+
     // ---------- Score Tracking ----------
     let score = 0;
     let highScore = localStorage.getItem("highScore") || 0;
@@ -447,6 +411,7 @@
         ctx.stroke();
     }
     function drawSpaceship() {
+        // Draw the trail (only points within the TRAIL_DURATION)
         if (spaceship.trail.length > 1) {
             ctx.beginPath();
             for (let i = 0; i < spaceship.trail.length; i++) {
@@ -457,6 +422,7 @@
                 } else {
                     ctx.lineTo(pt.x - camera.x, pt.y - camera.y);
                 }
+                // Optionally, you could use alpha to set strokeStyle for fading trail
             }
             ctx.strokeStyle = "#0f0";
             ctx.lineWidth = 1;
@@ -465,6 +431,7 @@
         ctx.save();
         ctx.translate(spaceship.x - camera.x, spaceship.y - camera.y);
         ctx.rotate(spaceship.angle);
+        // Draw shield if active
         if (spaceship.shieldTime > 0) {
             ctx.beginPath();
             ctx.arc(0, 0, spaceship.radius + 10, 0, Math.PI * 2);
@@ -472,6 +439,7 @@
             ctx.lineWidth = 3;
             ctx.stroke();
         }
+        // Draw spaceship shape
         ctx.beginPath();
         ctx.moveTo(15, 0);
         ctx.lineTo(-10, 8);
@@ -479,7 +447,7 @@
         ctx.closePath();
         ctx.fillStyle = "#fff";
         ctx.fill();
-        if((keys["ArrowUp"] || keys["w"]) && spaceship.fuel > 0 && !spaceship.disabled) {
+        if(keys["ArrowUp"] && spaceship.fuel > 0 && !spaceship.disabled) {
             ctx.beginPath();
             ctx.moveTo(-10, 4);
             ctx.lineTo(-20, 0);
@@ -489,6 +457,7 @@
         }
         ctx.restore();
     }
+    // ---------- HUD Drawing Functions ----------
     function drawFuelBar() {
         const barWidth = 200;
         const barHeight = 20;
@@ -522,13 +491,16 @@
         ctx.fillText("Shield", x, y - 5);
     }
     // ---------- Trajectory Projection ----------
+    // Simulate future positions assuming engines off (only gravitational forces apply)
     function getTrajectoryPoints(state, duration, dtSim) {
         let points = [];
         let simState = { x: state.x, y: state.y, vx: state.vx, vy: state.vy };
         const steps = duration / dtSim;
         for(let i = 0; i < steps; i++){
+            // Compute gravitational acceleration from each body
             let ax = 0, ay = 0;
             const bodies = [sun, planetA, planetB, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+            // Include black hole if within its effect radius
             let dBH = Math.hypot(simState.x - blackHole.x, simState.y - blackHole.y);
             if(dBH < BH_MAX_EFFECT_RADIUS) {
                 bodies.push(blackHole);
@@ -544,6 +516,7 @@
                     ay += force * dy / dist;
                 }
             }
+            // Euler integration
             simState.vx += ax * dtSim;
             simState.vy += ay * dtSim;
             simState.x += simState.vx * dtSim;
@@ -589,10 +562,13 @@
         drawBody(satelliteA, "#888");
         drawAsteroids();
         drawSolarFlareParticles();
+        drawCollectible();
+        // Draw projected trajectory if toggled on
         if(showTrajectory) {
             drawTrajectoryProjection();
         }
         drawSpaceship();
+        // Draw an indicator if collectible is off-screen
         const dxInd = collectible.x - spaceship.x;
         const dyInd = collectible.y - spaceship.y;
         const distInd = Math.sqrt(dxInd*dxInd + dyInd*dyInd);
@@ -661,35 +637,27 @@
             bgMusic.playbackRate = 1;
         }
         gameTime += dtEff;
-        // ---------- Spaceship Controls (with WASD support) ----------
+        // Update spaceship controls if not disabled.
         if(!spaceship.disabled) {
-            if(keys["ArrowLeft"] || keys["a"]) {
-                spaceship.angle -= 0.05 * (spaceship.rotationMultiplier || 1);
-            }
-            if(keys["ArrowRight"] || keys["d"]) {
-                spaceship.angle += 0.05 * (spaceship.rotationMultiplier || 1);
-            }
-            if((keys["ArrowUp"] || keys["w"]) && spaceship.fuel > 0) {
+            if(keys["ArrowLeft"]) { spaceship.angle -= 0.05 * (spaceship.rotationMultiplier || 1); }
+            if(keys["ArrowRight"]) { spaceship.angle += 0.05 * (spaceship.rotationMultiplier || 1); }
+            if(keys["ArrowUp"] && spaceship.fuel > 0) {
                 const thrust = 0.2 * (spaceship.thrustMultiplier || 1);
                 spaceship.vx += thrust * Math.cos(spaceship.angle) * dtEff;
                 spaceship.vy += thrust * Math.sin(spaceship.angle) * dtEff;
                 spaceship.fuel -= 0.05 * dtEff;
                 if(spaceship.fuel < 0) spaceship.fuel = 0;
                 if(thrustSound.paused) { thrustSound.play().catch(()=>{}); }
-            }
-            if(keys["s"] && spaceship.fuel > 0) {
-                // Reverse thrust (brake)
-                const reverseThrust = 0.1 * (spaceship.thrustMultiplier || 1);
-                spaceship.vx -= reverseThrust * Math.cos(spaceship.angle) * dtEff;
-                spaceship.vy -= reverseThrust * Math.sin(spaceship.angle) * dtEff;
-                spaceship.fuel -= 0.03 * dtEff;
-                if(spaceship.fuel < 0) spaceship.fuel = 0;
+            } else {
+                thrustSound.pause();
+                thrustSound.currentTime = 0;
             }
         }
+        // Record current position with timestamp; only keep points within TRAIL_DURATION.
         spaceship.trail.push({ x: spaceship.x, y: spaceship.y, t: gameTime });
         spaceship.trail = spaceship.trail.filter(pt => (gameTime - pt.t) <= TRAIL_DURATION);
 
-        // ---------- Update Orbiting Bodies ----------
+        // Update orbiting bodies.
         planetA.angle += planetA.angularSpeed * dtEff;
         planetA.x = sun.x + planetA.orbitRadius * Math.cos(planetA.angle);
         planetA.y = sun.y + planetA.orbitRadius * Math.sin(planetA.angle);
@@ -716,7 +684,7 @@
 
         updateAsteroids(dtEff);
 
-        // ---------- Update Spaceship Physics ----------
+        // Update spaceship physics by summing gravitational effects.
         const gravSun = computeGravity(sun, spaceship.x, spaceship.y);
         const gravPlanetA = computeGravity(planetA, spaceship.x, spaceship.y);
         const gravPlanetB = computeGravity(planetB, spaceship.x, spaceship.y);
@@ -737,7 +705,7 @@
 
         if(spaceship.graceTime > 0) spaceship.graceTime -= dtEff;
 
-        // ---------- Check Collectible Collection ----------
+        // Check collectible collection.
         const dxC = spaceship.x - collectible.x;
         const dyC = spaceship.y - collectible.y;
         if(Math.sqrt(dxC*dxC + dyC*dyC) < spaceship.radius + collectible.radius) {
@@ -752,7 +720,7 @@
         if(spaceship.fuel > spaceship.maxFuel) {
             spaceship.fuel = spaceship.maxFuel;
         }
-        // ---------- Wormhole Teleport ----------
+        // Wormhole teleport with proper exit offset.
         const dxEntry = spaceship.x - wormhole.entry.x;
         const dyEntry = spaceship.y - wormhole.entry.y;
         const dEntry = Math.sqrt(dxEntry*dxEntry + dyEntry*dyEntry);
@@ -880,10 +848,6 @@
 
     function animate() {
         animationId = requestAnimationFrame(animate);
-        if(introActive) {
-            drawIntroScreen();
-            return;
-        }
         if(simulationPaused) {
             drawScene();
             ctx.save();
