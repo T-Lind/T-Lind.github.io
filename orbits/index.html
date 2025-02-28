@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Orbits</title>
+    <title>Orbits - Refined Celestial Bodies</title>
     <style>
         html, body {
             margin: 0;
@@ -20,6 +20,7 @@
             background: rgba(0,0,0,0.6);
             padding: 10px;
             border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         #controls button, #controls label {
             margin: 5px;
@@ -35,6 +36,7 @@
             padding: 10px;
             border-radius: 4px;
             font-size: 1em;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -163,9 +165,8 @@
         dockingZone: 60
     };
 
-    // SHEILD DURATION
+    // SHIELD DURATION
     const SHIELD_DURATION = 100;  // ticks
-
 
     // ---------- Black Hole (with limited influence) ----------
     const blackHole = { x: -600, y: -2300, mass: 3000000, radius: 140 };
@@ -250,8 +251,12 @@
         }
     }
     function drawAsteroids() {
-        ctx.fillStyle = "#333";
         for (let a of asteroids) {
+            // Use a subtle two-tone gradient instead of a bright glow.
+            let grad = ctx.createRadialGradient(a.x - camera.x, a.y - camera.y, a.radius * 0.3, a.x - camera.x, a.y - camera.y, a.radius);
+            grad.addColorStop(0, "#666666");
+            grad.addColorStop(1, "#333333");
+            ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.arc(a.x - camera.x, a.y - camera.y, a.radius, 0, Math.PI*2);
             ctx.fill();
@@ -282,14 +287,11 @@
     }
 
     // ---------- Collectibles & Upgrades ----------
-    // A collectible always gives 1 point and may grant extra fuel or an upgrade.
     let collectible = { x: 0, y: 0, radius: 7, type: "score" };
     function spawnCollectible() {
-        // Determine maximum distance from sun.
         const wormholeDist = Math.sqrt(wormhole.entry.x ** 2 + wormhole.entry.y ** 2);
         const maxDist = 1.5 * wormholeDist;
-        const safeMargin = 10; // Minimum extra distance away from any object
-        // List of bodies that the collectible should avoid
+        const safeMargin = 10;
         const fixedBodies = [sun, planetA, planetB, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
 
         let valid = false;
@@ -299,7 +301,6 @@
             let newX = r * Math.cos(angle);
             let newY = r * Math.sin(angle);
             valid = true;
-            // Check against all fixed bodies using circlesOverlap with a buffer
             for (let body of fixedBodies) {
                 if (circlesOverlap(newX, newY, collectible.radius + safeMargin, body.x, body.y, body.radius)) {
                     valid = false;
@@ -367,7 +368,6 @@
     // ---------- Solar Flares (Dynamic Environmental Hazards) ----------
     let solarFlareTimer = 45; // ticks until next flare burst
     let solarFlareParticles = []; // each: {x, y, vx, vy, lifetime, radius}
-    // When triggered, the flare burst will be confined to a cone.
 
     // ---------- Score Tracking ----------
     let score = 0;
@@ -380,7 +380,6 @@
         if(e.key.toLowerCase() === "t") {
             showTrajectory = !showTrajectory;
         }
-        // Map WASD to arrow keys
         if(e.key.toLowerCase() === "w") keys["ArrowUp"] = true;
         if(e.key.toLowerCase() === "a") keys["ArrowLeft"] = true;
         if(e.key.toLowerCase() === "d") keys["ArrowRight"] = true;
@@ -388,7 +387,6 @@
 
     window.addEventListener("keyup", (e) => {
         keys[e.key] = false;
-        // Unmap WASD
         if(e.key.toLowerCase() === "w") keys["ArrowUp"] = false;
         if(e.key.toLowerCase() === "a") keys["ArrowLeft"] = false;
         if(e.key.toLowerCase() === "d") keys["ArrowRight"] = false;
@@ -400,7 +398,14 @@
         camera.y = spaceship.y - canvas.height / 2;
     }
 
-    // ---------- Drawing Functions ----------
+    // ---------- Background and Star Field ----------
+    function drawBackground() {
+        let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/4, canvas.width/2, canvas.height/2, canvas.width);
+        grad.addColorStop(0, "#001");
+        grad.addColorStop(1, "#000");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     function drawStars() {
         ctx.fillStyle = "#fff";
         for (let star of stars) {
@@ -413,6 +418,18 @@
             }
         }
     }
+    // ---------- Drawing Helper for Celestial Bodies ----------
+    // Revised drawPlanet: uses a subtle gradient without a bright glow.
+    function drawPlanet(body, baseColor, darkColor) {
+        let grad = ctx.createRadialGradient(body.x - camera.x, body.y - camera.y, body.radius * 0.3, body.x - camera.x, body.y - camera.y, body.radius);
+        grad.addColorStop(0, baseColor);
+        grad.addColorStop(1, darkColor);
+        ctx.beginPath();
+        ctx.arc(body.x - camera.x, body.y - camera.y, body.radius, 0, Math.PI*2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+    }
+    // For simple bodies (like orbiters) we keep the basic circle drawing.
     function drawBody(body, color) {
         ctx.beginPath();
         ctx.arc(body.x - camera.x, body.y - camera.y, body.radius, 0, Math.PI*2);
@@ -439,6 +456,9 @@
     function drawWormhole() {
         wormhole.pulse += 0.05;
         const pulseR = wormhole.entry.radius + Math.sin(wormhole.pulse) * 3;
+        ctx.save();
+        ctx.shadowColor = "#0ff";
+        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(wormhole.entry.x - camera.x, wormhole.entry.y - camera.y, pulseR, 0, Math.PI*2);
         ctx.strokeStyle = "#0ff";
@@ -449,29 +469,27 @@
         ctx.strokeStyle = "#0ff";
         ctx.lineWidth = 3;
         ctx.stroke();
+        ctx.restore();
     }
     function drawSpaceship() {
-        // Draw the trail (only points within the TRAIL_DURATION)
         if (spaceship.trail.length > 1) {
-            ctx.beginPath();
-            for (let i = 0; i < spaceship.trail.length; i++) {
-                let pt = spaceship.trail[i];
-                let alpha = 1 - (gameTime - pt.t) / TRAIL_DURATION;
-                if(i === 0) {
-                    ctx.moveTo(pt.x - camera.x, pt.y - camera.y);
-                } else {
-                    ctx.lineTo(pt.x - camera.x, pt.y - camera.y);
-                }
-                // Optionally, you could use alpha to set strokeStyle for fading trail
+            for (let i = 1; i < spaceship.trail.length; i++) {
+                let pt1 = spaceship.trail[i-1];
+                let pt2 = spaceship.trail[i];
+                let alpha = Math.max(0, 1 - (gameTime - pt1.t) / TRAIL_DURATION);
+                ctx.strokeStyle = "rgba(0,255,0," + alpha + ")";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(pt1.x - camera.x, pt1.y - camera.y);
+                ctx.lineTo(pt2.x - camera.x, pt2.y - camera.y);
+                ctx.stroke();
             }
-            ctx.strokeStyle = "#0f0";
-            ctx.lineWidth = 1;
-            ctx.stroke();
         }
         ctx.save();
+        ctx.shadowColor = "rgba(255,255,255,0.8)";
+        ctx.shadowBlur = 10;
         ctx.translate(spaceship.x - camera.x, spaceship.y - camera.y);
         ctx.rotate(spaceship.angle);
-        // Draw shield if active
         if (spaceship.shieldTime > 0) {
             ctx.beginPath();
             ctx.arc(0, 0, spaceship.radius + 10, 0, Math.PI * 2);
@@ -479,7 +497,6 @@
             ctx.lineWidth = 3;
             ctx.stroke();
         }
-        // Draw spaceship shape
         ctx.beginPath();
         ctx.moveTo(15, 0);
         ctx.lineTo(-10, 8);
@@ -531,16 +548,13 @@
         ctx.fillText("Shield", x, y - 5);
     }
     // ---------- Trajectory Projection ----------
-    // Simulate future positions assuming engines off (only gravitational forces apply)
     function getTrajectoryPoints(state, duration, dtSim) {
         let points = [];
         let simState = { x: state.x, y: state.y, vx: state.vx, vy: state.vy };
         const steps = duration / dtSim;
         for(let i = 0; i < steps; i++){
-            // Compute gravitational acceleration from each body
             let ax = 0, ay = 0;
             const bodies = [sun, planetA, planetB, moon, satelliteA, bhOrbiter1, bhOrbiter2];
-            // Include black hole if within its effect radius
             let dBH = Math.hypot(simState.x - blackHole.x, simState.y - blackHole.y);
             if(dBH < BH_MAX_EFFECT_RADIUS) {
                 bodies.push(blackHole);
@@ -556,7 +570,6 @@
                     ay += force * dy / dist;
                 }
             }
-            // Euler integration
             simState.vx += ax * dtSim;
             simState.vy += ay * dtSim;
             simState.x += simState.vx * dtSim;
@@ -581,34 +594,41 @@
         ctx.restore();
     }
     function drawSolarFlareParticles() {
-        ctx.fillStyle = "rgba(255,100,0,0.8)";
+        ctx.save();
+        ctx.shadowColor = "rgba(255,100,0,0.8)";
+        ctx.shadowBlur = 8;
         for (let p of solarFlareParticles) {
+            let grad = ctx.createRadialGradient(p.x - camera.x, p.y - camera.y, p.radius * 0.2, p.x - camera.x, p.y - camera.y, p.radius);
+            grad.addColorStop(0, "rgba(255,200,0,1)");
+            grad.addColorStop(1, "rgba(255,100,0,0)");
+            ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.arc(p.x - camera.x, p.y - camera.y, p.radius, 0, Math.PI*2);
             ctx.fill();
         }
+        ctx.restore();
     }
     function drawScene() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
         drawStars();
-        drawBody(sun, "#ff0");
-        drawBody(planetA, "#00f");
-        drawBody(planetB, "#f00");
+        // Draw celestial bodies with the revised functions (without harsh glow)
+        drawPlanet(sun, "#ffea00", "#ccaa00");
+        drawPlanet(planetA, "#00aaff", "#0077cc");
+        drawPlanet(planetB, "#ff4444", "#cc3333");
         drawBlackHole();
         drawBody(bhOrbiter1, "#888");
         drawBody(bhOrbiter2, "#888");
         drawWormhole();
-        drawBody(moon, "#888");
-        drawBody(satelliteA, "#888");
+        drawPlanet(moon, "#aaaaaa", "#888888");
+        drawPlanet(satelliteA, "#aaaaaa", "#888888");
         drawAsteroids();
         drawSolarFlareParticles();
         drawCollectible();
-        // Draw projected trajectory if toggled on
         if(showTrajectory) {
             drawTrajectoryProjection();
         }
         drawSpaceship();
-        // Draw an indicator if collectible is off-screen
+        // Off-screen collectible indicator
         const dxInd = collectible.x - spaceship.x;
         const dyInd = collectible.y - spaceship.y;
         const distInd = Math.sqrt(dxInd*dxInd + dyInd*dyInd);
@@ -676,7 +696,6 @@
             bgMusic.playbackRate = 1;
         }
         gameTime += dtEff;
-        // Update spaceship controls if not disabled.
         if(!spaceship.disabled) {
             if(keys["ArrowLeft"]) { spaceship.angle -= 0.05 * (spaceship.rotationMultiplier || 1); }
             if(keys["ArrowRight"]) { spaceship.angle += 0.05 * (spaceship.rotationMultiplier || 1); }
@@ -692,13 +711,10 @@
                 thrustSound.pause();
                 thrustSound.currentTime = 0;
             }
-
         }
-        // Record current position with timestamp; only keep points within TRAIL_DURATION.
         spaceship.trail.push({ x: spaceship.x, y: spaceship.y, t: gameTime });
         spaceship.trail = spaceship.trail.filter(pt => (gameTime - pt.t) <= TRAIL_DURATION);
 
-        // Update orbiting bodies.
         planetA.angle += planetA.angularSpeed * dtEff;
         planetA.x = sun.x + planetA.orbitRadius * Math.cos(planetA.angle);
         planetA.y = sun.y + planetA.orbitRadius * Math.sin(planetA.angle);
@@ -725,7 +741,6 @@
 
         updateAsteroids(dtEff);
 
-        // Update spaceship physics by summing gravitational effects.
         const gravSun = computeGravity(sun, spaceship.x, spaceship.y);
         const gravPlanetA = computeGravity(planetA, spaceship.x, spaceship.y);
         const gravPlanetB = computeGravity(planetB, spaceship.x, spaceship.y);
@@ -746,7 +761,6 @@
 
         if(spaceship.graceTime > 0) spaceship.graceTime -= dtEff;
 
-        // Check collectible collection.
         const dxC = spaceship.x - collectible.x;
         const dyC = spaceship.y - collectible.y;
         if(Math.sqrt(dxC*dxC + dyC*dyC) < spaceship.radius + collectible.radius) {
@@ -761,7 +775,6 @@
         if(spaceship.fuel > spaceship.maxFuel) {
             spaceship.fuel = spaceship.maxFuel;
         }
-        // Wormhole teleport with proper exit offset.
         const dxEntry = spaceship.x - wormhole.entry.x;
         const dyEntry = spaceship.y - wormhole.entry.y;
         const dEntry = Math.sqrt(dxEntry*dxEntry + dyEntry*dyEntry);
@@ -785,7 +798,6 @@
             spaceship.y = wormhole.entry.y + offset * Math.sin(angle);
             spaceship.fuel += 3;
         }
-        // ---------- Solar Flares ----------
         solarFlareTimer -= dtEff;
         if(solarFlareTimer <= 0) {
             let baseAngle = Math.random() * 2 * Math.PI;
