@@ -205,7 +205,7 @@
     const asteroids = [];
     function spawnAsteroids() {
         asteroids.length = 0;
-        const num = 10;
+        const num = 20;
         const fixedBodies = [sun, planetA, planetB, blackHole];
         let attempts = 0;
         while (asteroids.length < num && attempts < num * 10) {
@@ -213,9 +213,9 @@
             let a = {
                 x: sun.x + (Math.random() * 2000 - 1000),
                 y: sun.y + (Math.random() * 2000 - 1000),
-                vx: (Math.random()-0.5) * 0.5,
-                vy: (Math.random()-0.5) * 0.5,
-                radius: Math.random()*15 + 10
+                vx: (Math.random()-0.5) * 2,
+                vy: (Math.random()-0.5) * 2,
+                radius: Math.random()*5 + 6
             };
             let overlapping = false;
             for (let b of fixedBodies) {
