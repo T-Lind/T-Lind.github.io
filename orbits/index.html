@@ -164,7 +164,7 @@
     };
 
     // ---------- Black Hole (with limited influence) ----------
-    const blackHole = { x: -2000, y: -1500, mass: 100000, radius: 40 };
+    const blackHole = { x: -300, y: -1500, mass: 100000, radius: 40 };
     const BH_MAX_EFFECT_RADIUS = 800;
     const BH_TIME_DILATION_THRESHOLD = 200;
     const bhOrbiter1 = { orbitRadius: 100, angle: 0, angularSpeed: 0.008, mass: 1000, radius: 8, x: 0, y: 0 };
@@ -282,12 +282,32 @@
     let collectible = { x: 0, y: 0, radius: 7, type: "score" };
     function spawnCollectible() {
         // Determine maximum distance from sun.
-        const wormholeDist = Math.sqrt(wormhole.entry.x**2 + wormhole.entry.y**2);
+        const wormholeDist = Math.sqrt(wormhole.entry.x ** 2 + wormhole.entry.y ** 2);
         const maxDist = 1.5 * wormholeDist;
-        let angle = Math.random() * 2 * Math.PI;
-        let r = Math.random() * maxDist;
-        collectible.x = r * Math.cos(angle);
-        collectible.y = r * Math.sin(angle);
+        const safeMargin = 10; // Minimum extra distance away from any object
+        // List of bodies that the collectible should avoid
+        const fixedBodies = [sun, planetA, planetB, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+
+        let valid = false;
+        while (!valid) {
+            let angle = Math.random() * 2 * Math.PI;
+            let r = Math.random() * maxDist;
+            let newX = r * Math.cos(angle);
+            let newY = r * Math.sin(angle);
+            valid = true;
+            // Check against all fixed bodies using circlesOverlap with a buffer
+            for (let body of fixedBodies) {
+                if (circlesOverlap(newX, newY, collectible.radius + safeMargin, body.x, body.y, body.radius)) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) {
+                collectible.x = newX;
+                collectible.y = newY;
+            }
+        }
+
         let rnd = Math.random();
         if (rnd < 0.15) {
             collectible.type = "upgrade";
@@ -299,6 +319,7 @@
             collectible.type = "score";
         }
     }
+
     function drawCollectible() {
         ctx.beginPath();
         if (collectible.type === "fuel") {
