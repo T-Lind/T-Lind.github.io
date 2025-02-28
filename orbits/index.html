@@ -51,7 +51,11 @@
         <input type="range" id="sfxVolume" min="0" max="1" step="0.01" value="1">
     </label>
     <br>
-    <small>Press "T" to toggle trajectory projection.</small>
+    <small>Use arrow keys or W/A/S/D to control the spaceship. Press "T" to toggle trajectory projection.</small>
+    <br>
+    <small>The yellow arrow points to the next collectable to get.</small>
+    <br>
+    <small>Collect fuel to keep flying, and upgrades to improve your ship.</small>
 </div>
 <div id="status"></div>
 <canvas id="gameCanvas"></canvas>
@@ -351,8 +355,19 @@
         if(e.key.toLowerCase() === "t") {
             showTrajectory = !showTrajectory;
         }
+        // Map WASD to arrow keys
+        if(e.key.toLowerCase() === "w") keys["ArrowUp"] = true;
+        if(e.key.toLowerCase() === "a") keys["ArrowLeft"] = true;
+        if(e.key.toLowerCase() === "d") keys["ArrowRight"] = true;
     });
-    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+
+    window.addEventListener("keyup", (e) => {
+        keys[e.key] = false;
+        // Unmap WASD
+        if(e.key.toLowerCase() === "w") keys["ArrowUp"] = false;
+        if(e.key.toLowerCase() === "a") keys["ArrowLeft"] = false;
+        if(e.key.toLowerCase() === "d") keys["ArrowRight"] = false;
+    });
 
     // ---------- Camera Update ----------
     function updateCamera() {
@@ -648,10 +663,12 @@
                 spaceship.fuel -= 0.05 * dtEff;
                 if(spaceship.fuel < 0) spaceship.fuel = 0;
                 if(thrustSound.paused) { thrustSound.play().catch(()=>{}); }
-            } else {
+            }
+            if(!keys["ArrowUp"]) {
                 thrustSound.pause();
                 thrustSound.currentTime = 0;
             }
+
         }
         // Record current position with timestamp; only keep points within TRAIL_DURATION.
         spaceship.trail.push({ x: spaceship.x, y: spaceship.y, t: gameTime });
