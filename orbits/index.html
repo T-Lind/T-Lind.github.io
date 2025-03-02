@@ -38,6 +38,18 @@
             font-size: 1em;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
+        /* New info overlay styling */
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -60,6 +72,8 @@
     <small>Collect fuel to keep flying, and upgrades to improve your ship.</small>
 </div>
 <div id="status"></div>
+<!-- New informational overlay for the space station -->
+<div id="info">Deliver the drifting purple ship to the space station for 4 points!</div>
 <canvas id="gameCanvas"></canvas>
 
 <!-- Audio elements (supply your own audio files or update paths) -->
@@ -299,6 +313,32 @@
         };
     }
 
+    // ---------- Drifting Rescue Ship & Space Station ----------
+    let driftingShip; // The spaceship to rescue
+    let spaceStation; // The base to deliver the rescue ship
+
+    function spawnDriftingShip() {
+        let angle = Math.random() * 2 * Math.PI;
+        let distance = 800 + Math.random() * 400;
+        driftingShip = {
+            x: sun.x + distance * Math.cos(angle),
+            y: sun.y + distance * Math.sin(angle),
+            vx: (Math.random()-0.5)*0.2,
+            vy: (Math.random()-0.5)*0.2,
+            radius: 10,
+            rescued: false,
+            delivered: false
+        };
+    }
+    function spawnSpaceStation() {
+        // Fixed location for the space station.
+        spaceStation = {
+            x: 600,
+            y: 600,
+            radius: 40
+        };
+    }
+
     // ---------- Collectibles & Upgrades ----------
     let collectible = { x: 0, y: 0, radius: 7, type: "score" };
     function spawnCollectible() {
@@ -363,6 +403,68 @@
             ctx.fill();
         }
     }
+
+    // ---------- Drawing Functions for New Objects ----------
+    // Improved drawSpaceStation function with enhanced art
+    function drawSpaceStation() {
+        if (!spaceStation) return;
+        ctx.save();
+        ctx.translate(spaceStation.x - camera.x, spaceStation.y - camera.y);
+
+        // Draw outer ring for docking
+        const outerRingRadius = spaceStation.radius + 10;
+        ctx.beginPath();
+        ctx.arc(0, 0, outerRingRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = "#ccc";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Draw the main hub with a radial gradient
+        const hubRadius = spaceStation.radius;
+        let grad = ctx.createRadialGradient(0, 0, hubRadius * 0.3, 0, 0, hubRadius);
+        grad.addColorStop(0, "#88f");
+        grad.addColorStop(1, "#005");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, hubRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw solar panels as docking modules
+        ctx.fillStyle = "#444";
+        ctx.fillRect(-hubRadius - 20, -5, 20, 10); // left panel
+        ctx.fillRect(hubRadius, -5, 20, 10);         // right panel
+
+        // Draw "windows" on the hub for added detail
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(-hubRadius/2, -hubRadius/2, 3, 0, Math.PI * 2);
+        ctx.arc(hubRadius/2, -hubRadius/2, 3, 0, Math.PI * 2);
+        ctx.arc(-hubRadius/2, hubRadius/2, 3, 0, Math.PI * 2);
+        ctx.arc(hubRadius/2, hubRadius/2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // // Label the station
+        // ctx.font = "16px Arial";
+        // ctx.fillStyle = "#fff";
+        // ctx.textAlign = "center";
+        // ctx.fillText("Space Station", 0, hubRadius + 30);
+
+        ctx.restore();
+    }
+    function drawDriftingShip() {
+        if (!driftingShip || driftingShip.delivered) return;
+        ctx.save();
+        ctx.translate(driftingShip.x - camera.x, driftingShip.y - camera.y);
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-6, 5);
+        ctx.lineTo(-6, -5);
+        ctx.closePath();
+        ctx.fillStyle = driftingShip.rescued ? "#f0f" : "#f0f";
+        ctx.fill();
+        ctx.restore();
+    }
+
     // ---------- Upgrade System ----------
     function applyUpgrade(type) {
         spaceship.upgrades.push(type);
@@ -638,6 +740,9 @@
         drawPlanet(satelliteA, "#aaaaaa", "#888888");
         drawAsteroids();
         drawSolarFlareParticles();
+        // Draw the rescue mission objects:
+        drawSpaceStation();
+        drawDriftingShip();
         drawCollectible();
         if(showTrajectory) {
             drawTrajectoryProjection();
@@ -872,6 +977,30 @@
             spaceship.shieldTime -= dtEff;
             if(spaceship.shieldTime < 0) spaceship.shieldTime = 0;
         }
+
+        // --- Update the drifting rescue ship ---
+        if (driftingShip && !driftingShip.delivered) {
+            if (!driftingShip.rescued) {
+                driftingShip.x += driftingShip.vx * dtEff;
+                driftingShip.y += driftingShip.vy * dtEff;
+                const dxDS = spaceship.x - driftingShip.x;
+                const dyDS = spaceship.y - driftingShip.y;
+                if(Math.sqrt(dxDS*dxDS + dyDS*dyDS) < spaceship.radius + driftingShip.radius) {
+                    driftingShip.rescued = true;
+                    spaceship.thrustMultiplier *= 0.5;
+                }
+            } else {
+                driftingShip.x = spaceship.x;
+                driftingShip.y = spaceship.y - spaceship.radius - driftingShip.radius - 5;
+                const dxSS = spaceship.x - spaceStation.x;
+                const dySS = spaceship.y - spaceStation.y;
+                if(Math.sqrt(dxSS*dxSS + dySS*dySS) < spaceship.radius + spaceStation.radius) {
+                    driftingShip.delivered = true;
+                    score += 4;
+                    spaceship.thrustMultiplier *= 2;
+                }
+            }
+        }
         updateCamera();
     }
 
@@ -951,6 +1080,8 @@
         score = 0;
         spawnCollectible();
         spawnAsteroids();
+        spawnDriftingShip();
+        spawnSpaceStation();
         solarFlareTimer = 30;
         solarFlareParticles = [];
         gameTime = 0;
@@ -969,6 +1100,8 @@
     initSpaceship();
     spawnCollectible();
     spawnAsteroids();
+    spawnDriftingShip();
+    spawnSpaceStation();
     simulationRunning = true;
     animate();
 </script>
