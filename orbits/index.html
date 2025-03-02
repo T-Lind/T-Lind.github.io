@@ -148,21 +148,35 @@
     }
 
     // ---------- Solar System Objects ----------
-    const sun = { x: 0, y: 0, mass: 120000, radius: 110 };
+    const sun = { x: 0, y: 0, mass: 280000, radius: 110 };
     const planetA = {
         orbitRadius: 500,
         angle: 0,
-        angularSpeed: 0.002,
+        angularSpeed: 0.003,
         mass: 10000,
         radius: 30
     };
     const planetB = {
         orbitRadius: 650,
         angle: 4 * Math.PI / 3,
-        angularSpeed: 0.001,
+        angularSpeed: 0.002,
         mass: 25000,
         radius: 40,
-        dockingZone: 60
+    };
+    // New planets
+    const planetC = {
+        orbitRadius: 1050,
+        angle: - 5 * Math.PI / 3,
+        angularSpeed: 0.001,
+        mass: 35000,
+        radius: 30,
+    };
+    const planetD = {
+        orbitRadius: 1650,
+        angle: Math.PI / 2,
+        angularSpeed: 0.0005,
+        mass: 135000,
+        radius: 80,
     };
 
     // SHIELD DURATION
@@ -207,7 +221,7 @@
     function spawnAsteroids() {
         asteroids.length = 0;
         const num = 20;
-        const fixedBodies = [sun, planetA, planetB, blackHole];
+        const fixedBodies = [sun, planetA, planetB, planetC, planetD, blackHole];
         let attempts = 0;
         while (asteroids.length < num && attempts < num * 10) {
             attempts++;
@@ -241,7 +255,7 @@
             let a = asteroids[i];
             a.x += a.vx * dtEff;
             a.y += a.vy * dtEff;
-            const fixedBodies = [sun, planetA, planetB, blackHole];
+            const fixedBodies = [sun, planetA, planetB, planetC, planetD, blackHole];
             for (let b of fixedBodies) {
                 if (circlesOverlap(a.x, a.y, a.radius, b.x, b.y, b.radius)) {
                     asteroids.splice(i, 1);
@@ -252,7 +266,6 @@
     }
     function drawAsteroids() {
         for (let a of asteroids) {
-            // Use a subtle two-tone gradient instead of a bright glow.
             let grad = ctx.createRadialGradient(a.x - camera.x, a.y - camera.y, a.radius * 0.3, a.x - camera.x, a.y - camera.y, a.radius);
             grad.addColorStop(0, "#666666");
             grad.addColorStop(1, "#333333");
@@ -275,14 +288,14 @@
             fuel: 20,
             maxFuel: 30, // fuel capacity
             radius: 8,
-            trail: [],   // each point: {x, y, t}
+            trail: [],
             graceTime: 20,
             disabled: false,
             disableTime: 0,
             upgrades: [],
             thrustMultiplier: 1,
             rotationMultiplier: 1,
-            shieldTime: 0  // shield timer (in ticks)
+            shieldTime: 0
         };
     }
 
@@ -290,9 +303,9 @@
     let collectible = { x: 0, y: 0, radius: 7, type: "score" };
     function spawnCollectible() {
         const wormholeDist = Math.sqrt(wormhole.entry.x ** 2 + wormhole.entry.y ** 2);
-        const maxDist = 1.5 * wormholeDist;
+        const maxDist = 2 * wormholeDist;
         const safeMargin = 10;
-        const fixedBodies = [sun, planetA, planetB, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+        const fixedBodies = [sun, planetA, planetB, planetC, planetD, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
 
         let valid = false;
         while (!valid) {
@@ -367,7 +380,7 @@
 
     // ---------- Solar Flares (Dynamic Environmental Hazards) ----------
     let solarFlareTimer = 45; // ticks until next flare burst
-    let solarFlareParticles = []; // each: {x, y, vx, vy, lifetime, radius}
+    let solarFlareParticles = [];
 
     // ---------- Score Tracking ----------
     let score = 0;
@@ -419,7 +432,6 @@
         }
     }
     // ---------- Drawing Helper for Celestial Bodies ----------
-    // Revised drawPlanet: uses a subtle gradient without a bright glow.
     function drawPlanet(body, baseColor, darkColor) {
         let grad = ctx.createRadialGradient(body.x - camera.x, body.y - camera.y, body.radius * 0.3, body.x - camera.x, body.y - camera.y, body.radius);
         grad.addColorStop(0, baseColor);
@@ -429,7 +441,6 @@
         ctx.fillStyle = grad;
         ctx.fill();
     }
-    // For simple bodies (like orbiters) we keep the basic circle drawing.
     function drawBody(body, color) {
         ctx.beginPath();
         ctx.arc(body.x - camera.x, body.y - camera.y, body.radius, 0, Math.PI*2);
@@ -552,9 +563,10 @@
         let points = [];
         let simState = { x: state.x, y: state.y, vx: state.vx, vy: state.vy };
         const steps = duration / dtSim;
+        // Include the new planets in the gravity simulation.
+        const bodies = [sun, planetA, planetB, planetC, planetD, moon, satelliteA, bhOrbiter1, bhOrbiter2];
         for(let i = 0; i < steps; i++){
             let ax = 0, ay = 0;
-            const bodies = [sun, planetA, planetB, moon, satelliteA, bhOrbiter1, bhOrbiter2];
             let dBH = Math.hypot(simState.x - blackHole.x, simState.y - blackHole.y);
             if(dBH < BH_MAX_EFFECT_RADIUS) {
                 bodies.push(blackHole);
@@ -611,10 +623,13 @@
     function drawScene() {
         drawBackground();
         drawStars();
-        // Draw celestial bodies with the revised functions (without harsh glow)
+        // Draw celestial bodies
         drawPlanet(sun, "#ffea00", "#ccaa00");
         drawPlanet(planetA, "#00aaff", "#0077cc");
         drawPlanet(planetB, "#ff4444", "#cc3333");
+        // New planets with chosen colors:
+        drawPlanet(planetC, "#ffaa00", "#cc8800");
+        drawPlanet(planetD, "#aa00ff", "#8800cc");
         drawBlackHole();
         drawBody(bhOrbiter1, "#888");
         drawBody(bhOrbiter2, "#888");
@@ -723,6 +738,15 @@
         planetB.x = sun.x + planetB.orbitRadius * Math.cos(planetB.angle);
         planetB.y = sun.y + planetB.orbitRadius * Math.sin(planetB.angle);
 
+        // Update new planets
+        planetC.angle += planetC.angularSpeed * dtEff;
+        planetC.x = sun.x + planetC.orbitRadius * Math.cos(planetC.angle);
+        planetC.y = sun.y + planetC.orbitRadius * Math.sin(planetC.angle);
+
+        planetD.angle += planetD.angularSpeed * dtEff;
+        planetD.x = sun.x + planetD.orbitRadius * Math.cos(planetD.angle);
+        planetD.y = sun.y + planetD.orbitRadius * Math.sin(planetD.angle);
+
         moon.angle += moon.angularSpeed * dtEff;
         moon.x = planetB.x + moon.orbitRadius * Math.cos(moon.angle);
         moon.y = planetB.y + moon.orbitRadius * Math.sin(moon.angle);
@@ -744,6 +768,8 @@
         const gravSun = computeGravity(sun, spaceship.x, spaceship.y);
         const gravPlanetA = computeGravity(planetA, spaceship.x, spaceship.y);
         const gravPlanetB = computeGravity(planetB, spaceship.x, spaceship.y);
+        const gravPlanetC = computeGravity(planetC, spaceship.x, spaceship.y);
+        const gravPlanetD = computeGravity(planetD, spaceship.x, spaceship.y);
         let gravBlackHole = { ax: 0, ay: 0 };
         if(dBH < BH_MAX_EFFECT_RADIUS) {
             gravBlackHole = computeGravity(blackHole, spaceship.x, spaceship.y);
@@ -752,8 +778,8 @@
         const gravSat = computeGravity(satelliteA, spaceship.x, spaceship.y);
         const gravBhOrb1 = computeGravity(bhOrbiter1, spaceship.x, spaceship.y);
         const gravBhOrb2 = computeGravity(bhOrbiter2, spaceship.x, spaceship.y);
-        const ax = gravSun.ax + gravPlanetA.ax + gravPlanetB.ax + gravBlackHole.ax + gravMoon.ax + gravSat.ax + gravBhOrb1.ax + gravBhOrb2.ax;
-        const ay = gravSun.ay + gravPlanetA.ay + gravPlanetB.ay + gravBlackHole.ay + gravMoon.ay + gravSat.ay + gravBhOrb1.ay + gravBhOrb2.ay;
+        const ax = gravSun.ax + gravPlanetA.ax + gravPlanetB.ax + gravPlanetC.ax + gravPlanetD.ax + gravBlackHole.ax + gravMoon.ax + gravSat.ax + gravBhOrb1.ax + gravBhOrb2.ax;
+        const ay = gravSun.ay + gravPlanetA.ay + gravPlanetB.ay + gravPlanetC.ay + gravPlanetD.ay + gravBlackHole.ay + gravMoon.ay + gravSat.ay + gravBhOrb1.ay + gravBhOrb2.ay;
         spaceship.vx += ax * dtEff;
         spaceship.vy += ay * dtEff;
         spaceship.x += spaceship.vx * dtEff;
@@ -861,7 +887,7 @@
     // ---------- Collision Detection ----------
     function checkCollisions() {
         if(spaceship.shieldTime > 0) return false;
-        const bodies = [sun, planetA, planetB, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+        const bodies = [sun, planetA, planetB, planetC, planetD, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
         for(let body of bodies) {
             const dx = spaceship.x - body.x;
             const dy = spaceship.y - body.y;
