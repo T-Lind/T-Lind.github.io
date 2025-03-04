@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quantum Wave Simulator</title>
+    <!-- Include Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 p-6">
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-6">Quantum Wave Exploration Simulator</h1>
+    <canvas id="canvas" width="800" height="400" class="border border-gray-300 bg-gray-50 mx-auto block"></canvas>
+
+    <!-- Controls -->
+    <div class="mt-6 space-y-4">
+        <!-- Potential Selector -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+            <label for="potentialType" class="w-40 font-medium">Potential Type:</label>
+            <select id="potentialType" class="p-2 border border-gray-300 rounded">
+                <option value="free">Free Particle</option>
+                <option value="barrier">Barrier</option>
+                <option value="well">Well</option>
+                <option value="harmonic">Harmonic Oscillator</option>
+            </select>
+        </div>
+
+        <!-- Barrier Controls -->
+        <div id="barrierControls" class="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+            <div class="flex-1">
+                <label for="barrierHeight" class="font-medium">Barrier Height:</label>
+                <input type="range" id="barrierHeight" min="0" max="10" step="0.1" value="5" class="w-full">
+                <span id="barrierHeightVal" class="text-sm">5</span>
+            </div>
+            <div class="flex-1">
+                <label for="barrierWidth" class="font-medium">Barrier Width:</label>
+                <input type="range" id="barrierWidth" min="0.1" max="5" step="0.1" value="1" class="w-full">
+                <span id="barrierWidthVal" class="text-sm">1</span>
+            </div>
+        </div>
+
+        <!-- Well Controls -->
+        <div id="wellControls" class="flex flex-col sm:flex-row sm:items-center sm:space-x-4" style="display:none;">
+            <div class="flex-1">
+                <label for="wellDepth" class="font-medium">Well Depth:</label>
+                <input type="range" id="wellDepth" min="0" max="10" step="0.1" value="5" class="w-full">
+                <span id="wellDepthVal" class="text-sm">5</span>
+            </div>
+        </div>
+
+        <!-- Initial Momentum -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+            <label for="initMomentum" class="w-40 font-medium">Initial Momentum (k₀):</label>
+            <input type="range" id="initMomentum" min="0" max="10" step="0.1" value="5" class="w-full">
+            <span id="initMomentumVal" class="text-sm">5</span>
+        </div>
+
+        <!-- Display Toggles -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showReal" checked class="form-checkbox h-5 w-5">
+                <span class="ml-2">Show Real Part</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showImag" checked class="form-checkbox h-5 w-5">
+                <span class="ml-2">Show Imaginary Part</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showProb" checked class="form-checkbox h-5 w-5">
+                <span class="ml-2">Show |Ψ|²</span>
+            </label>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+            <button id="startPause" class="px-4 py-2 bg-blue-500 text-white rounded shadow">Start</button>
+            <button id="reset" class="px-4 py-2 bg-red-500 text-white rounded shadow">Reset</button>
+            <div id="timeDisplay" class="mt-2 sm:mt-0 text-lg font-medium">Time: 0.00</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // -------------------------------
+    // Basic Complex Number routines
+    // -------------------------------
+    function complex(re, im) {
+        return { re: re, im: im };
+    }
+    function add(a, b) { return { re: a.re + b.re, im: a.im + b.im }; }
+    function sub(a, b) { return { re: a.re - b.re, im: a.im - b.im }; }
+    function mul(a, b) {
+        return { re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re };
+    }
+    function div(a, b) {
+        var denom = b.re * b.re + b.im * b.im;
+        return { re: (a.re * b.re + a.im * b.im) / denom, im: (a.im * b.re - a.re * b.im) / denom };
+    }
+    function scale(a, s) { return { re: a.re * s, im: a.im * s }; }
+    function absSquared(a) { return a.re * a.re + a.im * a.im; }
+
+    // -------------------------------
+    // Simulation parameters and globals
+    // -------------------------------
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let simulationRunning = false;
+    let animationFrameId;
+
+    // Grid and simulation parameters
+    const N = 400; // grid points
+    const xMin = -10, xMax = 10;
+    const dx = (xMax - xMin) / (N - 1);
+    const dt = 0.005; // time step
+    let time = 0;
+
+    let x = new Array(N);      // spatial grid
+    let psi = new Array(N);    // wave function (complex numbers)
+    let V = new Array(N);      // potential array
+
+    // UI Elements
+    const potentialTypeSelect = document.getElementById("potentialType");
+    const barrierHeightSlider = document.getElementById("barrierHeight");
+    const barrierWidthSlider = document.getElementById("barrierWidth");
+    const wellDepthSlider = document.getElementById("wellDepth");
+    const initMomentumSlider = document.getElementById("initMomentum");
+    const showRealCheckbox = document.getElementById("showReal");
+    const showImagCheckbox = document.getElementById("showImag");
+    const showProbCheckbox = document.getElementById("showProb");
+
+    const barrierHeightVal = document.getElementById("barrierHeightVal");
+    const barrierWidthVal = document.getElementById("barrierWidthVal");
+    const wellDepthVal = document.getElementById("wellDepthVal");
+    const initMomentumVal = document.getElementById("initMomentumVal");
+    const timeDisplay = document.getElementById("timeDisplay");
+
+    // Buttons
+    const startPauseButton = document.getElementById("startPause");
+    const resetButton = document.getElementById("reset");
+
+    // -------------------------------
+    // Event Listeners for UI Controls
+    // -------------------------------
+    barrierHeightSlider.addEventListener("input", function() {
+        barrierHeightVal.textContent = barrierHeightSlider.value;
+        updatePotential();
+    });
+    barrierWidthSlider.addEventListener("input", function() {
+        barrierWidthVal.textContent = barrierWidthSlider.value;
+        updatePotential();
+    });
+    wellDepthSlider.addEventListener("input", function() {
+        wellDepthVal.textContent = wellDepthSlider.value;
+        updatePotential();
+    });
+    initMomentumSlider.addEventListener("input", function() {
+        initMomentumVal.textContent = initMomentumSlider.value;
+        initWaveFunction();
+    });
+    potentialTypeSelect.addEventListener("change", function() {
+        const type = potentialTypeSelect.value;
+        document.getElementById("barrierControls").style.display = (type === "barrier") ? "flex" : "none";
+        document.getElementById("wellControls").style.display = (type === "well") ? "flex" : "none";
+        updatePotential();
+    });
+
+    startPauseButton.addEventListener("click", function() {
+        simulationRunning = !simulationRunning;
+        startPauseButton.textContent = simulationRunning ? "Pause" : "Start";
+        if (simulationRunning) animate();
+    });
+
+    resetButton.addEventListener("click", function() {
+        simulationRunning = false;
+        startPauseButton.textContent = "Start";
+        time = 0;
+        initWaveFunction();
+        updatePotential();
+        drawSimulation();
+        updateTimeDisplay();
+    });
+
+    // -------------------------------
+    // Initialization functions
+    // -------------------------------
+    function initGrid() {
+        for (let i = 0; i < N; i++) {
+            x[i] = xMin + i * dx;
+        }
+    }
+
+    function initWaveFunction() {
+        // Initialize a Gaussian wave packet
+        const sigma = 1;
+        const x0 = -5; // initial center
+        const k0 = parseFloat(initMomentumSlider.value);
+        for (let i = 0; i < N; i++) {
+            let arg = (x[i] - x0) / sigma;
+            let envelope = Math.exp(-0.5 * arg * arg);
+            let phase = k0 * x[i];
+            psi[i] = complex(envelope * Math.cos(phase), envelope * Math.sin(phase));
+        }
+        // Normalize the wave function
+        let norm = 0;
+        for (let i = 0; i < N; i++) {
+            norm += absSquared(psi[i]);
+        }
+        norm = Math.sqrt(norm * dx);
+        for (let i = 0; i < N; i++) {
+            psi[i] = scale(psi[i], 1 / norm);
+        }
+    }
+
+    function updatePotential() {
+        const type = potentialTypeSelect.value;
+        for (let i = 0; i < N; i++) {
+            let xi = x[i];
+            if (type === "free") {
+                V[i] = 0;
+            } else if (type === "barrier") {
+                let width = parseFloat(barrierWidthSlider.value);
+                let height = parseFloat(barrierHeightSlider.value);
+                // Barrier centered at x = 0
+                V[i] = (Math.abs(xi) < width/2) ? height : 0;
+            } else if (type === "well") {
+                let depth = parseFloat(wellDepthSlider.value);
+                // Well centered at x = 0, with width fixed at 2 units
+                V[i] = (Math.abs(xi) < 1) ? -depth : 0;
+            } else if (type === "harmonic") {
+                // Harmonic oscillator potential: V = 0.5 * x² (with k=1)
+                V[i] = 0.5 * xi * xi;
+            }
+        }
+    }
+
+    function updateTimeDisplay() {
+        timeDisplay.textContent = "Time: " + time.toFixed(2);
+    }
+
+    // -------------------------------
+    // Crank-Nicolson Time Evolution (using Thomas algorithm)
+    // -------------------------------
+    function timeStep() {
+        // Solve for interior points (i=1 to N-2) with fixed boundaries ψ[0]=ψ[N-1]=0.
+        const nInterior = N - 2;
+        let aArr = new Array(nInterior);
+        let bArr = new Array(nInterior);
+        let cArr = new Array(nInterior);
+        let dArr = new Array(nInterior);
+
+        const kineticFactor = 1/(dx*dx);
+        const offDiagA = complex(0, - dt/(4 * dx*dx));
+        const offDiagB = complex(0, dt/(4 * dx*dx));
+
+        // Build the tridiagonal system for A and construct right-hand side vector d using operator B.
+        for (let j = 0; j < nInterior; j++) {
+            let i = j + 1;
+            let factor = kineticFactor + V[i];
+            bArr[j] = add( complex(1, 0), scale( complex(0, factor), dt/2 ) );
+            aArr[j] = offDiagA;
+            cArr[j] = offDiagA;
+
+            // Build operator B coefficients for the RHS
+            let B_center = sub( complex(1, 0), scale( complex(0, factor), dt/2 ) );
+            let B_off = offDiagB;
+            let term1 = (i - 1 >= 0) ? mul(B_off, psi[i-1]) : complex(0, 0);
+            let term2 = mul(B_center, psi[i]);
+            let term3 = (i + 1 < N) ? mul(B_off, psi[i+1]) : complex(0, 0);
+            dArr[j] = add(add(term1, term2), term3);
+        }
+        aArr[0] = complex(0, 0);
+        cArr[nInterior - 1] = complex(0, 0);
+
+        let psiNewInterior = thomasSolve(aArr, bArr, cArr, dArr);
+
+        // Update wave function with new values (boundaries remain 0)
+        for (let j = 0; j < nInterior; j++) {
+            psi[j + 1] = psiNewInterior[j];
+        }
+        psi[0] = complex(0, 0);
+        psi[N-1] = complex(0, 0);
+
+        time += dt;
+        updateTimeDisplay();
+    }
+
+    // Thomas algorithm for solving complex tridiagonal systems
+    function thomasSolve(a, b, c, d) {
+        const n = d.length;
+        let cp = new Array(n);
+        let dp = new Array(n);
+        let xSol = new Array(n);
+
+        cp[0] = div(c[0], b[0]);
+        dp[0] = div(d[0], b[0]);
+
+        for (let i = 1; i < n; i++) {
+            let denom = sub(b[i], mul(a[i], cp[i-1]));
+            cp[i] = (i < n - 1) ? div(c[i], denom) : null;
+            dp[i] = div(sub(d[i], mul(a[i], dp[i-1])), denom);
+        }
+        xSol[n - 1] = dp[n - 1];
+        for (let i = n - 2; i >= 0; i--) {
+            xSol[i] = sub(dp[i], mul(cp[i], xSol[i+1]));
+        }
+        return xSol;
+    }
+
+    // -------------------------------
+    // Drawing the Simulation
+    // -------------------------------
+    function drawSimulation() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Set up coordinate transforms
+        const pad = 40;
+        const drawWidth = canvas.width - 2 * pad;
+        const drawHeight = canvas.height - 2 * pad;
+
+        // Determine a scaling factor for the probability density
+        let maxProb = 0;
+        for (let i = 0; i < N; i++) {
+            let prob = absSquared(psi[i]);
+            if (prob > maxProb) maxProb = prob;
+        }
+        maxProb = Math.max(maxProb, 0.1);
+
+        // Draw potential curve
+        ctx.beginPath();
+        ctx.strokeStyle = "#000000";
+        for (let i = 0; i < N; i++) {
+            let xx = pad + ((x[i] - xMin) / (xMax - xMin)) * drawWidth;
+            let Vscaled = V[i] * 0.05; // Arbitrary scaling for visualization
+            let yy = pad + drawHeight/2 - Vscaled * drawHeight;
+            if (i === 0) ctx.moveTo(xx, yy);
+            else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+
+        // Plot probability density |Ψ|² in green
+        if (showProbCheckbox.checked) {
+            ctx.beginPath();
+            ctx.strokeStyle = "green";
+            for (let i = 0; i < N; i++) {
+                let xx = pad + ((x[i] - xMin) / (xMax - xMin)) * drawWidth;
+                let prob = absSquared(psi[i]);
+                let yy = pad + drawHeight - (prob / maxProb) * drawHeight;
+                if (i === 0) ctx.moveTo(xx, yy);
+                else ctx.lineTo(xx, yy);
+            }
+            ctx.stroke();
+        }
+
+        // Plot real part in red
+        if (showRealCheckbox.checked) {
+            ctx.beginPath();
+            ctx.strokeStyle = "red";
+            for (let i = 0; i < N; i++) {
+                let xx = pad + ((x[i] - xMin) / (xMax - xMin)) * drawWidth;
+                let reVal = psi[i].re;
+                let yy = pad + drawHeight/2 - reVal * 50;
+                if (i === 0) ctx.moveTo(xx, yy);
+                else ctx.lineTo(xx, yy);
+            }
+            ctx.stroke();
+        }
+
+        // Plot imaginary part in blue
+        if (showImagCheckbox.checked) {
+            ctx.beginPath();
+            ctx.strokeStyle = "blue";
+            for (let i = 0; i < N; i++) {
+                let xx = pad + ((x[i] - xMin) / (xMax - xMin)) * drawWidth;
+                let imVal = psi[i].im;
+                let yy = pad + drawHeight/2 - imVal * 50;
+                if (i === 0) ctx.moveTo(xx, yy);
+                else ctx.lineTo(xx, yy);
+            }
+            ctx.stroke();
+        }
+    }
+
+    // -------------------------------
+    // Animation Loop
+    // -------------------------------
+    function animate() {
+        if (simulationRunning) {
+            timeStep();
+            drawSimulation();
+            animationFrameId = requestAnimationFrame(animate);
+        }
+    }
+
+    // -------------------------------
+    // Initialization on Page Load
+    // -------------------------------
+    function init() {
+        initGrid();
+        initWaveFunction();
+        updatePotential();
+        drawSimulation();
+        updateTimeDisplay();
+    }
+
+    init();
+</script>
+</body>
+</html>
