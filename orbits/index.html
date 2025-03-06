@@ -299,7 +299,7 @@
             vx: 0,
             vy: 0,
             angle: 0,
-            fuel: 20,
+            fuel: 25,
             maxFuel: 30, // fuel capacity
             radius: 8,
             trail: [],
@@ -367,11 +367,13 @@
         }
 
         let rnd = Math.random();
-        if (rnd < 0.15) {
+        const pUpgrade = 0.2;
+        const pFuel = 0.3;
+        if (rnd < pUpgrade) {
             collectible.type = "upgrade";
             const upgradeOptions = ["thruster", "fuelTank", "maneuver", "shield"];
             collectible.upgrade = upgradeOptions[Math.floor(Math.random() * upgradeOptions.length)];
-        } else if (rnd < 0.15 + 0.25) {
+        } else if (rnd < pUpgrade + pFuel) {
             collectible.type = "fuel";
         } else {
             collectible.type = "score";
