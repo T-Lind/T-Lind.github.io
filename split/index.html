@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Split Decisions Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>Split Decisions</h1>
+<div id="instructions">
+    <p><strong>Overview:</strong> Split Decisions is a fast-paced brain teaser where you must answer two questions simultaneously. One question appears on the left panel and one on the right. Each question is randomly generated from a variety of types—such as math puzzles, prime checks, word scrambles, and more.</p>
+    <p><strong>How to Play:</strong></p>
+    <ul>
+        <li>The left panel uses the keys <strong>Q, W, E, R</strong>.</li>
+        <li>The right panel uses the keys <strong>U, I, O, P</strong>.</li>
+        <li>You have 5 seconds per round to answer both questions correctly.</li>
+        <li>If you answer one incorrectly or run out of time, the game is over.</li>
+        <li>Press the <strong>Start Game</strong> button (or hit Space/Enter) to begin, and use the same keys to restart after a game over.</li>
+    </ul>
+</div>
+<div id="score">Score: 0</div>
+<div id="timer">Time: 5.0</div>
+<div id="game-container">
+    <!-- Left panel -->
+    <div id="left-panel" class="panel">
+        <div class="question" id="left-question"></div>
+        <div class="options" id="left-options"></div>
+        <div class="key-label">Keys: Q, W, E, R</div>
+    </div>
+    <!-- Right panel -->
+    <div id="right-panel" class="panel">
+        <div class="question" id="right-question"></div>
+        <div class="options" id="right-options"></div>
+        <div class="key-label">Keys: U, I, O, P</div>
+    </div>
+</div>
+<button id="start-button">Start Game</button>
+<button id="restart-button" style="display:none;">Restart Game</button>
+
+<script src="game.js"></script>
+</body>
+</html>
