@@ -1,23 +1,33 @@
-// 3D Orbits – Advanced Collision Prediction & Controls
-// ------------------------------------------------------
+// 3D Orbits – Advanced Collision Prediction, Sound, & New Camera Controls
+// -------------------------------------------------------------------------
 // This script implements:
-// • Non‑inverted, mouse‐controlled camera (with pointer lock)
-// • F/B keys for default back/front views
+// • Non‑inverted, mouse‑controlled camera with pointer lock.
+// • F/B keys for default back/front views.
 // • Ship controls remapped as follows:
 //     Space: Thrust forward (only positive)
-//     W: Pitch down  S: Pitch up
-//     A: Yaw right  D: Yaw left
+//     W: Pitch down, S: Pitch up
+//     A: Yaw right, D: Yaw left
 //     L: Auto-align ship’s forward with velocity
 //     K: Auto-align ship’s forward opposite to velocity
 // • A 30‑sec ballistic trajectory with dash spacing that varies with simulated speed
-//   and a gradient from blue (at rest) to red (fast)
+//   and a gradient from blue (at rest) to red (fast).
 // • Collision prediction: a pink sphere appears at the predicted collision point with a warning on the HUD.
-// • A realistic star field is created on a sky sphere that’s attached to the camera.
+// • A realistic star field on a sky sphere attached to the camera.
+// • Sound effects for background music, thrust, and collision.
+// • Instead of a triangular flame, an orange cylinder is rendered out the back of the ship,
+//   with its length proportional to thrust.
+// • Additionally, left- and right-click instantly align the camera to the ship’s velocity
+//   (left-click: along velocity; right-click: opposite to velocity).
+//
 
 //
 // === Global Scene & DOM Elements ===
 let scene, camera, renderer;
 let statusElement;
+
+//
+// === Audio Elements ===
+let bgMusic, collisionSound, thrustSound;
 
 //
 // === Celestial Bodies ===
@@ -34,7 +44,7 @@ let planetAngle = 0;
 // === Spaceship & Motion ===
 let shipPivot;    // Container for the ship mesh, flame, and axis helper.
 let shipMesh;     // The ship (a cone).
-let flameMesh;    // Custom triangular flame.
+let flameMesh;    // Orange cylinder representing thrust.
 let axisHelper;   // Visualizes ship's local axes.
 const shipMass   = 10;
 const shipRadius = 2;
@@ -56,7 +66,7 @@ const controlLerp    = 0.1;
 
 //
 // === Camera Variables ===
-let cameraAzimuth   = Math.PI; // Default back view (ship faces +Z, so camera behind at azimuth = π).
+let cameraAzimuth   = Math.PI; // Default back view.
 let cameraElevation = 0;
 const cameraDistance = 20;
 const mouseSensitivity = 0.002;
@@ -71,7 +81,7 @@ const dt = 0.016; // ~60 FPS.
 let trajectoryLine = null;  // Dashed line for 30-sec projection.
 let collisionIndicator = null; // Pink sphere for predicted collision.
 let collisionWarning = false;
-const maxSimSpeed = 10;  // Maximum simulated speed for trajectory gradient normalization.
+const maxSimSpeed = 10;  // For trajectory gradient normalization.
 
 //
 // === State & Key Tracking ===
@@ -82,7 +92,7 @@ const keys = {}; // Tracks pressed keys.
 //
 // === Initialization ===
 function init() {
-    // Scene, camera, renderer.
+    // Set up scene, camera, renderer.
     scene = new THREE.Scene();
     scene.background = new THREE.Color("#000000");
 
@@ -99,6 +109,20 @@ function init() {
     renderer.domElement.addEventListener("click", function() {
         this.requestPointerLock();
     });
+
+    // Load audio.
+    bgMusic = new Audio("bgMusic.mp3");
+    bgMusic.loop = true;
+    bgMusic.volume = 0.5;
+    collisionSound = new Audio("collision.mp3");
+    thrustSound = new Audio("thrust.mp3");
+    thrustSound.loop = true;
+    thrustSound.volume = 0.5;
+
+    // Start bgMusic on first user interaction.
+    document.addEventListener("keydown", () => {
+        if (bgMusic.paused) bgMusic.play().catch(() => {});
+    }, { once: true });
 
     // Lights.
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
@@ -129,7 +153,7 @@ function init() {
     shipPivot = new THREE.Object3D();
     scene.add(shipPivot);
 
-    // Create ship mesh (a cone) – rotate so its tip is forward (+Z).
+    // Create ship mesh (a cone) – rotated so its tip is forward (+Z).
     {
         const coneGeo = new THREE.ConeGeometry(1, 3, 16);
         const coneMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
@@ -138,20 +162,15 @@ function init() {
         shipPivot.add(shipMesh);
     }
 
-    // Create custom flame (triangular shape).
+    // Create new flame: an orange cylinder.
     {
-        const flameShape = new THREE.Shape();
-        flameShape.moveTo(-0.5, 0);
-        flameShape.lineTo(0.5, 0);
-        flameShape.lineTo(0, -2);
-        flameShape.lineTo(-0.5, 0);
-        const flameGeo = new THREE.ShapeGeometry(flameShape);
-        const flameMat = new THREE.MeshBasicMaterial({
-            color: 0xff6600,
-            transparent: true,
-            opacity: 0.0
-        });
-        flameMesh = new THREE.Mesh(flameGeo, flameMat);
+        // Cylinder with radius 0.4, height 1. Its pivot is at the center; we translate it so the tip is at the back.
+        const cylGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 16);
+        const cylMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+        flameMesh = new THREE.Mesh(cylGeo, cylMat);
+        // Rotate so the cylinder's height is along Z; default cylinder is along Y.
+        flameMesh.rotation.x = Math.PI / 2;
+        // Position it so that its front (one end) touches the ship's rear.
         flameMesh.position.set(0, 0, -1.8);
         shipMesh.add(flameMesh);
     }
@@ -160,35 +179,36 @@ function init() {
     axisHelper = new THREE.AxesHelper(3);
     shipPivot.add(axisHelper);
 
-    // Start ship 500 units from origin.
-    shipPivot.position.set(500, 0, 0);
-
-    // Create a realistic star field and attach it to the camera.
+    // Create a realistic star field attached to the camera.
     createStarField();
+
+    // Set starting position 500 units from origin.
+    shipPivot.position.set(500, 0, 0);
 
     // Event listeners.
     window.addEventListener("resize", onWindowResize);
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     document.addEventListener("mousemove", onMouseMove);
+    // Add mouse down for camera alignment.
+    renderer.domElement.addEventListener("mousedown", onMouseDown);
 
     statusElement = document.getElementById("status");
     document.getElementById("resetBtn").addEventListener("click", resetSimulation);
     document.getElementById("pauseBtn").addEventListener("click", togglePause);
 
+    resetSimulation();
     animate();
 }
 
 //
-// === Star Field ===
-// Instead of being part of the world, the stars are created on a fixed sky sphere
-// that is attached to the camera so they remain always in the distance.
+// === Create Star Field ===
+// The stars are placed on a sky sphere attached to the camera so that they always appear distant.
 function createStarField() {
     const starCount = 1000;
     const radius = 1000;
     const positions = [];
     for (let i = 0; i < starCount; i++) {
-        // Random point on sphere surface.
         const theta = Math.acos(2 * Math.random() - 1);
         const phi = 2 * Math.PI * Math.random();
         const x = radius * Math.sin(theta) * Math.cos(phi);
@@ -200,7 +220,6 @@ function createStarField() {
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2, depthWrite: false });
     const stars = new THREE.Points(starGeo, starMat);
-    // Attach stars to the camera so they always remain fixed in the background.
     camera.add(stars);
     scene.add(camera);
 }
@@ -215,7 +234,7 @@ function onWindowResize() {
 function onKeyDown(e) {
     const key = e.key.toLowerCase();
     keys[key] = true;
-    // Camera defaults:
+    // Camera defaults.
     if (key === "f") {
         cameraAzimuth = Math.PI;
         cameraElevation = 0;
@@ -231,17 +250,35 @@ function onKeyUp(e) {
 function onMouseMove(e) {
     if (document.pointerLockElement === renderer.domElement) {
         cameraAzimuth += e.movementX * mouseSensitivity;
-        // Removed the inversion: add rather than subtract.
         cameraElevation += e.movementY * mouseSensitivity;
-        cameraElevation = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraElevation));
+        cameraElevation = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraElevation));
     }
+}
+// Mouse down: left-click and right-click for camera alignment along velocity.
+function onMouseDown(e) {
+    // e.button: 0 = left, 2 = right.
+    if (shipVelocity.length() < 0.1) return; // Do nothing if almost stationary.
+    const normVel = shipVelocity.clone().normalize();
+    let desiredOffset;
+    if (e.button === 0) {
+        // Left click: camera aligns along the velocity vector (in front of the ship).
+        desiredOffset = normVel.clone().multiplyScalar(cameraDistance);
+    } else if (e.button === 2) {
+        // Right click: camera aligns opposite to velocity (behind the ship).
+        desiredOffset = normVel.clone().multiplyScalar(-cameraDistance);
+    }
+    // Compute spherical coordinates from desiredOffset.
+    // For simplicity, assume desiredOffset in world coordinates.
+    const r = desiredOffset.length();
+    const elev = Math.asin(desiredOffset.y / r);
+    const azim = Math.atan2(desiredOffset.x, desiredOffset.z);
+    cameraElevation = elev;
+    cameraAzimuth = azim;
 }
 
 //
 // === Ship Control Update ===
-// Space bar: thrust forward (only positive)
-// W: Pitch down, S: Pitch up
-// A: Yaw right, D: Yaw left
+// Space: thrust forward; W: pitch down, S: pitch up; A: yaw right, D: yaw left.
 function updateShipControls() {
     desiredThrust    = keys[" "] ? maxThrust : 0;
     desiredPitchRate = (keys["w"] ? -maxPitchRate : 0) + (keys["s"] ? maxPitchRate : 0);
@@ -265,9 +302,8 @@ function autoAlignShipNormal() {
         const tempObj = new THREE.Object3D();
         tempObj.position.copy(shipPivot.position);
         tempObj.lookAt(shipPivot.position.clone().add(desiredDir));
-        const adjustQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
-        const desiredQuat = tempObj.quaternion.clone().multiply(adjustQuat);
-        shipPivot.quaternion.slerp(desiredQuat, 0.02);
+        // No additional adjustment now.
+        shipPivot.quaternion.slerp(tempObj.quaternion, 0.02);
     }
 }
 function autoAlignShipOpposite() {
@@ -276,9 +312,7 @@ function autoAlignShipOpposite() {
         const tempObj = new THREE.Object3D();
         tempObj.position.copy(shipPivot.position);
         tempObj.lookAt(shipPivot.position.clone().sub(desiredDir));
-        const adjustQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI);
-        const desiredQuat = tempObj.quaternion.clone().multiply(adjustQuat);
-        shipPivot.quaternion.slerp(desiredQuat, 0.02);
+        shipPivot.quaternion.slerp(tempObj.quaternion, 0.02);
     }
 }
 
@@ -298,10 +332,9 @@ function updateCamera() {
 
 //
 // === Trajectory Projection & Collision Prediction ===
-// Simulate 30 seconds ahead using Euler integration (with dtSim steps) to compute a ballistic trajectory.
-// The dash spacing is adjusted based on average simulated speed.
-// Vertex colors form a gradient from blue (at rest) to red (fast).
-// If a collision is predicted (with the sun or planet), a pink sphere is placed at the estimated collision point.
+// Simulate 30 seconds ahead (with dtSim steps) using Euler integration to compute a ballistic trajectory.
+// Dash spacing is adjusted based on average simulated speed, and vertex colors form a gradient from blue to red.
+// If a predicted collision occurs (with sun or planet), a pink sphere is placed at the estimated collision point.
 function updateTrajectoryLine() {
     if (trajectoryLine) {
         scene.remove(trajectoryLine);
@@ -327,14 +360,14 @@ function updateTrajectoryLine() {
 
         // Gravity from sun.
         {
-            const rSun = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), simPos);
+            const rSun = new THREE.Vector3().subVectors(new THREE.Vector3(0, 0, 0), simPos);
             let distSq = rSun.lengthSq();
             if (distSq < 1e-6) distSq = 1e-6;
             const forceMag = (G * sunMass * shipMass) / distSq;
             rSun.normalize().multiplyScalar(forceMag / shipMass);
             simVel.add(rSun.multiplyScalar(dtSim));
         }
-        // Gravity from planet (using predicted planet position).
+        // Gravity from planet.
         {
             const pX = Math.cos(predictedPlanetAngle) * planetOrbitRadius;
             const pZ = Math.sin(predictedPlanetAngle) * planetOrbitRadius;
@@ -366,12 +399,12 @@ function updateTrajectoryLine() {
         }
     }
 
-    // Average simulated speed to adjust dash spacing.
+    // Adjust dash spacing based on average simulated speed.
     let avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
     const dashSize = 2 * (1 + avgSpeed / 10);
     const gapSize  = dashSize;
 
-    // Create geometry with vertex colors (gradient from blue to red).
+    // Create geometry with vertex colors (gradient: blue = at rest, red = fast).
     const trajGeom = new THREE.BufferGeometry().setFromPoints(points);
     const colors = [];
     for (let i = 0; i < speeds.length; i++) {
@@ -415,16 +448,34 @@ function updateTrajectoryLine() {
 
 //
 // === Flame Update ===
-// The flame scales and its opacity increases with thrust.
+// Instead of a broken flame, we now use an orange cylinder.
+// Its length (scale along Z) is proportional to current thrust.
 function updateFlame() {
     const t = Math.abs(currentThrust);
     if (t > 0.001) {
-        const scaleFactor = 1 + (t / maxThrust) * 4;
-        flameMesh.scale.set(scaleFactor, scaleFactor, 1);
-        flameMesh.material.opacity = Math.min(0.2 + 2 * t, 1.0);
+        // Base length is 1; scale factor increases linearly with thrust.
+        const lengthScale = 1 + (t / maxThrust) * 4;
+        // Scale only along Z; keep X and Y constant.
+        flameMesh.scale.set(1, 1, lengthScale);
         flameMesh.visible = true;
     } else {
         flameMesh.visible = false;
+    }
+}
+
+//
+// === Audio Update ===
+// Play thrust sound while thrust is applied.
+function updateAudio() {
+    if (currentThrust > 0.001) {
+        if (thrustSound.paused) {
+            thrustSound.play().catch(() => {});
+        }
+    } else {
+        if (!thrustSound.paused) {
+            thrustSound.pause();
+            thrustSound.currentTime = 0;
+        }
     }
 }
 
@@ -472,6 +523,9 @@ function update(dt) {
     } else if (keys["k"]) {
         autoAlignShipOpposite();
     }
+
+    // Update audio (thrust sound).
+    updateAudio();
 
     // Compute gravitational acceleration.
     const accel = new THREE.Vector3(0, 0, 0);
@@ -535,7 +589,7 @@ function update(dt) {
     // Update flame visuals.
     updateFlame();
 
-    // Update trajectory projection and collision prediction.
+    // Update trajectory projection & collision prediction.
     updateTrajectoryLine();
 
     // Update HUD.
@@ -547,15 +601,19 @@ function update(dt) {
 function endGame(msg) {
     paused = true;
     if (animationId) cancelAnimationFrame(animationId);
+    if (!collisionSound.paused) collisionSound.pause();
     statusElement.innerHTML = `<strong>${msg}</strong><br>Simulation stopped.`;
+    collisionSound.play().catch(() => {});
 }
 function resetSimulation() {
     shipVelocity.set(0, 0, 0);
     shipPivot.position.set(500, 0, 0);
-    shipPivot.rotation.set(0, 0, 0);
+    shipPivot.rotation.set(0, -Math.PI/2, 0);
     planetAngle = 0;
     currentThrust = currentPitchRate = currentYawRate = 0;
     desiredThrust = desiredPitchRate = desiredYawRate = 0;
+    cameraAzimuth = Math.PI/2;
+    cameraElevation = Math.PI/24;
     paused = false;
     animate();
 }
