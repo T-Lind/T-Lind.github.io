@@ -1,0 +1,50 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    color: #fff;
+}
+
+#controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+#controls button, #controls label {
+    margin: 5px;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+#status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 1em;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* New info overlay styling */
+#info {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10;
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orbits 3D - Basic Prototype</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+<div id="instructions">
+    <p>Click to lock pointer and control the spaceship with WASD keys.</p>
+</div>
+<!-- Include Three.js from a CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- PointerLockControls from the Three.js examples -->
+<script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
+<script>
+    // --- Setup Scene, Camera, and Renderer ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    // Set up a perspective camera (FOV, aspect ratio, near, far)
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // Create the renderer and attach it to the DOM
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- Set up First-Person Controls ---
+    const controls = new THREE.PointerLockControls(camera, document.body);
+    document.body.addEventListener('click', () => {
+        controls.lock();
+    }, false);
+    scene.add(controls.getObject());
+
+    // --- Spaceship Movement Variables ---
+    const velocity = new THREE.Vector3();
+    const moveSpeed = 10.0; // units per second
+
+    // Movement state
+    const keys = { forward: false, backward: false, left: false, right: false };
+
+    document.addEventListener('keydown', (event) => {
+        switch(event.code) {
+            case "KeyW": keys.forward = true; break;
+            case "KeyS": keys.backward = true; break;
+            case "KeyA": keys.left = true; break;
+            case "KeyD": keys.right = true; break;
+        }
+    });
+    document.addEventListener('keyup', (event) => {
+        switch(event.code) {
+            case "KeyW": keys.forward = false; break;
+            case "KeyS": keys.backward = false; break;
+            case "KeyA": keys.left = false; break;
+            case "KeyD": keys.right = false; break;
+        }
+    });
+
+    // --- Add Lighting ---
+    // A simple point light at the center (can represent our star’s light)
+    const light = new THREE.PointLight(0xffffff, 1, 1000);
+    light.position.set(0, 0, 0);
+    scene.add(light);
+
+    // --- Create Celestial Bodies ---
+    // Central Star (could also serve as a visual light source)
+    const starGeometry = new THREE.SphereGeometry(5, 32, 32);
+    const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffea00 });
+    const star = new THREE.Mesh(starGeometry, starMaterial);
+    star.position.set(0, 0, -50); // Place the star ahead of the spaceship's starting position
+    scene.add(star);
+
+    // Planet 1: A small blue planet orbiting the star
+    const planetGeom1 = new THREE.SphereGeometry(2, 32, 32);
+    const planetMat1 = new THREE.MeshPhongMaterial({ color: 0x00aaff });
+    const planet1 = new THREE.Mesh(planetGeom1, planetMat1);
+    scene.add(planet1);
+
+    // Planet 2: A larger red planet orbiting the star on a different radius/speed
+    const planetGeom2 = new THREE.SphereGeometry(3, 32, 32);
+    const planetMat2 = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+    const planet2 = new THREE.Mesh(planetGeom2, planetMat2);
+    scene.add(planet2);
+
+    // --- Handle Window Resizing ---
+    window.addEventListener('resize', onWindowResize, false);
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // --- Variables for Planetary Orbits ---
+    const clock = new THREE.Clock();
+
+    // --- Animation Loop ---
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        const elapsed = clock.getElapsedTime();
+
+        // --- Update Spaceship (Camera) Movement ---
+        // Reset velocity and update based on key inputs
+        velocity.set(0, 0, 0);
+        if (keys.forward) velocity.z -= moveSpeed * delta;
+        if (keys.backward) velocity.z += moveSpeed * delta;
+        if (keys.left) velocity.x -= moveSpeed * delta;
+        if (keys.right) velocity.x += moveSpeed * delta;
+
+        // Use PointerLockControls methods to move the camera (spaceship)
+        controls.moveRight(velocity.x);
+        controls.moveForward(velocity.z);
+        // (For a full 6-DOF spaceship, you might later add vertical movement)
+
+        // --- Update Planetary Orbits ---
+        // Planet 1: Orbits with a radius of 20 units around the star
+        const radius1 = 20;
+        planet1.position.x = star.position.x + radius1 * Math.cos(elapsed * 0.5);
+        planet1.position.z = star.position.z + radius1 * Math.sin(elapsed * 0.5);
+        planet1.position.y = star.position.y;  // keep in the same horizontal plane
+
+        // Planet 2: Orbits with a radius of 30 units at a different speed
+        const radius2 = 30;
+        planet2.position.x = star.position.x + radius2 * Math.cos(elapsed * 0.3);
+        planet2.position.z = star.position.z + radius2 * Math.sin(elapsed * 0.3);
+        planet2.position.y = star.position.y;
+
+        renderer.render(scene, camera);
+    }
+    animate();
+</script>
+</body>
+</html>
