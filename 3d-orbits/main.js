@@ -1,24 +1,29 @@
 // 3D Orbits – Advanced Collision Prediction, Sound, & New Camera Controls
 // -------------------------------------------------------------------------
 // This script implements:
-// • Non‑inverted, mouse‑controlled camera with pointer lock.
-// • F/B keys for default back/front views.
+// • Mouse-controlled camera with pointer lock.
 // • Ship controls remapped as follows:
 //     Space: Thrust forward (only positive)
-//     W: Pitch down, S: Pitch up
-//     A: Yaw right, D: Yaw left
-//     L: Auto-align ship’s forward with velocity
-//     K: Auto-align ship’s forward opposite to velocity
-// • A 30‑sec ballistic trajectory with dash spacing that varies with simulated speed
-//   and a gradient from blue (at rest) to red (fast).
-// • Collision prediction: a pink sphere appears at the predicted collision point with a warning on the HUD.
-// • A realistic star field on a sky sphere attached to the camera.
-// • Sound effects for background music, thrust, and collision.
-// • Instead of a triangular flame, an orange cylinder is rendered out the back of the ship,
-//   with its length proportional to thrust.
-// • Additionally, left- and right-click instantly align the camera to the ship’s velocity
-//   (left-click: along velocity; right-click: opposite to velocity).
+//     W: Pitch Up
+//     S: Pitch Down
+//     A: Yaw Left
+//     D: Yaw Right
+//     Q: Roll Left
+//     E: Roll Right
+//     K: Auto‑Align ship’s forward with velocity (auto-align forward)
+//     L: Auto‑Align ship’s forward opposite to velocity (auto-align back)
+//     Shift + Left Click: Continuous auto‑align forward while held
+//     Shift + Right Click: Continuous auto‑align back while held
+//     R: Reset the game
+//     P: Toggle Pause
+//     H: Toggle Help overlay
 //
+// Additional features:
+// • A 30‑sec ballistic trajectory with dynamic dash spacing and a blue-to-red gradient.
+// • Collision prediction with a pink indicator.
+// • A realistic star field.
+// • Sound effects for music, thrust, and collision with volume sliders in the top right.
+// • On‑screen crosshair and help overlay for controls.
 
 //
 // === Global Scene & DOM Elements ===
@@ -32,12 +37,12 @@ let bgMusic, collisionSound, thrustSound;
 //
 // === Celestial Bodies ===
 let sunMesh, planetMesh;
-const sunMass      = 100000;
-const sunRadius    = 50;
-const planetMass   = 8000;
+const sunMass = 100000;
+const sunRadius = 50;
+const planetMass = 8000;
 const planetRadius = 12;
 const planetOrbitRadius = 100;
-const planetOrbitSpeed  = 0.2; // radians per second
+const planetOrbitSpeed = 0.2; // radians per second
 let planetAngle = 0;
 
 //
@@ -46,34 +51,37 @@ let shipPivot;    // Container for the ship mesh, flame, and axis helper.
 let shipMesh;     // The ship (a cone).
 let flameMesh;    // Orange cylinder representing thrust.
 let axisHelper;   // Visualizes ship's local axes.
-const shipMass   = 10;
+const shipMass = 10;
 const shipRadius = 2;
 let shipVelocity = new THREE.Vector3(0, 0, 0);
 
 //
 // === Control Variables ===
 // Smoothed control inputs.
-let desiredThrust    = 0;  // Thrust (only positive).
-let desiredPitchRate = 0;  // Controlled by W/S (W pitches down, S pitches up).
-let desiredYawRate   = 0;  // Controlled by A/D (A yaws right, D yaws left).
-let currentThrust    = 0;
+let desiredThrust = 0;  // Thrust (only positive).
+let desiredPitchRate = 0;  // For pitching (rotation about X).
+let desiredYawRate = 0;  // For yawing (rotation about Y).
+let desiredRollRate = 0;  // For rolling (rotation about Z).
+let currentThrust = 0;
 let currentPitchRate = 0;
-let currentYawRate   = 0;
-const maxThrust      = 0.2;
-const maxPitchRate   = 1.0; // radians per second.
-const maxYawRate     = 1.0;
-const controlLerp    = 0.1;
+let currentYawRate = 0;
+let currentRollRate = 0;
+const maxThrust = 0.2;
+const maxPitchRate = 1.0; // radians per second.
+const maxYawRate = 1.0;
+const maxRollRate = 1.0;
+const controlLerp = 0.1;
 
 //
 // === Camera Variables ===
-let cameraAzimuth   = Math.PI; // Default back view.
+let cameraAzimuth = Math.PI; // Default view.
 let cameraElevation = 0;
 const cameraDistance = 20;
 const mouseSensitivity = 0.002;
 
 //
 // === Simulation Constants ===
-const G  = 0.2;
+const G = 0.2;
 const dt = 0.016; // ~60 FPS.
 
 //
@@ -81,13 +89,18 @@ const dt = 0.016; // ~60 FPS.
 let trajectoryLine = null;  // Dashed line for 30-sec projection.
 let collisionIndicator = null; // Pink sphere for predicted collision.
 let collisionWarning = false;
-const maxSimSpeed = 10;  // For trajectory gradient normalization.
+const maxSimSpeed = 15;  // For trajectory gradient normalization.
 
 //
 // === State & Key Tracking ===
 let paused = false;
 let animationId;
 const keys = {}; // Tracks pressed keys.
+
+//
+// === Mouse Button Tracking for Continuous Auto‑Alignment ===
+let shiftLeftMouseDown = false;
+let shiftRightMouseDown = false;
 
 //
 // === Initialization ===
@@ -101,12 +114,12 @@ function init() {
         0.1, 3000);
     camera.position.set(0, 5, 15);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     // Request pointer lock on canvas click.
-    renderer.domElement.addEventListener("click", function() {
+    renderer.domElement.addEventListener("click", function () {
         this.requestPointerLock();
     });
 
@@ -121,8 +134,74 @@ function init() {
 
     // Start bgMusic on first user interaction.
     document.addEventListener("keydown", () => {
-        if (bgMusic.paused) bgMusic.play().catch(() => {});
-    }, { once: true });
+        if (bgMusic.paused) bgMusic.play().catch(() => {
+        });
+    }, {once: true});
+
+    // Create volume sliders for music and sound effects in the top right.
+    const volumeContainer = document.createElement("div");
+    volumeContainer.style.position = "absolute";
+    volumeContainer.style.top = "10px";
+    volumeContainer.style.right = "10px";
+    volumeContainer.style.backgroundColor = "rgba(0,0,0,0.5)";
+    volumeContainer.style.padding = "10px";
+    volumeContainer.style.color = "#fff";
+    volumeContainer.style.fontFamily = "sans-serif";
+    volumeContainer.innerHTML = `
+        <label>Music Volume: <input id="musicSlider" type="range" min="0" max="1" step="0.01" value="0.5"></label><br>
+        <label>SFX Volume: <input id="sfxSlider" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+    `;
+    document.body.appendChild(volumeContainer);
+    document.getElementById("musicSlider").addEventListener("input", function (e) {
+        bgMusic.volume = parseFloat(e.target.value);
+    });
+    document.getElementById("sfxSlider").addEventListener("input", function (e) {
+        thrustSound.volume = parseFloat(e.target.value);
+        collisionSound.volume = parseFloat(e.target.value);
+    });
+
+    // Add on-screen crosshair.
+    const crosshair = document.createElement("div");
+    crosshair.style.position = "absolute";
+    crosshair.style.top = "50%";
+    crosshair.style.left = "50%";
+    crosshair.style.transform = "translate(-50%, -50%)";
+    crosshair.style.fontSize = "24px";
+    crosshair.style.color = "#fff";
+    crosshair.style.pointerEvents = "none";
+    crosshair.innerHTML = "+";
+    document.body.appendChild(crosshair);
+
+    // Create a toggleable help overlay.
+    const helpOverlay = document.createElement("div");
+    helpOverlay.id = "helpOverlay";
+    helpOverlay.style.position = "absolute";
+    helpOverlay.style.bottom = "10px";
+    helpOverlay.style.right = "10px";
+    helpOverlay.style.backgroundColor = "rgba(0,0,0,0.5)";
+    helpOverlay.style.padding = "10px";
+    helpOverlay.style.color = "#fff";
+    helpOverlay.style.fontSize = "14px";
+    helpOverlay.style.fontFamily = "sans-serif";
+    helpOverlay.style.display = "none";
+    helpOverlay.innerHTML = `
+<strong>Controls:</strong><br>
+W: Pitch Up<br>
+S: Pitch Down<br>
+A: Yaw Left<br>
+D: Yaw Right<br>
+Q: Roll Left<br>
+E: Roll Right<br>
+Space: Thrust<br>
+K: Auto‑Align Forward<br>
+L: Auto‑Align Back<br>
+Shift+Left Click: Continuous Auto‑Align Forward<br>
+Shift+Right Click: Continuous Auto‑Align Back<br>
+R: Reset<br>
+P: Pause/Resume<br>
+H: Toggle Help
+    `;
+    document.body.appendChild(helpOverlay);
 
     // Lights.
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
@@ -134,7 +213,7 @@ function init() {
     // Sun at origin.
     {
         const sunGeo = new THREE.SphereGeometry(sunRadius, 32, 32);
-        const sunMat = new THREE.MeshPhongMaterial({ color: 0xffbb00, emissive: 0xaa6600 });
+        const sunMat = new THREE.MeshPhongMaterial({color: 0xffbb00, emissive: 0xaa6600});
         sunMesh = new THREE.Mesh(sunGeo, sunMat);
         sunMesh.position.set(0, 0, 0);
         scene.add(sunMesh);
@@ -143,7 +222,7 @@ function init() {
     // Orbiting planet.
     {
         const planetGeo = new THREE.SphereGeometry(planetRadius, 32, 32);
-        const planetMat = new THREE.MeshPhongMaterial({ color: 0x6688ff });
+        const planetMat = new THREE.MeshPhongMaterial({color: 0x6688ff});
         planetMesh = new THREE.Mesh(planetGeo, planetMat);
         planetMesh.position.set(planetOrbitRadius, 0, 0);
         scene.add(planetMesh);
@@ -156,22 +235,27 @@ function init() {
     // Create ship mesh (a cone) – rotated so its tip is forward (+Z).
     {
         const coneGeo = new THREE.ConeGeometry(1, 3, 16);
-        const coneMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        const coneMat = new THREE.MeshPhongMaterial({color: 0xffffff});
         shipMesh = new THREE.Mesh(coneGeo, coneMat);
         shipMesh.rotation.x = Math.PI / 2;
         shipPivot.add(shipMesh);
     }
 
-    // Create new flame: an orange cylinder.
+    // Create flame: an orange cylinder.
     {
-        // Cylinder with radius 0.4, height 1. Its pivot is at the center; we translate it so the tip is at the back.
-        const cylGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 16);
-        const cylMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+        // Create a cylinder with radius 0.4 and height 1.
+        // By default, the cylinder extends from y=-0.5 to y=0.5.
+        const cylGeo = new THREE.CylinderGeometry(0.4, 0.9, 1, 16);
+        // Translate so that the top face (originally at y = 0.5) becomes the attachment point (y = 0).
+        cylGeo.translate(-1.5, -1, 0);
+
+        const cylMat = new THREE.MeshBasicMaterial({color: 0xff6600});
         flameMesh = new THREE.Mesh(cylGeo, cylMat);
-        // Rotate so the cylinder's height is along Z; default cylinder is along Y.
-        flameMesh.rotation.x = Math.PI / 2;
-        // Position it so that its front (one end) touches the ship's rear.
-        flameMesh.position.set(0, 0, -1.8);
+        // Rotate so the cylinder, originally along Y, now extends along -Z.
+        flameMesh.rotation.y = Math.PI / 2;
+        // Position it so that its flat face is flush with the base of the cone.
+        // With the cone centered and rotated, its base is at z = -1.5.
+        flameMesh.position.set(0, 0, -1.5);
         shipMesh.add(flameMesh);
     }
 
@@ -190,12 +274,13 @@ function init() {
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     document.addEventListener("mousemove", onMouseMove);
-    // Add mouse down for camera alignment.
+    // Add mouse down/up for camera alignment and continuous auto‑alignment.
     renderer.domElement.addEventListener("mousedown", onMouseDown);
+    renderer.domElement.addEventListener("mouseup", onMouseUp);
 
     statusElement = document.getElementById("status");
-    document.getElementById("resetBtn").addEventListener("click", resetSimulation);
-    document.getElementById("pauseBtn").addEventListener("click", togglePause);
+    document.getElementById("resetBtn")?.addEventListener("click", resetSimulation);
+    document.getElementById("pauseBtn")?.addEventListener("click", togglePause);
 
     resetSimulation();
     animate();
@@ -218,7 +303,7 @@ function createStarField() {
     }
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2, depthWrite: false });
+    const starMat = new THREE.PointsMaterial({color: 0xffffff, size: 2, depthWrite: false});
     const stars = new THREE.Points(starGeo, starMat);
     camera.add(stars);
     scene.add(camera);
@@ -231,44 +316,58 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
 function onKeyDown(e) {
     const key = e.key.toLowerCase();
     keys[key] = true;
-    // Camera defaults.
-    if (key === "f") {
-        cameraAzimuth = Math.PI;
-        cameraElevation = 0;
+    if (key === "r") {  // Reset game.
+        resetSimulation();
     }
-    if (key === "b") {
-        cameraAzimuth = 0;
-        cameraElevation = 0;
+    if (key === "p") {  // Toggle pause.
+        togglePause();
+    }
+    if (key === "h") {  // Toggle help overlay.
+        const help = document.getElementById("helpOverlay");
+        help.style.display = help.style.display === "none" ? "block" : "none";
     }
 }
+
 function onKeyUp(e) {
     keys[e.key.toLowerCase()] = false;
 }
+
 function onMouseMove(e) {
     if (document.pointerLockElement === renderer.domElement) {
         cameraAzimuth += e.movementX * mouseSensitivity;
-        cameraElevation += e.movementY * mouseSensitivity;
+        // Flip vertical movement.
+        cameraElevation -= e.movementY * mouseSensitivity;
         cameraElevation = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraElevation));
     }
 }
-// Mouse down: left-click and right-click for camera alignment along velocity.
+
+// Mouse down: left/right click for camera alignment and setting continuous auto‑alignment.
 function onMouseDown(e) {
-    // e.button: 0 = left, 2 = right.
     if (shipVelocity.length() < 0.1) return; // Do nothing if almost stationary.
+
+    // If Shift is held, set continuous auto‑alignment flags.
+    if (e.shiftKey) {
+        if (e.button === 0) {
+            shiftLeftMouseDown = true;
+        } else if (e.button === 2) {
+            shiftRightMouseDown = true;
+        }
+    }
+
+    // Camera alignment code.
     const normVel = shipVelocity.clone().normalize();
     let desiredOffset;
     if (e.button === 0) {
-        // Left click: camera aligns along the velocity vector (in front of the ship).
-        desiredOffset = normVel.clone().multiplyScalar(cameraDistance);
-    } else if (e.button === 2) {
-        // Right click: camera aligns opposite to velocity (behind the ship).
+        // Left click: camera aligns behind the ship.
         desiredOffset = normVel.clone().multiplyScalar(-cameraDistance);
+    } else if (e.button === 2) {
+        // Right click: camera aligns in front of the ship.
+        desiredOffset = normVel.clone().multiplyScalar(cameraDistance);
     }
-    // Compute spherical coordinates from desiredOffset.
-    // For simplicity, assume desiredOffset in world coordinates.
     const r = desiredOffset.length();
     const elev = Math.asin(desiredOffset.y / r);
     const azim = Math.atan2(desiredOffset.x, desiredOffset.z);
@@ -276,36 +375,51 @@ function onMouseDown(e) {
     cameraAzimuth = azim;
 }
 
+// Mouse up: clear continuous auto‑alignment flags.
+function onMouseUp(e) {
+    if (e.button === 0) {
+        shiftLeftMouseDown = false;
+    } else if (e.button === 2) {
+        shiftRightMouseDown = false;
+    }
+}
+
 //
 // === Ship Control Update ===
-// Space: thrust forward; W: pitch down, S: pitch up; A: yaw right, D: yaw left.
+// Space: thrust forward.
+// W: Pitch Up, S: Pitch Down.
+// A: Yaw Left, D: Yaw Right.
+// Q: Roll Left, E: Roll Right.
 function updateShipControls() {
-    desiredThrust    = keys[" "] ? maxThrust : 0;
+    desiredThrust = keys[" "] ? maxThrust : 0;
     desiredPitchRate = (keys["w"] ? -maxPitchRate : 0) + (keys["s"] ? maxPitchRate : 0);
-    desiredYawRate   = (keys["a"] ? maxYawRate : 0) + (keys["d"] ? -maxYawRate : 0);
+    desiredYawRate = (keys["a"] ? maxYawRate : 0) + (keys["d"] ? -maxYawRate : 0);
+    desiredRollRate = (keys["q"] ? maxRollRate : 0) + (keys["e"] ? -maxRollRate : 0);
 
-    currentThrust    = THREE.MathUtils.lerp(currentThrust, desiredThrust, controlLerp);
+    currentThrust = THREE.MathUtils.lerp(currentThrust, desiredThrust, controlLerp);
     currentPitchRate = THREE.MathUtils.lerp(currentPitchRate, desiredPitchRate, controlLerp);
-    currentYawRate   = THREE.MathUtils.lerp(currentYawRate, desiredYawRate, controlLerp);
+    currentYawRate = THREE.MathUtils.lerp(currentYawRate, desiredYawRate, controlLerp);
+    currentRollRate = THREE.MathUtils.lerp(currentRollRate, desiredRollRate, controlLerp);
 
     shipPivot.rotateX(currentPitchRate * dt);
     shipPivot.rotateY(currentYawRate * dt);
+    shipPivot.rotateZ(currentRollRate * dt);
 }
 
 //
 // === Auto-Alignment Functions ===
-// L: Align ship’s forward (+Z) with its velocity (pointing where you’re going).
-// K: Align ship’s forward with the opposite of its velocity.
+// K: Align ship’s forward with velocity.
+// L: Align ship’s forward opposite to its velocity.
 function autoAlignShipNormal() {
     if (shipVelocity.length() > 0.1) {
         const desiredDir = shipVelocity.clone().normalize();
         const tempObj = new THREE.Object3D();
         tempObj.position.copy(shipPivot.position);
         tempObj.lookAt(shipPivot.position.clone().add(desiredDir));
-        // No additional adjustment now.
         shipPivot.quaternion.slerp(tempObj.quaternion, 0.02);
     }
 }
+
 function autoAlignShipOpposite() {
     if (shipVelocity.length() > 0.1) {
         const desiredDir = shipVelocity.clone().normalize();
@@ -318,7 +432,7 @@ function autoAlignShipOpposite() {
 
 //
 // === Camera Update ===
-// The camera offset is computed using fixed spherical coordinates (controlled by mouse and F/B keys)
+// The camera offset is computed using fixed spherical coordinates (controlled by mouse)
 // and is independent of the ship's rotation.
 function updateCamera() {
     const offset = new THREE.Vector3(
@@ -332,9 +446,6 @@ function updateCamera() {
 
 //
 // === Trajectory Projection & Collision Prediction ===
-// Simulate 30 seconds ahead (with dtSim steps) using Euler integration to compute a ballistic trajectory.
-// Dash spacing is adjusted based on average simulated speed, and vertex colors form a gradient from blue to red.
-// If a predicted collision occurs (with sun or planet), a pink sphere is placed at the estimated collision point.
 function updateTrajectoryLine() {
     if (trajectoryLine) {
         scene.remove(trajectoryLine);
@@ -402,7 +513,7 @@ function updateTrajectoryLine() {
     // Adjust dash spacing based on average simulated speed.
     let avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
     const dashSize = 2 * (1 + avgSpeed / 10);
-    const gapSize  = dashSize;
+    const gapSize = dashSize;
 
     // Create geometry with vertex colors (gradient: blue = at rest, red = fast).
     const trajGeom = new THREE.BufferGeometry().setFromPoints(points);
@@ -430,7 +541,7 @@ function updateTrajectoryLine() {
         collisionWarning = true;
         if (!collisionIndicator) {
             const colGeo = new THREE.SphereGeometry(3, 16, 16);
-            const colMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+            const colMat = new THREE.MeshBasicMaterial({color: 0xff00ff});
             collisionIndicator = new THREE.Mesh(colGeo, colMat);
             scene.add(collisionIndicator);
         }
@@ -448,15 +559,14 @@ function updateTrajectoryLine() {
 
 //
 // === Flame Update ===
-// Instead of a broken flame, we now use an orange cylinder.
-// Its length (scale along Z) is proportional to current thrust.
+// The flame's length (scale along Z) is proportional to current thrust.
 function updateFlame() {
     const t = Math.abs(currentThrust);
     if (t > 0.001) {
         // Base length is 1; scale factor increases linearly with thrust.
-        const lengthScale = 1 + (t / maxThrust) * 4;
-        // Scale only along Z; keep X and Y constant.
-        flameMesh.scale.set(1, 1, lengthScale);
+        const lengthScale = 1 + (t / maxThrust) * 2;
+        // Scale only along Z; the flame extends along its negative Z axis.
+        flameMesh.scale.set(1, lengthScale, 1);
         flameMesh.visible = true;
     } else {
         flameMesh.visible = false;
@@ -469,7 +579,8 @@ function updateFlame() {
 function updateAudio() {
     if (currentThrust > 0.001) {
         if (thrustSound.paused) {
-            thrustSound.play().catch(() => {});
+            thrustSound.play().catch(() => {
+            });
         }
     } else {
         if (!thrustSound.paused) {
@@ -517,10 +628,10 @@ function update(dt) {
     // Update ship controls.
     updateShipControls();
 
-    // Auto-align if L or K are pressed.
-    if (keys["l"]) {
+    // Auto-align if K or L keys are pressed, or if continuous auto‑alignment flags are set.
+    if (keys["k"] || shiftLeftMouseDown) {
         autoAlignShipNormal();
-    } else if (keys["k"]) {
+    } else if (keys["l"] || shiftRightMouseDown) {
         autoAlignShipOpposite();
     }
 
@@ -603,20 +714,23 @@ function endGame(msg) {
     if (animationId) cancelAnimationFrame(animationId);
     if (!collisionSound.paused) collisionSound.pause();
     statusElement.innerHTML = `<strong>${msg}</strong><br>Simulation stopped.`;
-    collisionSound.play().catch(() => {});
+    collisionSound.play().catch(() => {
+    });
 }
+
 function resetSimulation() {
     shipVelocity.set(0, 0, 0);
     shipPivot.position.set(500, 0, 0);
-    shipPivot.rotation.set(0, -Math.PI/2, 0);
+    shipPivot.rotation.set(0, -Math.PI / 2, 0);
     planetAngle = 0;
-    currentThrust = currentPitchRate = currentYawRate = 0;
-    desiredThrust = desiredPitchRate = desiredYawRate = 0;
-    cameraAzimuth = Math.PI/2;
-    cameraElevation = Math.PI/24;
+    currentThrust = currentPitchRate = currentYawRate = currentRollRate = 0;
+    desiredThrust = desiredPitchRate = desiredYawRate = desiredRollRate = 0;
+    cameraAzimuth = Math.PI / 2;
+    cameraElevation = Math.PI / 24;
     paused = false;
     animate();
 }
+
 function togglePause() {
     paused = !paused;
     if (!paused) animate();
