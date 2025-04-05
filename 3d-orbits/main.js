@@ -12,8 +12,8 @@
 //     E: Roll Right
 //     K: Auto‑Align ship’s forward with velocity (auto-align forward)
 //     L: Auto‑Align ship’s forward opposite to velocity (auto-align back)
-//     Shift + Left Click: Continuous auto‑align forward while held
-//     Shift + Right Click: Continuous auto‑align back while held
+//     Shift+Left Click: Continuous auto‑align forward while held
+//     Shift+Right Click: Continuous auto‑align back while held
 //     R: Reset the game
 //     P: Toggle Pause
 //     H: Toggle Help overlay
@@ -35,17 +35,6 @@ let statusElement;
 let bgMusic, collisionSound, thrustSound;
 
 //
-// === Celestial Bodies ===
-let sunMesh, planetMesh;
-const sunMass = 100000;
-const sunRadius = 50;
-const planetMass = 8000;
-const planetRadius = 12;
-const planetOrbitRadius = 100;
-const planetOrbitSpeed = 0.2; // radians per second
-let planetAngle = 0;
-
-//
 // === Spaceship & Motion ===
 let shipPivot;    // Container for the ship mesh, flame, and axis helper.
 let shipMesh;     // The ship (a cone).
@@ -57,24 +46,23 @@ let shipVelocity = new THREE.Vector3(0, 0, 0);
 
 //
 // === Control Variables ===
-// Smoothed control inputs.
-let desiredThrust = 0;  // Thrust (only positive).
-let desiredPitchRate = 0;  // For pitching (rotation about X).
-let desiredYawRate = 0;  // For yawing (rotation about Y).
-let desiredRollRate = 0;  // For rolling (rotation about Z).
+let desiredThrust = 0;
+let desiredPitchRate = 0;
+let desiredYawRate = 0;
+let desiredRollRate = 0;
 let currentThrust = 0;
 let currentPitchRate = 0;
 let currentYawRate = 0;
 let currentRollRate = 0;
 const maxThrust = 0.2;
-const maxPitchRate = 1.0; // radians per second.
+const maxPitchRate = 1.0;
 const maxYawRate = 1.0;
 const maxRollRate = 1.0;
 const controlLerp = 0.1;
 
 //
 // === Camera Variables ===
-let cameraAzimuth = Math.PI; // Default view.
+let cameraAzimuth = Math.PI;
 let cameraElevation = 0;
 const cameraDistance = 20;
 const mouseSensitivity = 0.002;
@@ -82,20 +70,20 @@ const mouseSensitivity = 0.002;
 //
 // === Simulation Constants ===
 const G = 0.2;
-const dt = 0.016; // ~60 FPS.
+const dt = 0.016; // ~60 FPS
 
 //
 // === Trajectory Projection & Collision Prediction ===
-let trajectoryLine = null;  // Dashed line for 30-sec projection.
-let collisionIndicator = null; // Pink sphere for predicted collision.
+let trajectoryLine = null;
+let collisionIndicator = null;
 let collisionWarning = false;
-const maxSimSpeed = 15;  // For trajectory gradient normalization.
+const maxSimSpeed = 20;
 
 //
 // === State & Key Tracking ===
 let paused = false;
 let animationId;
-const keys = {}; // Tracks pressed keys.
+const keys = {};
 
 //
 // === Mouse Button Tracking for Continuous Auto‑Alignment ===
@@ -103,9 +91,127 @@ let shiftLeftMouseDown = false;
 let shiftRightMouseDown = false;
 
 //
+// === Helper Function: Calculate Orbit Speed ===
+// For a circular orbit: v = sqrt(G * centralMass / orbitRadius)
+function calculateOrbitSpeed(centralMass, orbitRadius) {
+    return 0.005 * Math.sqrt(G * centralMass / orbitRadius);
+}
+
+//
+// === Solar System Configuration & Massive Bodies Array ===
+// The config now no longer requires an "orbitSpeed" property.
+// Also, the radii for orbits and the asteroid belt have been increased.
+// If no initialAngle is provided, a random angle is assigned.
+const solarSystem = {
+    sun: {
+        name: "Sun",
+        mass: 100000,
+        radius: 50,
+        color: 0xffbb00,
+        emissive: 0xaa6600,
+        glowSize: 60,
+        position: new THREE.Vector3(0, 0, 0)
+    },
+    planets: [
+        {
+            name: "Planet1",
+            mass: 8000,
+            radius: 12,
+            orbitRadius: 200, // increased
+            color: 0x6688ff,
+            initialAngle: Math.PI / 4,
+            texture: "",
+            // initialAngle is optional; if not provided, a random value is used.
+            moons: [
+                {
+                    name: "Moon1",
+                    mass: 100,
+                    radius: 3,
+                    orbitRadius: 40, // increased
+                    color: 0x888888,
+                    texture: ""
+                    // Optionally, you can add initialAngle here.
+                }
+            ]
+        },
+        {
+            name: "Planet2",
+            mass: 9000,
+            radius: 14,
+            orbitRadius: 300,
+            initialAngle: 3 * Math.PI / 2,
+            color: 0xff8855,
+            texture: "",
+            moons: []
+        },
+        {
+            name: "Planet3",
+            mass: 10000,
+            radius: 16,
+            orbitRadius: 400,
+            color: 0x55ff55,
+            initialAngle: 3 * Math.PI / 4,
+            texture: "",
+            moons: [
+                {
+                    name: "Moon2",
+                    mass: 200,
+                    radius: 4,
+                    orbitRadius: 50,
+                    color: 0xaaaaaa,
+                    texture: ""
+                }
+            ]
+        },
+        {
+            name: "Planet4",
+            mass: 50000,
+            radius: 32,
+            orbitRadius: 1000,
+            color: 0xdd320f,
+            initialAngle: 7 * Math.PI / 4,
+            texture: "",
+            moons: [
+                {
+                    name: "Moon3",
+                    mass: 1200,
+                    radius: 4,
+                    orbitRadius: 75,
+                    color: 0xaaaaaa,
+                    texture: ""
+                }
+            ]
+        },
+        {
+            name: "Planet5",
+            mass: 11000,
+            radius: 14,
+            orbitRadius: 1400,
+            color: 0x7733ff,
+            initialAngle: 5 * Math.PI / 4,
+            texture: "",
+            moons: []
+        }
+    ],
+    asteroidBelt: {
+        count: 500,
+        innerRadius: 600,
+        outerRadius: 800,
+        beltHeight: 20,
+        asteroidSize: { min: 0.5, max: 2 }
+    }
+};
+
+// Array for massive bodies (sun, planets, and moons) used for gravity and collision.
+let massiveBodies = [];
+
+// Global arrays for created planet groups and the asteroid belt.
+let planetGroups = [];
+let asteroidBeltGroup;
+
+//
 // === Initialization ===
 function init() {
-    // Set up scene, camera, renderer.
     scene = new THREE.Scene();
     scene.background = new THREE.Color("#000000");
 
@@ -114,16 +220,14 @@ function init() {
         0.1, 3000);
     camera.position.set(0, 5, 15);
 
-    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Request pointer lock on canvas click.
     renderer.domElement.addEventListener("click", function () {
         this.requestPointerLock();
     });
 
-    // Load audio.
     bgMusic = new Audio("bgMusic.mp3");
     bgMusic.loop = true;
     bgMusic.volume = 0.5;
@@ -132,13 +236,10 @@ function init() {
     thrustSound.loop = true;
     thrustSound.volume = 0.5;
 
-    // Start bgMusic on first user interaction.
     document.addEventListener("keydown", () => {
-        if (bgMusic.paused) bgMusic.play().catch(() => {
-        });
-    }, {once: true});
+        if (bgMusic.paused) bgMusic.play().catch(() => {});
+    }, { once: true });
 
-    // Create volume sliders for music and sound effects in the top right.
     const volumeContainer = document.createElement("div");
     volumeContainer.style.position = "absolute";
     volumeContainer.style.top = "10px";
@@ -148,9 +249,9 @@ function init() {
     volumeContainer.style.color = "#fff";
     volumeContainer.style.fontFamily = "sans-serif";
     volumeContainer.innerHTML = `
-        <label>Music Volume: <input id="musicSlider" type="range" min="0" max="1" step="0.01" value="0.5"></label><br>
-        <label>SFX Volume: <input id="sfxSlider" type="range" min="0" max="1" step="0.01" value="0.5"></label>
-    `;
+      <label>Music Volume: <input id="musicSlider" type="range" min="0" max="1" step="0.01" value="0.5"></label><br>
+      <label>SFX Volume: <input id="sfxSlider" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+  `;
     document.body.appendChild(volumeContainer);
     document.getElementById("musicSlider").addEventListener("input", function (e) {
         bgMusic.volume = parseFloat(e.target.value);
@@ -160,7 +261,6 @@ function init() {
         collisionSound.volume = parseFloat(e.target.value);
     });
 
-    // Add on-screen crosshair.
     const crosshair = document.createElement("div");
     crosshair.style.position = "absolute";
     crosshair.style.top = "50%";
@@ -172,7 +272,6 @@ function init() {
     crosshair.innerHTML = "+";
     document.body.appendChild(crosshair);
 
-    // Create a toggleable help overlay.
     const helpOverlay = document.createElement("div");
     helpOverlay.id = "helpOverlay";
     helpOverlay.style.position = "absolute";
@@ -200,81 +299,43 @@ Shift+Right Click: Continuous Auto‑Align Back<br>
 R: Reset<br>
 P: Pause/Resume<br>
 H: Toggle Help
-    `;
+  `;
     document.body.appendChild(helpOverlay);
 
-    // Lights.
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    directionalLight.position.set(300, 200, 100);
-    scene.add(directionalLight);
+    // Remove global ambient/directional lights.
+    createStarField();
+    createSolarSystem(solarSystem);
 
-    // Sun at origin.
-    {
-        const sunGeo = new THREE.SphereGeometry(sunRadius, 32, 32);
-        const sunMat = new THREE.MeshPhongMaterial({color: 0xffbb00, emissive: 0xaa6600});
-        sunMesh = new THREE.Mesh(sunGeo, sunMat);
-        sunMesh.position.set(0, 0, 0);
-        scene.add(sunMesh);
-    }
-
-    // Orbiting planet.
-    {
-        const planetGeo = new THREE.SphereGeometry(planetRadius, 32, 32);
-        const planetMat = new THREE.MeshPhongMaterial({color: 0x6688ff});
-        planetMesh = new THREE.Mesh(planetGeo, planetMat);
-        planetMesh.position.set(planetOrbitRadius, 0, 0);
-        scene.add(planetMesh);
-    }
-
-    // Create ship pivot.
     shipPivot = new THREE.Object3D();
     scene.add(shipPivot);
 
-    // Create ship mesh (a cone) – rotated so its tip is forward (+Z).
     {
         const coneGeo = new THREE.ConeGeometry(1, 3, 16);
-        const coneMat = new THREE.MeshPhongMaterial({color: 0xffffff});
+        const coneMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
         shipMesh = new THREE.Mesh(coneGeo, coneMat);
         shipMesh.rotation.x = Math.PI / 2;
         shipPivot.add(shipMesh);
     }
 
-    // Create flame: an orange cylinder.
     {
-        // Create a cylinder with radius 0.4 and height 1.
-        // By default, the cylinder extends from y=-0.5 to y=0.5.
         const cylGeo = new THREE.CylinderGeometry(0.4, 0.9, 1, 16);
-        // Translate so that the top face (originally at y = 0.5) becomes the attachment point (y = 0).
         cylGeo.translate(-1.5, -1, 0);
-
-        const cylMat = new THREE.MeshBasicMaterial({color: 0xff6600});
+        const cylMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
         flameMesh = new THREE.Mesh(cylGeo, cylMat);
-        // Rotate so the cylinder, originally along Y, now extends along -Z.
         flameMesh.rotation.y = Math.PI / 2;
-        // Position it so that its flat face is flush with the base of the cone.
-        // With the cone centered and rotated, its base is at z = -1.5.
         flameMesh.position.set(0, 0, -1.5);
         shipMesh.add(flameMesh);
     }
 
-    // Add axis helper.
     axisHelper = new THREE.AxesHelper(3);
     shipPivot.add(axisHelper);
 
-    // Create a realistic star field attached to the camera.
-    createStarField();
-
-    // Set starting position 500 units from origin.
     shipPivot.position.set(500, 0, 0);
 
-    // Event listeners.
     window.addEventListener("resize", onWindowResize);
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     document.addEventListener("mousemove", onMouseMove);
-    // Add mouse down/up for camera alignment and continuous auto‑alignment.
     renderer.domElement.addEventListener("mousedown", onMouseDown);
     renderer.domElement.addEventListener("mouseup", onMouseUp);
 
@@ -287,8 +348,133 @@ H: Toggle Help
 }
 
 //
-// === Create Star Field ===
-// The stars are placed on a sky sphere attached to the camera so that they always appear distant.
+// === Solar System Building Functions ===
+function createSolarSystem(config) {
+    massiveBodies = [];
+    createSun(config.sun);
+    createPlanets(config.planets);
+    createAsteroidBelt(config.asteroidBelt);
+}
+
+function createSun(sunConfig) {
+    const sunGeo = new THREE.SphereGeometry(sunConfig.radius, 32, 32);
+    const sunMat = new THREE.MeshPhongMaterial({ color: sunConfig.color, emissive: sunConfig.emissive });
+    sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    sunMesh.position.copy(sunConfig.position);
+    scene.add(sunMesh);
+
+    const glowGeo = new THREE.SphereGeometry(sunConfig.glowSize, 32, 32);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color: sunConfig.color,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending
+    });
+    const sunGlow = new THREE.Mesh(glowGeo, glowMat);
+    sunGlow.position.copy(sunConfig.position);
+    scene.add(sunGlow);
+
+    const sunLight = new THREE.PointLight(0xffffff, 1.5, 2000);
+    sunLight.position.copy(sunConfig.position);
+    scene.add(sunLight);
+
+    massiveBodies.push({
+        name: sunConfig.name,
+        mass: sunConfig.mass,
+        radius: sunConfig.radius,
+        mesh: sunMesh
+    });
+}
+
+function createPlanets(planetsArray) {
+    planetGroups = [];
+    planetsArray.forEach(planetConfig => {
+        const planetGroup = new THREE.Group();
+        planetGroup.userData.orbitRadius = planetConfig.orbitRadius;
+        // Set initial angle from config or randomize.
+        const angle = (planetConfig.initialAngle !== undefined ? planetConfig.initialAngle : Math.random() * Math.PI * 2);
+        planetGroup.userData.angle = angle;
+        planetGroup.userData.initialAngle = angle; // store initial angle for reset
+        planetGroup.userData.name = planetConfig.name;
+        // Automatically calculate orbit speed based on the sun's mass.
+        planetGroup.userData.orbitSpeed = calculateOrbitSpeed(solarSystem.sun.mass, planetConfig.orbitRadius);
+        const planetGeo = new THREE.SphereGeometry(planetConfig.radius, 32, 32);
+        const planetMatOptions = { color: planetConfig.color };
+        if (planetConfig.texture) {
+            planetMatOptions.map = new THREE.TextureLoader().load(planetConfig.texture);
+        }
+        const planetMat = new THREE.MeshPhongMaterial(planetMatOptions);
+        const planetMesh = new THREE.Mesh(planetGeo, planetMat);
+        // Set initial position using the computed angle.
+        planetMesh.position.set(planetConfig.orbitRadius * Math.cos(angle), 0, planetConfig.orbitRadius * Math.sin(angle));
+        planetGroup.add(planetMesh);
+        planetGroup.userData.planetMesh = planetMesh;
+        scene.add(planetGroup);
+        planetGroups.push(planetGroup);
+
+        massiveBodies.push({
+            name: planetConfig.name,
+            mass: planetConfig.mass,
+            radius: planetConfig.radius,
+            mesh: planetMesh
+        });
+
+        if (planetConfig.moons && planetConfig.moons.length > 0) {
+            planetGroup.userData.moons = [];
+            planetConfig.moons.forEach(moonConfig => {
+                const moonGroup = new THREE.Group();
+                moonGroup.userData.orbitRadius = moonConfig.orbitRadius;
+                // Set initial moon angle.
+                const moonAngle = (moonConfig.initialAngle !== undefined ? moonConfig.initialAngle : Math.random() * Math.PI * 2);
+                moonGroup.userData.angle = moonAngle;
+                moonGroup.userData.initialAngle = moonAngle;
+                moonGroup.userData.name = moonConfig.name;
+                // Calculate moon orbit speed using the planet's mass.
+                moonGroup.userData.orbitSpeed = calculateOrbitSpeed(planetConfig.mass, moonConfig.orbitRadius);
+                const moonGeo = new THREE.SphereGeometry(moonConfig.radius, 32, 32);
+                const moonMatOptions = { color: moonConfig.color };
+                if (moonConfig.texture) {
+                    moonMatOptions.map = new THREE.TextureLoader().load(moonConfig.texture);
+                }
+                const moonMat = new THREE.MeshPhongMaterial(moonMatOptions);
+                const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+                // Set initial moon position relative to planet using its angle.
+                moonMesh.position.set(moonConfig.orbitRadius * Math.cos(moonAngle), 0, moonConfig.orbitRadius * Math.sin(moonAngle));
+                moonGroup.add(moonMesh);
+                // Attach the moon group to the planet mesh so its orbit is centered on the planet.
+                planetMesh.add(moonGroup);
+                planetGroup.userData.moons.push(moonGroup);
+
+                massiveBodies.push({
+                    name: moonConfig.name,
+                    mass: moonConfig.mass,
+                    radius: moonConfig.radius,
+                    mesh: moonMesh
+                });
+            });
+        }
+    });
+}
+
+function createAsteroidBelt(beltConfig) {
+    asteroidBeltGroup = new THREE.Group();
+    for (let i = 0; i < beltConfig.count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = beltConfig.innerRadius + Math.random() * (beltConfig.outerRadius - beltConfig.innerRadius);
+        const y = (Math.random() - 0.5) * beltConfig.beltHeight;
+        const x = radius * Math.cos(angle);
+        const z = radius * Math.sin(angle);
+        const size = beltConfig.asteroidSize.min + Math.random() * (beltConfig.asteroidSize.max - beltConfig.asteroidSize.min);
+        const asteroidGeo = new THREE.DodecahedronGeometry(size, 0);
+        const asteroidMat = new THREE.MeshPhongMaterial({ color: 0x888888 });
+        const asteroid = new THREE.Mesh(asteroidGeo, asteroidMat);
+        asteroid.position.set(x, y, z);
+        asteroid.userData.radius = size;
+        asteroidBeltGroup.add(asteroid);
+    }
+    scene.add(asteroidBeltGroup);
+}
+
 function createStarField() {
     const starCount = 1000;
     const radius = 1000;
@@ -303,7 +489,7 @@ function createStarField() {
     }
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    const starMat = new THREE.PointsMaterial({color: 0xffffff, size: 2, depthWrite: false});
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2, depthWrite: false });
     const stars = new THREE.Points(starGeo, starMat);
     camera.add(stars);
     scene.add(camera);
@@ -320,13 +506,9 @@ function onWindowResize() {
 function onKeyDown(e) {
     const key = e.key.toLowerCase();
     keys[key] = true;
-    if (key === "r") {  // Reset game.
-        resetSimulation();
-    }
-    if (key === "p") {  // Toggle pause.
-        togglePause();
-    }
-    if (key === "h") {  // Toggle help overlay.
+    if (key === "r") resetSimulation();
+    if (key === "p") togglePause();
+    if (key === "h") {
         const help = document.getElementById("helpOverlay");
         help.style.display = help.style.display === "none" ? "block" : "none";
     }
@@ -339,35 +521,21 @@ function onKeyUp(e) {
 function onMouseMove(e) {
     if (document.pointerLockElement === renderer.domElement) {
         cameraAzimuth += e.movementX * mouseSensitivity;
-        // Flip vertical movement.
         cameraElevation -= e.movementY * mouseSensitivity;
         cameraElevation = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraElevation));
     }
 }
 
-// Mouse down: left/right click for camera alignment and setting continuous auto‑alignment.
 function onMouseDown(e) {
-    if (shipVelocity.length() < 0.1) return; // Do nothing if almost stationary.
-
-    // If Shift is held, set continuous auto‑alignment flags.
+    if (shipVelocity.length() < 0.1) return;
     if (e.shiftKey) {
-        if (e.button === 0) {
-            shiftLeftMouseDown = true;
-        } else if (e.button === 2) {
-            shiftRightMouseDown = true;
-        }
+        if (e.button === 0) shiftLeftMouseDown = true;
+        else if (e.button === 2) shiftRightMouseDown = true;
     }
-
-    // Camera alignment code.
     const normVel = shipVelocity.clone().normalize();
     let desiredOffset;
-    if (e.button === 0) {
-        // Left click: camera aligns behind the ship.
-        desiredOffset = normVel.clone().multiplyScalar(-cameraDistance);
-    } else if (e.button === 2) {
-        // Right click: camera aligns in front of the ship.
-        desiredOffset = normVel.clone().multiplyScalar(cameraDistance);
-    }
+    if (e.button === 0) desiredOffset = normVel.clone().multiplyScalar(-cameraDistance);
+    else if (e.button === 2) desiredOffset = normVel.clone().multiplyScalar(cameraDistance);
     const r = desiredOffset.length();
     const elev = Math.asin(desiredOffset.y / r);
     const azim = Math.atan2(desiredOffset.x, desiredOffset.z);
@@ -375,21 +543,13 @@ function onMouseDown(e) {
     cameraAzimuth = azim;
 }
 
-// Mouse up: clear continuous auto‑alignment flags.
 function onMouseUp(e) {
-    if (e.button === 0) {
-        shiftLeftMouseDown = false;
-    } else if (e.button === 2) {
-        shiftRightMouseDown = false;
-    }
+    if (e.button === 0) shiftLeftMouseDown = false;
+    else if (e.button === 2) shiftRightMouseDown = false;
 }
 
 //
 // === Ship Control Update ===
-// Space: thrust forward.
-// W: Pitch Up, S: Pitch Down.
-// A: Yaw Left, D: Yaw Right.
-// Q: Roll Left, E: Roll Right.
 function updateShipControls() {
     desiredThrust = keys[" "] ? maxThrust : 0;
     desiredPitchRate = (keys["w"] ? -maxPitchRate : 0) + (keys["s"] ? maxPitchRate : 0);
@@ -408,8 +568,6 @@ function updateShipControls() {
 
 //
 // === Auto-Alignment Functions ===
-// K: Align ship’s forward with velocity.
-// L: Align ship’s forward opposite to its velocity.
 function autoAlignShipNormal() {
     if (shipVelocity.length() > 0.1) {
         const desiredDir = shipVelocity.clone().normalize();
@@ -432,8 +590,6 @@ function autoAlignShipOpposite() {
 
 //
 // === Camera Update ===
-// The camera offset is computed using fixed spherical coordinates (controlled by mouse)
-// and is independent of the ship's rotation.
 function updateCamera() {
     const offset = new THREE.Vector3(
         cameraDistance * Math.cos(cameraElevation) * Math.sin(cameraAzimuth),
@@ -454,68 +610,44 @@ function updateTrajectoryLine() {
         trajectoryLine = null;
     }
 
-    const steps = 600;  // 60 sec / 0.1 s
+    const steps = 600;
     const dtSim = 0.1;
     let simPos = shipPivot.position.clone();
     let simVel = shipVelocity.clone();
-    let predictedPlanetAngle = planetAngle; // start from current angle
-    const points = [];
-    const speeds = [];
+    const points = [simPos.clone()];
+    const speeds = [simVel.length()];
     let predictedCollisionPoint = null;
 
-    points.push(simPos.clone());
-    speeds.push(simVel.length());
-
     for (let i = 0; i < steps; i++) {
-        predictedPlanetAngle += planetOrbitSpeed * dtSim;
-
-        // Gravity from sun.
-        {
-            const rSun = new THREE.Vector3().subVectors(new THREE.Vector3(0, 0, 0), simPos);
-            let distSq = rSun.lengthSq();
+        let accelSim = new THREE.Vector3(0, 0, 0);
+        massiveBodies.forEach(body => {
+            const bodyPos = body.mesh.getWorldPosition(new THREE.Vector3());
+            let rVec = new THREE.Vector3().subVectors(bodyPos, simPos);
+            let distSq = rVec.lengthSq();
             if (distSq < 1e-6) distSq = 1e-6;
-            const forceMag = (G * sunMass * shipMass) / distSq;
-            rSun.normalize().multiplyScalar(forceMag / shipMass);
-            simVel.add(rSun.multiplyScalar(dtSim));
-        }
-        // Gravity from planet.
-        {
-            const pX = Math.cos(predictedPlanetAngle) * planetOrbitRadius;
-            const pZ = Math.sin(predictedPlanetAngle) * planetOrbitRadius;
-            const predictedPlanetPos = new THREE.Vector3(pX, 0, pZ);
-            const rPlanet = new THREE.Vector3().subVectors(predictedPlanetPos, simPos);
-            let distSq = rPlanet.lengthSq();
-            if (distSq < 1e-6) distSq = 1e-6;
-            const forceMag = (G * planetMass * shipMass) / distSq;
-            rPlanet.normalize().multiplyScalar(forceMag / shipMass);
-            simVel.add(rPlanet.multiplyScalar(dtSim));
-        }
-        // No thrust applied.
+            const forceMag = (G * body.mass * shipMass) / distSq;
+            rVec.normalize().multiplyScalar(forceMag / shipMass);
+            accelSim.add(rVec);
+        });
+        simVel.add(accelSim.multiplyScalar(dtSim));
         simPos.add(simVel.clone().multiplyScalar(dtSim));
         points.push(simPos.clone());
         speeds.push(simVel.length());
 
-        // Check collision with sun.
-        if (simPos.length() < sunRadius + shipRadius) {
-            predictedCollisionPoint = simPos.clone();
-            break;
+        for (let body of massiveBodies) {
+            const bodyPos = body.mesh.getWorldPosition(new THREE.Vector3());
+            if (simPos.distanceTo(bodyPos) < body.radius + shipRadius) {
+                predictedCollisionPoint = simPos.clone();
+                break;
+            }
         }
-        // Check collision with planet.
-        const pX = Math.cos(predictedPlanetAngle) * planetOrbitRadius;
-        const pZ = Math.sin(predictedPlanetAngle) * planetOrbitRadius;
-        const predictedPlanetPos = new THREE.Vector3(pX, 0, pZ);
-        if (simPos.distanceTo(predictedPlanetPos) < planetRadius + shipRadius) {
-            predictedCollisionPoint = simPos.clone();
-            break;
-        }
+        if (predictedCollisionPoint) break;
     }
 
-    // Adjust dash spacing based on average simulated speed.
     let avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
     const dashSize = 2 * (1 + avgSpeed / 10);
     const gapSize = dashSize;
 
-    // Create geometry with vertex colors (gradient: blue = at rest, red = fast).
     const trajGeom = new THREE.BufferGeometry().setFromPoints(points);
     const colors = [];
     for (let i = 0; i < speeds.length; i++) {
@@ -536,12 +668,11 @@ function updateTrajectoryLine() {
     trajectoryLine.computeLineDistances();
     scene.add(trajectoryLine);
 
-    // Manage collision indicator.
     if (predictedCollisionPoint) {
         collisionWarning = true;
         if (!collisionIndicator) {
             const colGeo = new THREE.SphereGeometry(3, 16, 16);
-            const colMat = new THREE.MeshBasicMaterial({color: 0xff00ff});
+            const colMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
             collisionIndicator = new THREE.Mesh(colGeo, colMat);
             scene.add(collisionIndicator);
         }
@@ -559,13 +690,10 @@ function updateTrajectoryLine() {
 
 //
 // === Flame Update ===
-// The flame's length (scale along Z) is proportional to current thrust.
 function updateFlame() {
     const t = Math.abs(currentThrust);
     if (t > 0.001) {
-        // Base length is 1; scale factor increases linearly with thrust.
         const lengthScale = 1 + (t / maxThrust) * 2;
-        // Scale only along Z; the flame extends along its negative Z axis.
         flameMesh.scale.set(1, lengthScale, 1);
         flameMesh.visible = true;
     } else {
@@ -575,12 +703,10 @@ function updateFlame() {
 
 //
 // === Audio Update ===
-// Play thrust sound while thrust is applied.
 function updateAudio() {
     if (currentThrust > 0.001) {
         if (thrustSound.paused) {
-            thrustSound.play().catch(() => {
-            });
+            thrustSound.play().catch(() => {});
         }
     } else {
         if (!thrustSound.paused) {
@@ -616,94 +742,81 @@ function updateStatus() {
 // === Main Animation Loop ===
 function animate() {
     animationId = requestAnimationFrame(animate);
-    if (!paused) {
-        update(dt);
-    }
+    if (!paused) update(dt);
     renderer.render(scene, camera);
 }
 
 //
 // === Update Function ===
 function update(dt) {
-    // Update ship controls.
     updateShipControls();
-
-    // Auto-align if K or L keys are pressed, or if continuous auto‑alignment flags are set.
     if (keys["k"] || shiftLeftMouseDown) {
         autoAlignShipNormal();
     } else if (keys["l"] || shiftRightMouseDown) {
         autoAlignShipOpposite();
     }
-
-    // Update audio (thrust sound).
     updateAudio();
 
-    // Compute gravitational acceleration.
     const accel = new THREE.Vector3(0, 0, 0);
     const shipPos = shipPivot.position.clone();
-
-    // Gravity from sun.
-    {
-        const rSun = new THREE.Vector3().subVectors(new THREE.Vector3(0, 0, 0), shipPos);
-        let distSq = rSun.lengthSq();
+    massiveBodies.forEach(body => {
+        const bodyPos = body.mesh.getWorldPosition(new THREE.Vector3());
+        let rVec = new THREE.Vector3().subVectors(bodyPos, shipPos);
+        let distSq = rVec.lengthSq();
         if (distSq < 1e-6) distSq = 1e-6;
-        const forceMag = (G * sunMass * shipMass) / distSq;
-        rSun.normalize().multiplyScalar(forceMag / shipMass);
-        accel.add(rSun);
-    }
-    // Gravity from planet.
-    {
-        const pX = Math.cos(planetAngle) * planetOrbitRadius;
-        const pZ = Math.sin(planetAngle) * planetOrbitRadius;
-        const planetPos = new THREE.Vector3(pX, 0, pZ);
-        const rPlanet = new THREE.Vector3().subVectors(planetPos, shipPos);
-        let distSq = rPlanet.lengthSq();
-        if (distSq < 1e-6) distSq = 1e-6;
-        const forceMag = (G * planetMass * shipMass) / distSq;
-        rPlanet.normalize().multiplyScalar(forceMag / shipMass);
-        accel.add(rPlanet);
-    }
+        const forceMag = (G * body.mass * shipMass) / distSq;
+        rVec.normalize().multiplyScalar(forceMag / shipMass);
+        accel.add(rVec);
+    });
 
-    // Thrust along ship's local forward (+Z).
     if (Math.abs(currentThrust) > 1e-6) {
         const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(shipPivot.quaternion);
         forward.multiplyScalar(currentThrust);
         accel.add(forward);
     }
 
-    // Update velocity and position.
     shipVelocity.add(accel.multiplyScalar(dt));
     shipPivot.position.add(shipVelocity.clone().multiplyScalar(dt));
 
-    // Update orbiting planet position.
-    planetAngle += planetOrbitSpeed * dt;
-    planetMesh.position.set(
-        Math.cos(planetAngle) * planetOrbitRadius,
-        0,
-        Math.sin(planetAngle) * planetOrbitRadius
-    );
+    planetGroups.forEach(planetGroup => {
+        planetGroup.userData.angle += planetGroup.userData.orbitSpeed * dt;
+        const angle = planetGroup.userData.angle;
+        const radius = planetGroup.userData.orbitRadius;
+        // Update planet position based on current orbit angle.
+        planetGroup.userData.planetMesh.position.set(radius * Math.cos(angle), 0, radius * Math.sin(angle));
 
-    // Collision detection.
-    if (shipPivot.position.length() < sunRadius + shipRadius) {
-        endGame("Collision with Sun!");
-        return;
-    }
-    const distToPlanet = shipPivot.position.distanceTo(planetMesh.position);
-    if (distToPlanet < planetRadius + shipRadius) {
-        endGame("Collision with Planet!");
-        return;
+        if (planetGroup.userData.moons) {
+            planetGroup.userData.moons.forEach(moonGroup => {
+                moonGroup.userData.angle += moonGroup.userData.orbitSpeed * dt;
+                const mAngle = moonGroup.userData.angle;
+                const mRadius = moonGroup.userData.orbitRadius;
+                moonGroup.children[0].position.set(mRadius * Math.cos(mAngle), 0, mRadius * Math.sin(mAngle));
+            });
+        }
+    });
+
+    for (let body of massiveBodies) {
+        const bodyPos = body.mesh.getWorldPosition(new THREE.Vector3());
+        if (shipPivot.position.distanceTo(bodyPos) < body.radius + shipRadius) {
+            endGame("Collision with " + body.name + "!");
+            return;
+        }
     }
 
-    // Update camera.
+    if (asteroidBeltGroup) {
+        for (let asteroid of asteroidBeltGroup.children) {
+            const astPos = asteroid.getWorldPosition(new THREE.Vector3());
+            const astRadius = asteroid.userData.radius;
+            if (shipPivot.position.distanceTo(astPos) < astRadius + shipRadius) {
+                endGame("Collision with an asteroid!");
+                return;
+            }
+        }
+    }
+
     updateCamera();
-
-    // Update flame visuals.
     updateFlame();
-
-    // Update trajectory projection & collision prediction.
     updateTrajectoryLine();
-
-    // Update HUD.
     updateStatus();
 }
 
@@ -714,15 +827,23 @@ function endGame(msg) {
     if (animationId) cancelAnimationFrame(animationId);
     if (!collisionSound.paused) collisionSound.pause();
     statusElement.innerHTML = `<strong>${msg}</strong><br>Simulation stopped.`;
-    collisionSound.play().catch(() => {
-    });
+    collisionSound.play().catch(() => {});
 }
 
 function resetSimulation() {
     shipVelocity.set(0, 0, 0);
     shipPivot.position.set(500, 0, 0);
     shipPivot.rotation.set(0, -Math.PI / 2, 0);
-    planetAngle = 0;
+    // Reset each planet's orbit angle to its initial value.
+    planetGroups.forEach(pg => {
+        pg.userData.angle = pg.userData.initialAngle;
+        // Also reset moon angles if present.
+        if (pg.userData.moons) {
+            pg.userData.moons.forEach(moonGroup => {
+                moonGroup.userData.angle = moonGroup.userData.initialAngle;
+            });
+        }
+    });
     currentThrust = currentPitchRate = currentYawRate = currentRollRate = 0;
     desiredThrust = desiredPitchRate = desiredYawRate = desiredRollRate = 0;
     cameraAzimuth = Math.PI / 2;
