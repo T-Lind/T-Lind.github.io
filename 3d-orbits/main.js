@@ -12,8 +12,8 @@
 //     E: Roll Right
 //     K: Auto‑Align ship’s forward with velocity (auto-align forward)
 //     L: Auto‑Align ship’s forward opposite to velocity (auto-align back)
-//     Shift+Left Click: Continuous auto‑align forward while held
-//     Shift+Right Click: Continuous auto‑align back while held
+//     Shift+Left Click: Continuous Auto‑Align Forward
+//     Shift+Right Click: Continuous Auto‑Align Back
 //     R: Reset the game
 //     P: Toggle Pause
 //     H: Toggle Help overlay
@@ -22,7 +22,7 @@
 // • A 30‑sec ballistic trajectory with dynamic dash spacing and a blue-to-red gradient.
 // • Collision prediction with a pink indicator.
 // • A realistic star field.
-// • Sound effects for music, thrust, and collision with volume sliders in the top right.
+// • Sound effects for music, thrust, and collision with volume sliders.
 // • On‑screen crosshair and help overlay for controls.
 
 //
@@ -39,10 +39,20 @@ let bgMusic, collisionSound, thrustSound;
 let shipPivot;    // Container for the ship mesh, flame, and axis helper.
 let shipMesh;     // The ship (a cone).
 let flameMesh;    // Orange cylinder representing thrust.
+let flameLight;   // A point light for the engine flame.
 let axisHelper;   // Visualizes ship's local axes.
 const shipMass = 10;
 const shipRadius = 2;
 let shipVelocity = new THREE.Vector3(0, 0, 0);
+
+//
+// === Game & HUD Variables ===
+let score = 0;
+let highScore = 0;
+let collectible;  // The current collectible (a green sphere)
+let fuel = 750;
+const maxFuel = 1000;
+const fuelConsumptionRate = 10; // fuel consumption rate per thrust unit
 
 //
 // === Control Variables ===
@@ -92,16 +102,12 @@ let shiftRightMouseDown = false;
 
 //
 // === Helper Function: Calculate Orbit Speed ===
-// For a circular orbit: v = sqrt(G * centralMass / orbitRadius)
 function calculateOrbitSpeed(centralMass, orbitRadius) {
     return 0.005 * Math.sqrt(G * centralMass / orbitRadius);
 }
 
 //
 // === Solar System Configuration & Massive Bodies Array ===
-// The config now no longer requires an "orbitSpeed" property.
-// Also, the radii for orbits and the asteroid belt have been increased.
-// If no initialAngle is provided, a random angle is assigned.
 const solarSystem = {
     sun: {
         name: "Sun",
@@ -117,20 +123,18 @@ const solarSystem = {
             name: "Planet1",
             mass: 8000,
             radius: 12,
-            orbitRadius: 200, // increased
+            orbitRadius: 200,
             color: 0x6688ff,
             initialAngle: Math.PI / 4,
             texture: "",
-            // initialAngle is optional; if not provided, a random value is used.
             moons: [
                 {
                     name: "Moon1",
                     mass: 100,
                     radius: 3,
-                    orbitRadius: 40, // increased
+                    orbitRadius: 40,
                     color: 0x888888,
                     texture: ""
-                    // Optionally, you can add initialAngle here.
                 }
             ]
         },
@@ -202,10 +206,7 @@ const solarSystem = {
     }
 };
 
-// Array for massive bodies (sun, planets, and moons) used for gravity and collision.
 let massiveBodies = [];
-
-// Global arrays for created planet groups and the asteroid belt.
 let planetGroups = [];
 let asteroidBeltGroup;
 
@@ -240,6 +241,7 @@ function init() {
         if (bgMusic.paused) bgMusic.play().catch(() => {});
     }, { once: true });
 
+    // Volume controls
     const volumeContainer = document.createElement("div");
     volumeContainer.style.position = "absolute";
     volumeContainer.style.top = "10px";
@@ -302,7 +304,49 @@ H: Toggle Help
   `;
     document.body.appendChild(helpOverlay);
 
-    // Remove global ambient/directional lights.
+    // Fuel bar HUD with a low fuel warning animation (CSS class added dynamically)
+    const fuelBarContainer = document.createElement("div");
+    fuelBarContainer.id = "fuelBarContainer";
+    fuelBarContainer.style.position = "absolute";
+    fuelBarContainer.style.bottom = "10px";
+    fuelBarContainer.style.left = "10px";
+    fuelBarContainer.style.width = "200px";
+    fuelBarContainer.style.height = "20px";
+    fuelBarContainer.style.backgroundColor = "rgba(255,255,255,0.2)";
+    fuelBarContainer.style.border = "1px solid #fff";
+    document.body.appendChild(fuelBarContainer);
+
+    const fuelBar = document.createElement("div");
+    fuelBar.id = "fuelBar";
+    fuelBar.style.height = "100%";
+    fuelBar.style.width = "100%";
+    fuelBar.style.backgroundColor = "#00ff00";
+    fuelBar.style.transition = "width 0.2s";
+    fuelBarContainer.appendChild(fuelBar);
+
+    // Collectible indicator: a ring and a separate distance label (number above the ring)
+    const indicatorRing = document.createElement("div");
+    indicatorRing.id = "collectibleIndicator";
+    indicatorRing.style.position = "absolute";
+    indicatorRing.style.width = "40px";
+    indicatorRing.style.height = "40px";
+    indicatorRing.style.border = "2px solid #00ff00";
+    indicatorRing.style.borderRadius = "50%";
+    indicatorRing.style.pointerEvents = "none";
+    document.body.appendChild(indicatorRing);
+
+    const indicatorLabel = document.createElement("div");
+    indicatorLabel.id = "collectibleDistance";
+    indicatorLabel.style.position = "absolute";
+    indicatorLabel.style.width = "40px";
+    indicatorLabel.style.textAlign = "center";
+    indicatorLabel.style.fontFamily = "sans-serif";
+    indicatorLabel.style.color = "#00ff00";
+    indicatorLabel.style.pointerEvents = "none";
+    document.body.appendChild(indicatorLabel);
+
+    // (Reset High Score button removed as requested)
+
     createStarField();
     createSolarSystem(solarSystem);
 
@@ -327,6 +371,12 @@ H: Toggle Help
         shipMesh.add(flameMesh);
     }
 
+    // Use a point light for a more uniform flame illumination.
+    flameLight = new THREE.PointLight(0xffaa33, 0, 25, 2);
+    flameLight.position.set(0, 0, -1.5);
+    shipMesh.add(flameLight);
+    flameLight.visible = false;
+
     axisHelper = new THREE.AxesHelper(3);
     shipPivot.add(axisHelper);
 
@@ -343,6 +393,7 @@ H: Toggle Help
     document.getElementById("resetBtn")?.addEventListener("click", resetSimulation);
     document.getElementById("pauseBtn")?.addEventListener("click", togglePause);
 
+    spawnCollectible();
     resetSimulation();
     animate();
 }
@@ -359,7 +410,7 @@ function createSolarSystem(config) {
 function createSun(sunConfig) {
     const sunGeo = new THREE.SphereGeometry(sunConfig.radius, 32, 32);
     const sunMat = new THREE.MeshPhongMaterial({ color: sunConfig.color, emissive: sunConfig.emissive });
-    sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
     sunMesh.position.copy(sunConfig.position);
     scene.add(sunMesh);
 
@@ -391,12 +442,10 @@ function createPlanets(planetsArray) {
     planetsArray.forEach(planetConfig => {
         const planetGroup = new THREE.Group();
         planetGroup.userData.orbitRadius = planetConfig.orbitRadius;
-        // Set initial angle from config or randomize.
         const angle = (planetConfig.initialAngle !== undefined ? planetConfig.initialAngle : Math.random() * Math.PI * 2);
         planetGroup.userData.angle = angle;
-        planetGroup.userData.initialAngle = angle; // store initial angle for reset
+        planetGroup.userData.initialAngle = angle;
         planetGroup.userData.name = planetConfig.name;
-        // Automatically calculate orbit speed based on the sun's mass.
         planetGroup.userData.orbitSpeed = calculateOrbitSpeed(solarSystem.sun.mass, planetConfig.orbitRadius);
         const planetGeo = new THREE.SphereGeometry(planetConfig.radius, 32, 32);
         const planetMatOptions = { color: planetConfig.color };
@@ -405,7 +454,6 @@ function createPlanets(planetsArray) {
         }
         const planetMat = new THREE.MeshPhongMaterial(planetMatOptions);
         const planetMesh = new THREE.Mesh(planetGeo, planetMat);
-        // Set initial position using the computed angle.
         planetMesh.position.set(planetConfig.orbitRadius * Math.cos(angle), 0, planetConfig.orbitRadius * Math.sin(angle));
         planetGroup.add(planetMesh);
         planetGroup.userData.planetMesh = planetMesh;
@@ -424,12 +472,10 @@ function createPlanets(planetsArray) {
             planetConfig.moons.forEach(moonConfig => {
                 const moonGroup = new THREE.Group();
                 moonGroup.userData.orbitRadius = moonConfig.orbitRadius;
-                // Set initial moon angle.
                 const moonAngle = (moonConfig.initialAngle !== undefined ? moonConfig.initialAngle : Math.random() * Math.PI * 2);
                 moonGroup.userData.angle = moonAngle;
                 moonGroup.userData.initialAngle = moonAngle;
                 moonGroup.userData.name = moonConfig.name;
-                // Calculate moon orbit speed using the planet's mass.
                 moonGroup.userData.orbitSpeed = calculateOrbitSpeed(planetConfig.mass, moonConfig.orbitRadius);
                 const moonGeo = new THREE.SphereGeometry(moonConfig.radius, 32, 32);
                 const moonMatOptions = { color: moonConfig.color };
@@ -438,10 +484,8 @@ function createPlanets(planetsArray) {
                 }
                 const moonMat = new THREE.MeshPhongMaterial(moonMatOptions);
                 const moonMesh = new THREE.Mesh(moonGeo, moonMat);
-                // Set initial moon position relative to planet using its angle.
                 moonMesh.position.set(moonConfig.orbitRadius * Math.cos(moonAngle), 0, moonConfig.orbitRadius * Math.sin(moonAngle));
                 moonGroup.add(moonMesh);
-                // Attach the moon group to the planet mesh so its orbit is centered on the planet.
                 planetMesh.add(moonGroup);
                 planetGroup.userData.moons.push(moonGroup);
 
@@ -696,8 +740,11 @@ function updateFlame() {
         const lengthScale = 1 + (t / maxThrust) * 2;
         flameMesh.scale.set(1, lengthScale, 1);
         flameMesh.visible = true;
+        flameLight.visible = true;
+        flameLight.intensity = 2 + (t / maxThrust) * 2;
     } else {
         flameMesh.visible = false;
+        flameLight.visible = false;
     }
 }
 
@@ -726,16 +773,98 @@ function updateStatus() {
     const rz = THREE.MathUtils.radToDeg(shipPivot.rotation.z).toFixed(1);
     const speed = vel.length().toFixed(2);
     const collisionMsg = collisionWarning ? "<span style='color:#ff00ff'>Warning: Predicted collision!</span><br>" : "";
+    const lowFuelWarning = (fuel / maxFuel < 0.2) ? "<span style='color:#ff0000; font-weight:bold;'>Low Fuel!</span><br>" : "";
 
-    statusElement.innerHTML = `
+    const hudInfo = `
     <strong>Ship Info</strong><br>
     Position: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})<br>
     Velocity: (${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})<br>
     Speed: ${speed}<br>
     Rotation (deg): x=${rx}, y=${ry}, z=${rz}<br>
     Thrust: ${currentThrust.toFixed(3)}<br>
+    Score: ${score} | High Score: ${highScore}<br>
+    Fuel: ${fuel.toFixed(0)} / ${maxFuel}<br>
+    ${lowFuelWarning}
     ${collisionMsg}
   `;
+    if (statusElement) statusElement.innerHTML = hudInfo;
+    updateFuelBar();
+}
+
+function updateFuelBar() {
+    const fuelBar = document.getElementById("fuelBar");
+    if (fuelBar) {
+        fuelBar.style.width = (fuel / maxFuel * 100) + "%";
+        fuelBar.style.backgroundColor = (fuel / maxFuel < 0.2) ? "#ff0000" : "#00ff00";
+        fuelBar.style.animation = (fuel / maxFuel < 0.2) ? "shake 0.5s infinite" : "none";
+    }
+}
+
+//
+// === Collectible Functions ===
+function spawnCollectible() {
+    const minDistance = solarSystem.sun.radius + 50;
+    const maxOrbit = Math.max(...solarSystem.planets.map(p => p.orbitRadius));
+    const maxDistance = maxOrbit + 50;
+    const distance = minDistance + Math.random() * (maxDistance - minDistance);
+    const theta = Math.acos(2 * Math.random() - 1);
+    const phi = 2 * Math.PI * Math.random();
+    const x = distance * Math.sin(theta) * Math.cos(phi);
+    const y = distance * Math.sin(theta) * Math.sin(phi);
+    const z = distance * Math.cos(theta);
+
+    // If a collectible exists, remove it immediately.
+    if (collectible) {
+        scene.remove(collectible);
+        collectible.geometry.dispose();
+        collectible.material.dispose();
+        collectible = null;
+    }
+    const geo = new THREE.SphereGeometry(3, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    collectible = new THREE.Mesh(geo, mat);
+    collectible.position.set(x, y, z);
+    scene.add(collectible);
+}
+
+function updateCollectibleIndicator() {
+    if (!collectible) return;
+    // Project collectible position to screen space
+    const vector = collectible.position.clone().project(camera);
+    const widthHalf = window.innerWidth / 2;
+    const heightHalf = window.innerHeight / 2;
+    let x = vector.x * widthHalf + widthHalf;
+    let y = -vector.y * heightHalf + heightHalf;
+
+    // Determine if collectible is behind the camera
+    if (vector.z < 0) {
+        const angle = Math.atan2(y - heightHalf, x - widthHalf);
+        const margin = 30;
+        const radius = Math.min(widthHalf, heightHalf) - margin;
+        x = widthHalf + radius * Math.cos(angle);
+        y = heightHalf + radius * Math.sin(angle);
+    } else {
+        const margin = 20;
+        x = Math.min(window.innerWidth - margin, Math.max(margin, x));
+        y = Math.min(window.innerHeight - margin, Math.max(margin, y));
+    }
+
+    // Position the ring indicator (centered)
+    const indicatorRing = document.getElementById("collectibleIndicator");
+    if (indicatorRing) {
+        indicatorRing.style.left = (x - 20) + "px";
+        indicatorRing.style.top = (y - 20) + "px";
+        indicatorRing.style.display = "block";
+    }
+    // Position the distance label above the ring
+    const distance = shipPivot.position.distanceTo(collectible.position).toFixed(0);
+    const indicatorLabel = document.getElementById("collectibleDistance");
+    if (indicatorLabel) {
+        indicatorLabel.style.left = (x - 20) + "px";
+        indicatorLabel.style.top = (y - 45) + "px";
+        indicatorLabel.innerHTML = distance;
+        indicatorLabel.style.display = "block";
+    }
 }
 
 //
@@ -769,10 +898,12 @@ function update(dt) {
         accel.add(rVec);
     });
 
-    if (Math.abs(currentThrust) > 1e-6) {
+    if (Math.abs(currentThrust) > 1e-6 && fuel > 0) {
         const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(shipPivot.quaternion);
         forward.multiplyScalar(currentThrust);
         accel.add(forward);
+        fuel -= currentThrust * fuelConsumptionRate * dt;
+        fuel = Math.max(0, fuel);
     }
 
     shipVelocity.add(accel.multiplyScalar(dt));
@@ -782,7 +913,6 @@ function update(dt) {
         planetGroup.userData.angle += planetGroup.userData.orbitSpeed * dt;
         const angle = planetGroup.userData.angle;
         const radius = planetGroup.userData.orbitRadius;
-        // Update planet position based on current orbit angle.
         planetGroup.userData.planetMesh.position.set(radius * Math.cos(angle), 0, radius * Math.sin(angle));
 
         if (planetGroup.userData.moons) {
@@ -814,10 +944,23 @@ function update(dt) {
         }
     }
 
+    if (collectible && shipPivot.position.distanceTo(collectible.position) < (3 + shipRadius)) {
+        score++;
+        if (score > highScore) highScore = score;
+        fuel = Math.min(maxFuel, fuel + 200);
+        // Remove collected collectible and spawn a new one.
+        scene.remove(collectible);
+        collectible.geometry.dispose();
+        collectible.material.dispose();
+        collectible = null;
+        spawnCollectible();
+    }
+
     updateCamera();
     updateFlame();
     updateTrajectoryLine();
     updateStatus();
+    updateCollectibleIndicator();
 }
 
 //
@@ -831,13 +974,12 @@ function endGame(msg) {
 }
 
 function resetSimulation() {
+    score = 0;
     shipVelocity.set(0, 0, 0);
     shipPivot.position.set(500, 0, 0);
     shipPivot.rotation.set(0, -Math.PI / 2, 0);
-    // Reset each planet's orbit angle to its initial value.
     planetGroups.forEach(pg => {
         pg.userData.angle = pg.userData.initialAngle;
-        // Also reset moon angles if present.
         if (pg.userData.moons) {
             pg.userData.moons.forEach(moonGroup => {
                 moonGroup.userData.angle = moonGroup.userData.initialAngle;
@@ -860,3 +1002,16 @@ function togglePause() {
 //
 // === Start the Simulation ===
 init();
+
+/* Add CSS for low fuel shake effect */
+const style = document.createElement('style');
+style.innerHTML = `
+@keyframes shake {
+  0% { transform: translate(0px, 0px); }
+  25% { transform: translate(2px, -2px); }
+  50% { transform: translate(-2px, 2px); }
+  75% { transform: translate(2px, 2px); }
+  100% { transform: translate(0px, 0px); }
+}
+`;
+document.head.appendChild(style);
