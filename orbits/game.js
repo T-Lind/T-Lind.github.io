@@ -17,10 +17,24 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
+// Zoom via mouse wheel
+canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+        zoom *= ZOOM_STEP;
+    } else {
+        zoom /= ZOOM_STEP;
+    }
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+    updateCamera();
+});
+
 const resetBtn = document.getElementById("resetBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const fsBtn = document.getElementById("fsBtn");
 const statusDiv = document.getElementById("status");
+
+// Removed spawnEnemy button logic
 
 fsBtn.addEventListener("click", () => {
     if (!document.fullscreenElement) {
@@ -59,13 +73,32 @@ let animationId;
 let simulationRunning = false;
 let simulationPaused = false;
 const dt = 0.1;
+// ADD: Seeded RNG setup
+const RNG_INITIAL_SEED = Date.now() & 0xffffffff;
+let rngState = RNG_INITIAL_SEED;
+function setRandomSeed(s) { rngState = s >>> 0; }
+function random() {
+    rngState = (rngState * 1664525 + 1013904223) >>> 0;
+    return rngState / 4294967295;
+}
+// Override Math.random with seeded version for determinism
+Math.random = random;
 const G = 0.4;
 let gameTime = 0;  // Global game time
 const TRAIL_DURATION = 10;  // How many ticks of trail to show
 let showTrajectory = true; // Toggle for drawing projected trajectory
+// ADD: fast-forward and enemy globals
+const FAST_FORWARD_FACTOR = 4; // Simulation speed multiplier when fast-forward is active
+// REMOVE fastForward toggle State (superseded by hold multipliers)
+
+// Enemy system removed.
 
 // ---------- Camera ----------
 const camera = {x: 0, y: 0};
+let zoom = 1;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 1.1;
 
 // ---------- Procedurally Generated Stars ----------
 const stars = [];
@@ -111,10 +144,11 @@ const planetD = {
 };
 
 // SHIELD DURATION
-const SHIELD_DURATION = 100;  // ticks
+const SHIELD_DURATION = 200;  // ticks (extended duration)
 
 // ---------- Black Hole (with limited influence) ----------
-const blackHole = {x: -600, y: -2300, mass: 3000000, radius: 140};
+// Repositioned far away as an easter-egg object
+const blackHole = {x: 5000, y: 5000, mass: 3000000, radius: 140};
 const BH_MAX_EFFECT_RADIUS = 1200;
 const BH_TIME_DILATION_THRESHOLD = 200;
 const bhOrbiter1 = {orbitRadius: 100, angle: 0, angularSpeed: 0.008, mass: 1000, radius: 8, x: 0, y: 0};
@@ -150,42 +184,71 @@ const satelliteA = {
 // ---------- Asteroids (Additional Hazards) ----------
 const asteroids = [];
 
+// ---------- Constants for Asteroid Belt ----------
+const BELT_INNER = 1300; // farther out belt
+const BELT_OUTER = 1800;
+
 function spawnAsteroids() {
     asteroids.length = 0;
-    const num = 20;
-    const fixedBodies = [sun, planetA, planetB, planetC, planetD, blackHole];
-    let attempts = 0;
-    while (asteroids.length < num && attempts < num * 10) {
-        attempts++;
-        let a = {
-            x: sun.x + (Math.random() * 2000 - 1000),
-            y: sun.y + (Math.random() * 2000 - 1000),
-            vx: (Math.random() - 0.5) * 2,
-            vy: (Math.random() - 0.5) * 2,
-            radius: Math.random() * 5 + 6
-        };
-        let overlapping = false;
-        for (let b of fixedBodies) {
-            if (circlesOverlap(a.x, a.y, a.radius, b.x, b.y, b.radius)) {
-                overlapping = true;
-                break;
-            }
-        }
-        for (let ast of asteroids) {
-            if (circlesOverlap(a.x, a.y, a.radius, ast.x, ast.y, ast.radius)) {
-                overlapping = true;
-                break;
-            }
-        }
-        if (!overlapping) {
-            asteroids.push(a);
-        }
+    const beltInner = BELT_INNER;
+    const beltOuter = BELT_OUTER;
+    const beltCount = 80; // balanced asteroid belt
+    const cometCount = 10; // moderate comets
+
+    // Circular-belt asteroids
+    for (let i = 0; i < beltCount; i++) {
+        let r = beltInner + random() * (beltOuter - beltInner);
+        let angle = random() * Math.PI * 2;
+        let x = sun.x + r * Math.cos(angle);
+        let y = sun.y + r * Math.sin(angle);
+
+        // Circular orbital speed
+        let speed = Math.sqrt(G * sun.mass / r);
+        // Tangential direction: force clockwise (same as planets)
+        const cw = 1;
+        let vx = cw * (-Math.sin(angle)) * speed;
+        let vy = cw * ( Math.cos(angle)) * speed;
+
+        asteroids.push({x, y, vx, vy, radius: 5 + random() * 3, isComet: false});
+    }
+
+    // Comets on highly-elliptical orbits
+    for (let i = 0; i < cometCount; i++) {
+        let r = beltOuter + 300 + random() * 1000; // spawn farther out
+        let angle = random() * Math.PI * 2;
+        let x = sun.x + r * Math.cos(angle);
+        let y = sun.y + r * Math.sin(angle);
+
+        // Slower than circular to create elliptical orbit
+        let speed = Math.sqrt(G * sun.mass / r) * 0.6;
+        let vx = (-Math.sin(angle)) * speed;
+        let vy = ( Math.cos(angle)) * speed;
+
+        asteroids.push({x, y, vx, vy, radius: 5 + random() * 3, isComet: true});
     }
 }
 
 function updateAsteroids(dtEff) {
     for (let i = asteroids.length - 1; i >= 0; i--) {
         let a = asteroids[i];
+        // ADD: gravitational influence on asteroids
+        let ax = 0, ay = 0;
+        const gravityBodies = [sun, planetA, planetB, planetC, planetD, moon, blackHole];
+        for (let b of gravityBodies) {
+            if (b === blackHole) {
+                const dBH_ast = Math.hypot(a.x - b.x, a.y - b.y);
+                if (dBH_ast > BH_MAX_EFFECT_RADIUS) {
+                    // outside BH influence
+                    continue;
+                }
+            }
+            const g = computeGravity(b, a.x, a.y);
+            ax += g.ax;
+            ay += g.ay;
+        }
+        a.vx += ax * dtEff;
+        a.vy += ay * dtEff;
+
         a.x += a.vx * dtEff;
         a.y += a.vy * dtEff;
         const fixedBodies = [sun, planetA, planetB, planetC, planetD, blackHole];
@@ -209,6 +272,10 @@ function drawAsteroids() {
         ctx.fill();
     }
 }
+
+// ADD: Enemy logic ----------------------------------------------------
+// Enemy logic removed
+// --------------------------------------------------------------------
 
 // ---------- The Player's Spaceship ----------
 let spaceship;
@@ -265,8 +332,8 @@ function spawnSpaceStation() {
 let collectible = {x: 0, y: 0, radius: 7, type: "score"};
 
 function spawnCollectible() {
-    const wormholeDist = Math.sqrt(wormhole.entry.x ** 2 + wormhole.entry.y ** 2);
-    const maxDist = 2 * wormholeDist;
+    // Spawn within the orbit of the furthest planet (Planet D)
+    const maxDist = planetD.orbitRadius + 200;
     const safeMargin = 10;
     const fixedBodies = [sun, planetA, planetB, planetC, planetD, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
 
@@ -414,6 +481,11 @@ let solarFlareParticles = [];
 let score = 0;
 let highScore = localStorage.getItem("highScore") || 0;
 
+// ---------- Local Storage Stats ----------
+let totalScoreLS = parseInt(localStorage.getItem("totalScore")) || 0;
+let totalGamesLS = parseInt(localStorage.getItem("totalGames")) || 0;
+// totalEnemies stat removed
+
 // ---------- Keyboard Input ----------
 const keys = {};
 window.addEventListener("keydown", (e) => {
@@ -424,6 +496,10 @@ window.addEventListener("keydown", (e) => {
     if (e.key.toLowerCase() === "w") keys["ArrowUp"] = true;
     if (e.key.toLowerCase() === "a") keys["ArrowLeft"] = true;
     if (e.key.toLowerCase() === "d") keys["ArrowRight"] = true;
+    // ADD: reset keybind
+    if (e.key.toLowerCase() === "r") {
+        resetGame();
+    }
 });
 
 window.addEventListener("keyup", (e) => {
@@ -435,8 +511,8 @@ window.addEventListener("keyup", (e) => {
 
 // ---------- Camera Update ----------
 function updateCamera() {
-    camera.x = spaceship.x - canvas.width / 2;
-    camera.y = spaceship.y - canvas.height / 2;
+    camera.x = spaceship.x - canvas.width / (2 * zoom);
+    camera.y = spaceship.y - canvas.height / (2 * zoom);
 }
 
 // ---------- Background and Star Field ----------
@@ -665,8 +741,70 @@ function drawSolarFlareParticles() {
     ctx.restore();
 }
 
+// ---------- Drawing Functions (add minimap) ----------
+function drawMinimap() {
+    const size = 180;
+    const margin = 15;
+    const x0 = canvas.width - size - margin;
+    const y0 = margin;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(x0, y0, size, size);
+    ctx.strokeStyle = '#fff';
+    ctx.strokeRect(x0, y0, size, size);
+
+    // Dynamically determine scale based on furthest object (planets, belt, comets)
+    let maxDist = 0;
+    const bodiesForScale = [planetA, planetB, planetC, planetD, moon, satelliteA]; // exclude remote black hole
+    for (let b of bodiesForScale) {
+        const d = Math.hypot(b.x - sun.x, b.y - sun.y);
+        if (d > maxDist) maxDist = d;
+    }
+    for (let a of asteroids) {
+        const d = Math.hypot(a.x - sun.x, a.y - sun.y);
+        if (d > maxDist) maxDist = d;
+    }
+    if (maxDist < BELT_OUTER) maxDist = BELT_OUTER;
+    const scale = size / (maxDist * 2);
+
+    const cx = x0 + size / 2;
+    const cy = y0 + size / 2;
+
+    function drawDot(px, py, color, r = 2) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx + px * scale, cy + py * scale, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawDot(sun.x - sun.x, sun.y - sun.y, '#ff0', 3); // sun at center (offset by sun)
+    drawDot(spaceship.x - sun.x, spaceship.y - sun.y, '#0f0');
+    drawDot(collectible.x - sun.x, collectible.y - sun.y, '#0ff');
+    // Planets & moon
+    drawDot(planetA.x - sun.x, planetA.y - sun.y, '#00aaff');
+    drawDot(planetB.x - sun.x, planetB.y - sun.y, '#ff4444');
+    drawDot(planetC.x - sun.x, planetC.y - sun.y, '#ffaa00');
+    drawDot(planetD.x - sun.x, planetD.y - sun.y, '#aa00ff');
+    drawDot(moon.x - sun.x, moon.y - sun.y, '#888888');
+    drawDot(blackHole.x - sun.x, blackHole.y - sun.y, '#551122', 3);
+    if (driftingShip && !driftingShip.delivered) {
+        drawDot(driftingShip.x - sun.x, driftingShip.y - sun.y, '#f0f');
+    }
+
+    ctx.restore();
+}
+
 function drawScene() {
+     // Clear with identity transform to prevent streak artifacts
+     ctx.setTransform(1,0,0,1,0,0);
+     ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Draw background without scaling so it always covers viewport
     drawBackground();
+
+    ctx.save();
+    ctx.scale(zoom, zoom);
+
     drawStars();
     // Draw celestial bodies
     drawPlanet(sun, "#ffea00", "#ccaa00");
@@ -682,6 +820,7 @@ function drawScene() {
     drawPlanet(moon, "#aaaaaa", "#888888");
     drawPlanet(satelliteA, "#aaaaaa", "#888888");
     drawAsteroids();
+    // Enemies removed, no draw call
     drawSolarFlareParticles();
     // Draw the rescue mission objects:
     drawSpaceStation();
@@ -725,12 +864,16 @@ function drawScene() {
     if (dBH < 300) {
         const opacity = 1 - dBH / 300;
         ctx.fillStyle = "rgba(50,0,50," + (opacity * 0.5) + ")";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(camera.x, camera.y, canvas.width / zoom, canvas.height / zoom);
     }
+
+    ctx.restore();
+
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     drawFuelBar();
     drawShieldBar();
+    drawMinimap();
     ctx.restore();
 }
 
@@ -750,14 +893,20 @@ function updateGame() {
     const dxBH = spaceship.x - blackHole.x;
     const dyBH = spaceship.y - blackHole.y;
     const dBH = Math.sqrt(dxBH * dxBH + dyBH * dyBH);
-    let dtEff = dt;
+    // Compute speed multiplier based on held keys (c/v/b/n)
+    let speedMul = 1;
+    if (keys['c'] || keys['C']) speedMul = 2;
+    if (keys['v'] || keys['V']) speedMul = 4;
+    if (keys['b'] || keys['B']) speedMul = 8;
+    if (keys['n'] || keys['N']) speedMul = 16;
+    let dtEff = dt * speedMul;
+    let timeFactor = speedMul;
     if (dBH < BH_TIME_DILATION_THRESHOLD) {
-        let factor = dBH / BH_TIME_DILATION_THRESHOLD;
-        if (factor < 0.2) factor = 0.2;
-        bgMusic.playbackRate = factor;
-    } else {
-        bgMusic.playbackRate = 1;
+        let bhf = dBH / BH_TIME_DILATION_THRESHOLD;
+        if (bhf < 0.2) bhf = 0.2;
+        timeFactor *= bhf;
     }
+    bgMusic.playbackRate = timeFactor;
     gameTime += dtEff;
     if (!spaceship.disabled) {
         if (keys["ArrowLeft"]) {
@@ -819,6 +968,7 @@ function updateGame() {
     bhOrbiter2.y = blackHole.y + bhOrbiter2.orbitRadius * Math.sin(bhOrbiter2.angle);
 
     updateAsteroids(dtEff);
+    // Enemies removed, no update call
 
     const gravSun = computeGravity(sun, spaceship.x, spaceship.y);
     const gravPlanetA = computeGravity(planetA, spaceship.x, spaceship.y);
@@ -846,6 +996,9 @@ function updateGame() {
     const dyC = spaceship.y - collectible.y;
     if (Math.sqrt(dxC * dxC + dyC * dyC) < spaceship.radius + collectible.radius) {
         score++;
+        totalScoreLS++;
+        localStorage.setItem("totalScore", totalScoreLS);
+        // Enemy spawning removed
         if (collectible.type === "fuel") {
             spaceship.fuel += 5;
         } else if (collectible.type === "upgrade") {
@@ -949,6 +1102,8 @@ function updateGame() {
             if (Math.sqrt(dxSS * dxSS + dySS * dySS) < spaceship.radius + spaceStation.radius) {
                 driftingShip.delivered = true;
                 score += 4;
+                totalScoreLS += 4;
+                localStorage.setItem("totalScore", totalScoreLS);
                 spaceship.thrustMultiplier *= 2;
             }
         }
@@ -959,6 +1114,7 @@ function updateGame() {
 function updateStatus() {
     const speed = Math.sqrt(spaceship.vx ** 2 + spaceship.vy ** 2).toFixed(2);
     let txt = `Fuel: ${spaceship.fuel.toFixed(2)}/${spaceship.maxFuel} | Speed: ${speed} | Score: ${score} | High Score: ${highScore}`;
+    txt += ` | Total Score: ${totalScoreLS} | Games: ${totalGamesLS}`;
     if (spaceship.graceTime > 0) txt += ` | Safe: ${(spaceship.graceTime * dt).toFixed(1)}s`;
     if (spaceship.disabled) txt += ` | DISABLED: ${(spaceship.disableTime * dt).toFixed(1)}s`;
     if (spaceship.upgrades.length > 0) txt += ` | Upgrades: ${spaceship.upgrades.join(", ")}`;
@@ -1001,6 +1157,7 @@ function checkCollisions() {
             return true;
         }
     }
+    // Enemy collision removed
     return false;
 }
 
@@ -1025,11 +1182,17 @@ function animate() {
     if (checkCollisions()) return;
 }
 
-resetBtn.addEventListener("click", () => {
+// ADD: Centralised reset function ------------------------------------
+function resetGame() {
     cancelAnimationFrame(animationId);
     simulationRunning = false;
     simulationPaused = false;
     pauseBtn.textContent = "Pause";
+    // No enemies to reset
+    zoom = 1;
+    totalGamesLS++;
+    localStorage.setItem("totalGames", totalGamesLS);
+    // speed multipliers reset via keys release; nothing to reset here
     initSpaceship();
     score = 0;
     spawnCollectible();
@@ -1041,14 +1204,30 @@ resetBtn.addEventListener("click", () => {
     gameTime = 0;
     animationId = null;
     simulationRunning = true;
-    animate();
-});
+    // Reset planet angles/positions
+    planetA.angle = 0;
+    planetB.angle = 4 * Math.PI / 3;
+    planetC.angle = -5 * Math.PI / 3;
+    planetD.angle = Math.PI / 2;
 
-pauseBtn.addEventListener("click", () => {
-    simulationPaused = !simulationPaused;
-    pauseBtn.textContent = simulationPaused ? "Resume" : "Pause";
-    if (!simulationPaused) animate();
-});
+    planetA.x = sun.x + planetA.orbitRadius * Math.cos(planetA.angle);
+    planetA.y = sun.y + planetA.orbitRadius * Math.sin(planetA.angle);
+    planetB.x = sun.x + planetB.orbitRadius * Math.cos(planetB.angle);
+    planetB.y = sun.y + planetB.orbitRadius * Math.sin(planetB.angle);
+    planetC.x = sun.x + planetC.orbitRadius * Math.cos(planetC.angle);
+    planetC.y = sun.y + planetC.orbitRadius * Math.sin(planetC.angle);
+    planetD.x = sun.x + planetD.orbitRadius * Math.cos(planetD.angle);
+    planetD.y = sun.y + planetD.orbitRadius * Math.sin(planetD.angle);
+
+    // Re-seed RNG so each reset gives fresh randomness
+    setRandomSeed(Date.now() & 0xffffffff);
+
+    animate();
+}
+// --------------------------------------------------------------------
+
+// Update reset button to use new function
+resetBtn.addEventListener("click", resetGame);
 
 // ---------- Start Game ----------
 initSpaceship();
