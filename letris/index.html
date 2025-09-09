@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letris - Word Tetris Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1 class="game-title">LETRIS</h1>
+            <div class="game-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Score</span>
+                    <span class="stat-value" id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Level</span>
+                    <span class="stat-value" id="level">1</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Lines</span>
+                    <span class="stat-value" id="lines">0</span>
+                </div>
+            </div>
+        </header>
+        
+        <main class="game-main">
+            <div class="game-board-container">
+                <canvas id="gameBoard" width="400" height="400"></canvas>
+                <div class="game-overlay" id="gameOverlay">
+                    <div class="overlay-content">
+                        <h2 id="overlayTitle">Game Over</h2>
+                        <p id="overlayMessage">Final Score: <span id="finalScore">0</span></p>
+                        <button id="restartButton" class="game-button">Play Again</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-sidebar">
+                <div class="next-piece">
+                    <h3>Next Letter</h3>
+                    <div class="next-letter-display" id="nextLetter">A</div>
+                </div>
+                
+                <div class="word-found" id="wordFound">
+                    <h3>Word Found!</h3>
+                    <div class="found-word" id="foundWord"></div>
+                    <div class="word-points" id="wordPoints">+0</div>
+                </div>
+                
+                <div class="game-settings">
+                    <h3>Settings</h3>
+                    <div class="setting-item">
+                        <label for="letterDistribution">Letter Distribution:</label>
+                        <select id="letterDistribution">
+                            <option value="frequency" selected>Commonness</option>
+                            <option value="uniform">Uniform</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="minWordLength">Min Word Length:</label>
+                        <select id="minWordLength">
+                            <option value="3">3 letters</option>
+                            <option value="4" selected>4 letters</option>
+                            <option value="5">5 letters</option>
+                            <option value="6">6 letters</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <div class="control-item">
+                        <span class="control-key">←→</span>
+                        <span class="control-desc">Move</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">↓</span>
+                        <span class="control-desc">Drop</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">Space</span>
+                        <span class="control-desc">Hard Drop</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-key">P</span>
+                        <span class="control-desc">Pause</span>
+                    </div>
+                </div>
+                
+                <button id="pauseButton" class="game-button">Pause</button>
+                <button id="newGameButton" class="game-button">New Game</button>
+            </div>
+        </main>
+    </div>
+    
+    <script src="dictionary.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
