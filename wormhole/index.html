@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="generator" content="pandoc"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
+    <meta name="author" content="Tiernan Lindauer"/>
+    <meta name="dcterms.date" content="2025-10-29"/>
+    <title>Wormhole Simulation</title>
+    <link rel="stylesheet" href="../reset.css"/>
+    <link rel="stylesheet" href="../index.css"/>
+    <style>
+        video {
+            display: block;
+            margin: auto;
+            width: 100%;
+            max-width: 800px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <a href="../projects/" class="back-link">← Back to Projects</a>
+    <h1>Wormhole Simulation</h1>
+    <p><a href="https://github.com/T-Lind/wormhole" target="_blank">View on GitHub</a></p>
+</header>
+<main>
+    <p>This is a real-time, interactive simulation of a traversable wormhole connecting two distinct universes. The rendering is performed entirely on the GPU using a compute shader for high performance.</p>
+    <video controls poster="../public/projects/wormhole_still.png">
+        <source src="../public/projects/wormhole.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <h2>How it Works</h2>
+    <p>The simulation visualizes what it might look like to approach a Morris-Thorne wormhole. The view from one universe into the other through the wormhole's throat is distorted by an approximated gravitational lensing effect, implemented as a refraction effect in the compute shader. While not a full general relativity calculation, this approach allows for an interactive, real-time experience.</p>
+    <p>The project also includes a second, non-interactive, CPU-based renderer that calculates the physically accurate path of light by numerically solving the geodesic equations of general relativity. This produces a more accurate image at the cost of being extremely slow.</p>
+    <h2>Technologies Used</h2>
+    <ul>
+        <li>C++ (C++17)</li>
+        <li>OpenGL (4.3)</li>
+        <li>GLSL (Compute Shaders)</li>
+        <li>GLFW for windowing and input</li>
+        <li>GLM for mathematics</li>
+        <li>CMake for building</li>
+    </ul>
+</main>
+</body>
+</html>
