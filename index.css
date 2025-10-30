@@ -759,3 +759,39 @@ label input {
     border-color: #999;
     color: #333;
 }
+
+/* Reading List Styles */
+.reading-list .year-section {
+    margin-bottom: 2rem;
+}
+
+.reading-list .year-title {
+    font-size: 1.8rem;
+    border-bottom: 2px solid var(--text-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.reading-list h3 {
+    font-size: 1.2rem;
+    font-weight: var(--font-weight-medium);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.reading-list .book-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.reading-list .book-list li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.reading-list .book-list input[type="checkbox"] {
+    margin-right: 1ch;
+    width: 1.5ch;
+    height: 1.5ch;
+}
