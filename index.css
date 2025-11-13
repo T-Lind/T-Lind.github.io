@@ -795,3 +795,29 @@ label input {
     width: 1.5ch;
     height: 1.5ch;
 }
+
+/* Introduction Section */
+.intro-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 2ch;
+    margin-top: var(--line-height);
+}
+
+.profile-pic {
+    width: 200px;
+    height: 200px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+@media screen and (max-width: 600px) {
+    .intro-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .profile-pic {
+        margin-bottom: var(--line-height);
+    }
+}
