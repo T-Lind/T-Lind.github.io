@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accelerated Charge Radiation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f1419;
+            color: #e4e4e7;
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: #a1a1aa;
+            font-size: 1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .canvas-wrapper {
+            background: #000000;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #27272a;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .panel-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        button {
+            padding: 10px 16px;
+            border: 1px solid #27272a;
+            border-radius: 8px;
+            background: #27272a;
+            color: #e4e4e7;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #3f3f46;
+            border-color: #3f3f46;
+        }
+
+        button.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-row label {
+            font-size: 0.875rem;
+            color: #a1a1aa;
+            min-width: 100px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #27272a;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid #18181b;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid #18181b;
+        }
+
+        .value {
+            font-size: 0.875rem;
+            color: #ffffff;
+            font-weight: 500;
+            min-width: 50px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+
+        .checkbox-item label {
+            font-size: 0.875rem;
+            color: #e4e4e7;
+            cursor: pointer;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .stat-item {
+            background: #27272a;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #a1a1aa;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .info-section {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .info-section h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-section p {
+            font-size: 0.875rem;
+            color: #a1a1aa;
+            line-height: 1.6;
+        }
+
+        .interactive-hint {
+            background: #27272a;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+            font-size: 0.875rem;
+            color: #a1a1aa;
+            display: none;
+        }
+
+        .interactive-hint.active {
+            display: block;
+        }
+
+        .interactive-hint strong {
+            color: #3b82f6;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Accelerated Charge Radiation</h1>
+            <p class="subtitle">Electromagnetic field visualization from moving charges</p>
+        </header>
+
+        <div class="main-content">
+            <div class="canvas-wrapper">
+                <canvas id="canvas" width="800" height="800"></canvas>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <div class="panel-title">Animation Mode</div>
+                    <div class="button-group">
+                        <button id="mode1" class="active">Constant</button>
+                        <button id="mode2">Oscillate</button>
+                        <button id="mode3">Circular</button>
+                        <button id="mode4">Interactive</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Controls</div>
+                    <div class="button-group">
+                        <button id="playPause">Play</button>
+                        <button id="step">Step</button>
+                        <button id="reset">Reset</button>
+                    </div>
+                    <div class="interactive-hint" id="interactiveHint">
+                        <strong>Arrow Keys:</strong> Accelerate the charge with momentum physics
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Parameters</div>
+                    <div class="control-row">
+                        <label>Speed</label>
+                        <input type="range" id="speedSlider" min="0.1" max="0.9" step="0.01" value="0.5">
+                        <span class="value" id="speedValue">0.50</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Amplitude</label>
+                        <input type="range" id="ampSlider" min="0.1" max="2.0" step="0.1" value="0.5">
+                        <span class="value" id="ampValue">0.50</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Field Lines</label>
+                        <input type="range" id="raysSlider" min="12" max="72" step="6" value="36">
+                        <span class="value" id="raysValue">36</span>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Display Options</div>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="showVelocity" checked>
+                            <label for="showVelocity">Velocity Vector</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="showTrail" checked>
+                            <label for="showTrail">Charge Trail</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="showGrid" checked>
+                            <label for="showGrid">Grid</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="showAxes" checked>
+                            <label for="showAxes">Axes</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Statistics</div>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Time</div>
+                            <div class="stat-value" id="timeValue">0.00</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Velocity</div>
+                            <div class="stat-value" id="velocityValue">0.50</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Position X</div>
+                            <div class="stat-value" id="posXValue">0.00</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Position Y</div>
+                            <div class="stat-value" id="posYValue">0.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>About</h3>
+            <p>
+                This simulation visualizes the electric field around a moving charge. When a charge accelerates, 
+                it creates disturbances in the electromagnetic field that propagate outward as radiation. The field 
+                lines show the direction of the electric field, and their distortion reveals how acceleration affects 
+                the field structure. The energy carried by electromagnetic waves originates from the work done to 
+                accelerate the charge.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Physics parameters
+        let space = 4;
+        let amp = 0.5;
+        let xSource = 0.0;
+        let ySource = 0.0;
+        let vmax = 0.5;
+        let vx = 0.5;
+        let vy = 0.0;
+        let phase = 0.0;
+        let offset = 0.0;
+        let t = 0.0;
+        let dt = 0.05;
+        let animation = 1;
+
+        // Ray and shell parameters
+        let nRays = 36;
+        let nShells = 512;
+        let nextShell = nShells - 1;
+
+        // Data structures
+        let xRays = [];
+        let yRays = [];
+        let slope = [];
+        let sign = [];
+        let shells = [];
+
+        // Charge trail
+        let chargeTrail = [];
+        const maxTrailLength = 200;
+
+        // Display options
+        let showVelocity = true;
+        let showTrail = true;
+        let showGrid = true;
+        let showAxes = true;
+
+        // Animation state
+        let isPlaying = false;
+
+        // Interactive mode
+        let isInteractive = false;
+        let keysPressed = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false
+        };
+        // Physics parameters for smooth dynamics
+        const maxSpeed = 10;
+        const acceleration = 0.25;
+        const friction = 0.95; // Higher = less friction (0.92 means 8% velocity lost per frame)
+        const minVelocity = 0.001; // Threshold below which velocity is set to 0
+
+        // Initialize arrays
+        function initArrays() {
+            xRays = [];
+            yRays = [];
+            slope = [];
+            sign = [];
+            shells = [];
+            chargeTrail = [];
+
+            for (let i = 0; i < nRays; i++) {
+                xRays[i] = new Array(nShells).fill(xSource);
+                yRays[i] = new Array(nShells).fill(ySource);
+            }
+
+            for (let i = 0; i < nShells; i++) {
+                const delta = t - i * dt;
+                shells[i] = {
+                    ts: delta,
+                    xs: xSource + delta * vx,
+                    ys: ySource + delta * vy,
+                    vxs: vx,
+                    vys: vy,
+                    gamma: 1 / Math.sqrt(Math.max(0.01, 1 - vx * vx - vy * vy)),
+                    m: new Array(nRays),
+                    sg: new Array(nRays)
+                };
+            }
+        }
+
+        // Coordinate transformation
+        function worldToScreen(x, y) {
+            const scale = Math.min(width, height) / (2 * space);
+            return {
+                x: width / 2 + x * scale,
+                y: height / 2 - y * scale
+            };
+        }
+
+        function screenToWorld(sx, sy) {
+            const scale = Math.min(width, height) / (2 * space);
+            return {
+                x: (sx - width / 2) / scale,
+                y: (height / 2 - sy) / scale
+            };
+        }
+
+        // Initialize field lines
+        function initFieldLines() {
+            let theta = 0.0001;
+            const dtheta = 2 * Math.PI / nRays;
+            const gamma = 1.0 / Math.sqrt(Math.max(0.01, 1 - vx * vx - vy * vy));
+            const thetaV = Math.atan2(vy, vx);
+
+            for (let i = 0; i < nRays; i++) {
+                const thetaF = Math.atan2(
+                    gamma * Math.sin(theta - thetaV),
+                    Math.cos(theta - thetaV)
+                );
+                const thetaFV = thetaF + thetaV;
+                sign[i] = Math.cos(thetaFV) > 0;
+                if (Math.cos(thetaFV) !== 0) {
+                    slope[i] = Math.tan(thetaFV);
+                } else {
+                    slope[i] = theta > 0 ? 1000 : -1000;
+                }
+                theta += dtheta;
+            }
+
+            for (let i = 0; i < nShells; i++) {
+                const delta = t - i * dt;
+                shells[i] = {
+                    ts: delta,
+                    xs: xSource + delta * vx,
+                    ys: ySource + delta * vy,
+                    vxs: vx,
+                    vys: vy,
+                    gamma: 1 / Math.sqrt(Math.max(0.01, 1 - vx * vx - vy * vy)),
+                    m: [...slope],
+                    sg: [...sign]
+                };
+            }
+        }
+
+        // Step source position
+        function stepSource() {
+            t += dt;
+            const omega = vmax / amp;
+            phase = omega * t + offset;
+
+            if (isInteractive) {
+                // Interactive mode: controlled by arrow keys with momentum
+                let targetAx = 0;
+                let targetAy = 0;
+                
+                // Calculate target acceleration based on keys
+                if (keysPressed.ArrowRight) {
+                    targetAx = acceleration;
+                }
+                if (keysPressed.ArrowLeft) {
+                    targetAx = -acceleration;
+                }
+                if (keysPressed.ArrowUp) {
+                    targetAy = acceleration;
+                }
+                if (keysPressed.ArrowDown) {
+                    targetAy = -acceleration;
+                }
+                
+                // Apply acceleration to velocity
+                vx += targetAx * dt;
+                vy += targetAy * dt;
+                
+                // Apply friction (momentum decay)
+                vx *= friction;
+                vy *= friction;
+                
+                // Limit maximum speed
+                const speed = Math.sqrt(vx * vx + vy * vy);
+                if (speed > maxSpeed) {
+                    const scale = maxSpeed / speed;
+                    vx *= scale;
+                    vy *= scale;
+                }
+                
+                // Stop very small velocities to prevent jitter
+                if (Math.abs(vx) < minVelocity) {
+                    vx = 0;
+                }
+                if (Math.abs(vy) < minVelocity) {
+                    vy = 0;
+                }
+                
+                // Update position based on velocity
+                xSource += vx * dt;
+                ySource += vy * dt;
+                
+                // Keep charge within bounds with bounce
+                if (xSource > space) {
+                    xSource = space;
+                    vx *= -0.5; // Bounce with energy loss
+                }
+                if (xSource < -space) {
+                    xSource = -space;
+                    vx *= -0.5;
+                }
+                if (ySource > space) {
+                    ySource = space;
+                    vy *= -0.5;
+                }
+                if (ySource < -space) {
+                    ySource = -space;
+                    vy *= -0.5;
+                }
+            } else {
+                switch (animation) {
+                    case 1:
+                        xSource += vmax * dt;
+                        const delta = Math.abs(vmax - vx);
+                        if (delta > 0 && vmax - vx > 0) vx = Math.min(vx + 0.1, vmax);
+                        if (delta > 0 && vmax - vx < 0) vx = Math.max(vx - 0.1, vmax);
+                        break;
+                    case 2:
+                        xSource = amp * Math.sin(phase);
+                        vx = vmax * Math.cos(phase);
+                        break;
+                    case 3:
+                        xSource = amp * Math.sin(phase);
+                        ySource = amp * Math.cos(phase);
+                        vx = vmax * Math.cos(phase);
+                        vy = -vmax * Math.sin(phase);
+                        break;
+                }
+            }
+
+            // Update trail
+            if (showTrail) {
+                chargeTrail.push({ x: xSource, y: ySource });
+                if (chargeTrail.length > maxTrailLength) {
+                    chargeTrail.shift();
+                }
+            }
+
+            // Adjust position for constant speed mode
+            if (animation === 1 && xSource > space) {
+                for (let i = 0; i < nShells; i++) {
+                    shells[i].xs -= 2 * space;
+                }
+                xSource -= 2 * space;
+            }
+            if (animation === 1 && xSource < -space) {
+                for (let i = 0; i < nShells; i++) {
+                    shells[i].xs += 2 * space;
+                }
+                xSource += 2 * space;
+            }
+        }
+
+        // Update shell data
+        function updateShell() {
+            shells[nextShell].ts = t;
+            shells[nextShell].xs = xSource;
+            shells[nextShell].ys = ySource;
+            shells[nextShell].vxs = vx;
+            shells[nextShell].vys = vy;
+
+            let theta = 0.00001;
+            const dtheta = 2 * Math.PI / nRays;
+            const gamma = 1.0 / Math.sqrt(Math.max(0.01, 1 - vx * vx - vy * vy));
+            const thetaV = Math.atan2(vy, vx);
+
+            for (let i = 0; i < nRays; i++) {
+                const thetaF = Math.atan2(
+                    gamma * Math.sin(theta - thetaV),
+                    Math.cos(theta - thetaV)
+                );
+                const thetaFV = thetaF + thetaV;
+                shells[nextShell].sg[i] = Math.cos(thetaFV) > 0;
+                if (Math.cos(thetaFV) !== 0) {
+                    shells[nextShell].m[i] = Math.tan(thetaFV);
+                } else {
+                    shells[nextShell].m[i] = theta > 0 ? 1000 : -1000;
+                }
+                theta += dtheta;
+            }
+            shells[nextShell].gamma = gamma;
+            nextShell--;
+            if (nextShell < 0) nextShell = nShells - 1;
+        }
+
+        // Compute ray positions
+        function computeRays() {
+            for (let i = 0; i < nShells; i++) {
+                const ii = (nextShell + i + 1) % nShells;
+                const delta = t - shells[ii].ts;
+
+                for (let j = 0; j < nRays; j++) {
+                    const m = shells[ii].m[j];
+                    const dx = shells[ii].vxs * delta;
+                    const dy = shells[ii].vys * delta;
+                    const c = dy - dx * m;
+                    const disc = 4 * m * m * c * c - 4 * (1 + m * m) * (c * c - delta * delta);
+
+                    if (disc >= 0) {
+                        const sqrtDisc = Math.sqrt(disc);
+                        const xr = shells[ii].sg[j] > 0
+                            ? (-2 * m * c + sqrtDisc) / (2 * (1 + m * m))
+                            : (-2 * m * c - sqrtDisc) / (2 * (1 + m * m));
+                        const yr = m * xr + c;
+                        xRays[j][i] = shells[ii].xs + xr;
+                        yRays[j][i] = shells[ii].ys + yr;
+                    }
+                }
+            }
+        }
+
+        // Draw the simulation
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw grid
+            if (showGrid) {
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 1;
+                const gridSpacing = space / 4;
+                for (let i = -space; i <= space; i += gridSpacing) {
+                    const pos1 = worldToScreen(i, -space);
+                    const pos2 = worldToScreen(i, space);
+                    ctx.beginPath();
+                    ctx.moveTo(pos1.x, pos1.y);
+                    ctx.lineTo(pos2.x, pos2.y);
+                    ctx.stroke();
+
+                    const pos3 = worldToScreen(-space, i);
+                    const pos4 = worldToScreen(space, i);
+                    ctx.beginPath();
+                    ctx.moveTo(pos3.x, pos3.y);
+                    ctx.lineTo(pos4.x, pos4.y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw axes
+            if (showAxes) {
+                ctx.strokeStyle = '#2a2a2a';
+                ctx.lineWidth = 2;
+                const origin = worldToScreen(0, 0);
+                ctx.beginPath();
+                ctx.moveTo(origin.x, 0);
+                ctx.lineTo(origin.x, height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, origin.y);
+                ctx.lineTo(width, origin.y);
+                ctx.stroke();
+            }
+
+            // Draw charge trail
+            if (showTrail && chargeTrail.length > 1) {
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const first = worldToScreen(chargeTrail[0].x, chargeTrail[0].y);
+                ctx.moveTo(first.x, first.y);
+                for (let i = 1; i < chargeTrail.length; i++) {
+                    const pos = worldToScreen(chargeTrail[i].x, chargeTrail[i].y);
+                    ctx.lineTo(pos.x, pos.y);
+                }
+                ctx.stroke();
+            }
+
+            // Draw field lines (same for all modes including interactive)
+            for (let j = 0; j < nRays; j++) {
+                ctx.strokeStyle = `rgba(59, 130, 246, ${0.4 + (j / nRays) * 0.3})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+
+                let firstPoint = true;
+                for (let i = 0; i < nShells; i++) {
+                    const x = xRays[j][i];
+                    const y = yRays[j][i];
+                    if (Math.abs(x) < space * 2 && Math.abs(y) < space * 2) {
+                        const pos = worldToScreen(x, y);
+                        if (firstPoint) {
+                            ctx.moveTo(pos.x, pos.y);
+                            firstPoint = false;
+                        } else {
+                            ctx.lineTo(pos.x, pos.y);
+                        }
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // Draw charge
+            const chargePos = worldToScreen(xSource, ySource);
+            const chargeRadius = 10;
+
+            // Charge circle
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(chargePos.x, chargePos.y, chargeRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Charge border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Plus sign
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(chargePos.x - 5, chargePos.y);
+            ctx.lineTo(chargePos.x + 5, chargePos.y);
+            ctx.moveTo(chargePos.x, chargePos.y - 5);
+            ctx.lineTo(chargePos.x, chargePos.y + 5);
+            ctx.stroke();
+
+            // Draw velocity vector
+            if (showVelocity && (Math.abs(vx) > 0.01 || Math.abs(vy) > 0.01)) {
+                const velScale = 1.5;
+                const velEnd = worldToScreen(
+                    xSource + vx * velScale,
+                    ySource + vy * velScale
+                );
+
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(chargePos.x, chargePos.y);
+                ctx.lineTo(velEnd.x, velEnd.y);
+                ctx.stroke();
+
+                // Arrowhead - calculate angle in screen coordinates
+                const dx = velEnd.x - chargePos.x;
+                const dy = velEnd.y - chargePos.y;
+                const angle = Math.atan2(dy, dx);
+                const arrowLength = 8;
+                const arrowAngle = Math.PI / 6;
+                ctx.beginPath();
+                ctx.moveTo(velEnd.x, velEnd.y);
+                ctx.lineTo(
+                    velEnd.x - arrowLength * Math.cos(angle - arrowAngle),
+                    velEnd.y - arrowLength * Math.sin(angle - arrowAngle)
+                );
+                ctx.moveTo(velEnd.x, velEnd.y);
+                ctx.lineTo(
+                    velEnd.x - arrowLength * Math.cos(angle + arrowAngle),
+                    velEnd.y - arrowLength * Math.sin(angle + arrowAngle)
+                );
+                ctx.stroke();
+            }
+
+            // Draw markers for oscillation mode
+            if (animation === 2) {
+                const markPos1 = worldToScreen(3.0, 0.0);
+                const markPos2 = worldToScreen(-3.0, 0.0);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(markPos1.x - 8, markPos1.y - 1, 16, 2);
+                ctx.fillRect(markPos2.x - 8, markPos2.y - 1, 16, 2);
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('timeValue').textContent = t.toFixed(2);
+            const velocity = Math.sqrt(vx * vx + vy * vy);
+            document.getElementById('velocityValue').textContent = velocity.toFixed(2);
+            document.getElementById('posXValue').textContent = xSource.toFixed(2);
+            document.getElementById('posYValue').textContent = ySource.toFixed(2);
+        }
+
+        // Animation loop
+        function animate() {
+            if (isPlaying || isInteractive) {
+                stepSource();
+                updateShell();
+                computeRays();
+            }
+            draw();
+            updateStats();
+            requestAnimationFrame(animate);
+        }
+
+        // Change animation mode
+        function changeAnimation(mode) {
+            animation = mode;
+            t = 0;
+            offset = 0;
+            phase = 0;
+            chargeTrail = [];
+            
+            if (mode === 4) {
+                isInteractive = true;
+                xSource = 0;
+                ySource = 0;
+                vx = 0;
+                vy = 0;
+                // Reset keys
+                keysPressed.ArrowUp = false;
+                keysPressed.ArrowDown = false;
+                keysPressed.ArrowLeft = false;
+                keysPressed.ArrowRight = false;
+            } else {
+                isInteractive = false;
+                switch (animation) {
+                    case 1:
+                        xSource = 0;
+                        ySource = 0;
+                        vx = vmax;
+                        vy = 0;
+                        break;
+                    case 2:
+                        xSource = 0;
+                        ySource = 0;
+                        vx = vmax;
+                        vy = 0;
+                        break;
+                    case 3:
+                        xSource = 0;
+                        ySource = amp;
+                        vx = vmax;
+                        vy = 0;
+                        break;
+                }
+            }
+
+            nextShell = nShells - 1;
+            for (let i = 0; i < nShells; i++) {
+                const delta = t - i * dt;
+                shells[i].ts = delta;
+                shells[i].xs = xSource + delta * vx;
+                shells[i].ys = ySource + delta * vy;
+            }
+            initFieldLines();
+        }
+
+        // Change speed
+        function changeSpeed() {
+            vmax = Math.min(vmax, 0.90);
+            vmax = Math.max(vmax, -0.90);
+            const omega = vmax / amp;
+            offset = phase - omega * t;
+        }
+
+        // Update number of rays
+        function updateRays() {
+            initArrays();
+            initFieldLines();
+            computeRays();
+        }
+
+        // Event listeners
+        document.getElementById('mode1').addEventListener('click', () => {
+            document.querySelectorAll('.button-group button').forEach(b => b.classList.remove('active'));
+            document.getElementById('mode1').classList.add('active');
+            document.getElementById('interactiveHint').classList.remove('active');
+            changeAnimation(1);
+        });
+
+        document.getElementById('mode2').addEventListener('click', () => {
+            document.querySelectorAll('.button-group button').forEach(b => b.classList.remove('active'));
+            document.getElementById('mode2').classList.add('active');
+            document.getElementById('interactiveHint').classList.remove('active');
+            changeAnimation(2);
+        });
+
+        document.getElementById('mode3').addEventListener('click', () => {
+            document.querySelectorAll('.button-group button').forEach(b => b.classList.remove('active'));
+            document.getElementById('mode3').classList.add('active');
+            document.getElementById('interactiveHint').classList.remove('active');
+            changeAnimation(3);
+        });
+
+        document.getElementById('mode4').addEventListener('click', () => {
+            document.querySelectorAll('.button-group button').forEach(b => b.classList.remove('active'));
+            document.getElementById('mode4').classList.add('active');
+            isPlaying = true;
+            document.getElementById('playPause').textContent = 'Pause';
+            document.getElementById('interactiveHint').classList.add('active');
+            changeAnimation(4);
+        });
+
+        document.getElementById('playPause').addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            document.getElementById('playPause').textContent = isPlaying ? 'Pause' : 'Play';
+        });
+
+        document.getElementById('step').addEventListener('click', () => {
+            isPlaying = false;
+            document.getElementById('playPause').textContent = 'Play';
+            stepSource();
+            updateShell();
+            computeRays();
+            draw();
+            updateStats();
+        });
+
+        document.getElementById('reset').addEventListener('click', () => {
+            isPlaying = false;
+            document.getElementById('playPause').textContent = 'Play';
+            t = 0;
+            changeAnimation(animation);
+            draw();
+            updateStats();
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            vmax = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = vmax.toFixed(2);
+            changeSpeed();
+        });
+
+        document.getElementById('ampSlider').addEventListener('input', (e) => {
+            amp = parseFloat(e.target.value);
+            document.getElementById('ampValue').textContent = amp.toFixed(2);
+            changeAnimation(animation);
+        });
+
+        document.getElementById('raysSlider').addEventListener('input', (e) => {
+            nRays = parseInt(e.target.value);
+            document.getElementById('raysValue').textContent = nRays;
+            updateRays();
+        });
+
+        document.getElementById('showVelocity').addEventListener('change', (e) => {
+            showVelocity = e.target.checked;
+        });
+
+        document.getElementById('showTrail').addEventListener('change', (e) => {
+            showTrail = e.target.checked;
+            if (!showTrail) {
+                chargeTrail = [];
+            }
+        });
+
+        document.getElementById('showGrid').addEventListener('change', (e) => {
+            showGrid = e.target.checked;
+        });
+
+        document.getElementById('showAxes').addEventListener('change', (e) => {
+            showAxes = e.target.checked;
+        });
+
+        // Keyboard controls for interactive mode
+        document.addEventListener('keydown', (e) => {
+            if (isInteractive && keysPressed.hasOwnProperty(e.key)) {
+                keysPressed[e.key] = true;
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (isInteractive && keysPressed.hasOwnProperty(e.key)) {
+                keysPressed[e.key] = false;
+                e.preventDefault();
+            }
+        });
+
+        // Initialize
+        initArrays();
+        initFieldLines();
+        computeRays();
+        draw();
+        updateStats();
+        animate();
+    </script>
+</body>
+</html>
