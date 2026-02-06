@@ -916,12 +916,19 @@ label input {
     border: var(--border-thickness) solid var(--text-color);
     text-align: center;
     font-weight: var(--font-weight-medium);
+    opacity: 0;
+    transition: opacity 0.6s ease-in;
+}
+
+.central-quote.loaded {
+    opacity: 1;
 }
 
 .central-quote p {
     margin: 0 0 var(--line-height);
     font-size: 1.05rem;
     line-height: 1.7;
+    white-space: pre-line;
 }
 
 .central-quote .attribution {
@@ -930,4 +937,85 @@ label input {
     font-weight: var(--font-weight-normal);
     color: var(--text-color-alt);
     font-style: italic;
+}
+
+/* Live data widgets */
+.widgets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2ch;
+    margin-top: var(--line-height);
+}
+
+.widget-card {
+    border: var(--border-thickness) solid var(--text-color);
+    padding: calc(var(--line-height)) 1ch;
+    overflow: hidden;
+}
+
+.widget-title {
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    margin: 0 0 var(--line-height);
+}
+
+.widget-loading {
+    color: var(--text-color-alt);
+    font-style: italic;
+}
+
+.widget-card img {
+    width: 100%;
+    border-radius: 4px;
+    margin: calc(var(--line-height) / 2) 0;
+}
+
+.apod-title {
+    margin: 0 0 calc(var(--line-height) / 2);
+}
+
+.apod-desc {
+    font-size: 0.85rem;
+    color: var(--text-color-alt);
+    margin: calc(var(--line-height) / 2) 0 0;
+    line-height: 1.5;
+}
+
+.launch-name {
+    margin: 0 0 calc(var(--line-height) / 2);
+}
+
+.launch-provider {
+    font-size: 0.85rem;
+    color: var(--text-color-alt);
+    margin: 0 0 var(--line-height);
+}
+
+.launch-countdown {
+    font-size: 1.4rem;
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    padding: var(--line-height) 0;
+    letter-spacing: 0.1ch;
+}
+
+.launch-countdown-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-color-alt);
+    text-align: center;
+    margin: calc(var(--line-height) / 4) 0 0;
+}
+
+.launch-pad {
+    font-size: 0.8rem;
+    color: var(--text-color-alt);
+    margin: calc(var(--line-height) / 2) 0 0;
+}
+
+@media screen and (max-width: 720px) {
+    .widgets-grid {
+        grid-template-columns: 1fr;
+    }
 }
