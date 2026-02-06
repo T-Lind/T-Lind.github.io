@@ -60,6 +60,93 @@ body {
     overflow-x: hidden;
 }
 
+/* Site layout with sidebar */
+body:has(.site-layout) {
+    max-width: none;
+    padding: var(--line-height) 2ch;
+}
+
+.site-layout {
+    display: flex;
+    gap: calc(var(--line-height) * 2);
+    width: 100%;
+    max-width: calc(80ch + 22ch + var(--line-height) * 2);
+    margin: 0 auto;
+    align-items: flex-start;
+}
+
+.site-sidebar {
+    flex-shrink: 0;
+    width: 22ch;
+    position: sticky;
+    top: var(--line-height);
+    padding: calc(var(--line-height) / 2) 0;
+    border-right: var(--border-thickness) solid var(--text-color);
+    min-height: 50vh;
+}
+
+.site-sidebar-nav {
+    margin: 0;
+    padding: 0;
+}
+
+.site-sidebar-title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    margin: 0 0 var(--line-height);
+    font-weight: var(--font-weight-bold);
+}
+
+.site-sidebar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.site-sidebar-list li {
+    margin: 0;
+}
+
+.site-sidebar-list a {
+    display: block;
+    padding: calc(var(--line-height) / 4) 0;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: var(--font-weight-medium);
+    border: none;
+}
+
+.site-sidebar-list a:hover {
+    color: var(--text-color-alt);
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    max-width: 80ch;
+    padding: 0;
+}
+
+@media screen and (max-width: 720px) {
+    .site-layout {
+        flex-direction: column;
+        max-width: 80ch;
+    }
+
+    .site-sidebar {
+        width: 100%;
+        position: static;
+        border-right: none;
+        border-bottom: var(--border-thickness) solid var(--text-color);
+        padding-bottom: var(--line-height);
+        min-height: 0;
+    }
+
+    .main-content {
+        max-width: none;
+    }
+}
+
 @media screen and (max-width: 480px) {
     :root {
         font-size: 14px;
@@ -820,4 +907,27 @@ label input {
     .profile-pic {
         margin-bottom: var(--line-height);
     }
+}
+
+/* Central quote block — focal point of the main page */
+.central-quote {
+    margin: calc(var(--line-height) * 2) 0;
+    padding: calc(var(--line-height) * 1.5) 2ch;
+    border: var(--border-thickness) solid var(--text-color);
+    text-align: center;
+    font-weight: var(--font-weight-medium);
+}
+
+.central-quote p {
+    margin: 0 0 var(--line-height);
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.central-quote .attribution {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: var(--font-weight-normal);
+    color: var(--text-color-alt);
+    font-style: italic;
 }

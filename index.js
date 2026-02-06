@@ -189,7 +189,32 @@ There's also some other interesting stuff here. Have fun exploring!
     }
 }
 
-window.addEventListener('load', typeIntroduction);
+window.addEventListener('load', function () {
+    if (document.getElementById('typing-container')) typeIntroduction();
+});
+
+(function injectSidebar() {
+    var container = document.getElementById('sidebar-container');
+    if (!container) return;
+
+    var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
+    var segments = pathname.split('/').filter(Boolean);
+    var depth = segments.length;
+    var pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
+    var sidebarUrl = pathPrefix + 'sidebar.html';
+
+    fetch(sidebarUrl)
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+            container.innerHTML = html;
+            container.querySelectorAll('.site-sidebar-list a').forEach(function (a) {
+                var href = a.getAttribute('href');
+                if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return;
+                a.setAttribute('href', pathPrefix + href);
+            });
+        })
+        .catch(function () { container.innerHTML = '<p class="site-sidebar-title">Site Directory</p><p>Navigation unavailable.</p>'; });
+})();
 
 // const yesButton = document.getElementById('yes-button');
 // const noButton = document.getElementById('no-button');

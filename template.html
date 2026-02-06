@@ -28,6 +28,9 @@ $if(math)$
 $endif$
 </head>
 <body>
+<div class="site-layout">
+  <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+  <main class="main-content">
 $for(include-before)$
 $include-before$
 $endfor$
@@ -71,6 +74,8 @@ $for(include-after)$
 $include-after$
 $endfor$
   <div class="debug-grid"></div>
+  </main>
+</div>
   <script src="index.js"></script>
 </body>
 </html>
