@@ -59,6 +59,14 @@ sfxVolumeSlider.addEventListener("input", (e) => {
     wormholeSound.volume = sfxVolume;
 });
 
+// ---------- Prediction Range Control ----------
+const predictionSlider = document.getElementById("predictionRange");
+const predictionValueSpan = document.getElementById("predictionValue");
+predictionSlider.addEventListener("input", (e) => {
+    predictionDuration = parseInt(e.target.value);
+    predictionValueSpan.textContent = predictionDuration + "s";
+});
+
 // ---------- Audio Elements ----------
 const bgMusic = document.getElementById("bgMusic");
 const thrustSound = document.getElementById("thrustSound");
@@ -87,6 +95,8 @@ const G = 0.4;
 let gameTime = 0;  // Global game time
 const TRAIL_DURATION = 10;  // How many ticks of trail to show
 let showTrajectory = true; // Toggle for drawing projected trajectory
+let predictionDuration = 45; // How far ahead to project trajectory (0–120 game-time units)
+let trajectoryCollisionWarning = false; // Active collision warning flag
 // ADD: fast-forward and enemy globals
 const FAST_FORWARD_FACTOR = 4; // Simulation speed multiplier when fast-forward is active
 // REMOVE fastForward toggle State (superseded by hold multipliers)
@@ -672,19 +682,18 @@ function drawShieldBar() {
 }
 
 // ---------- Trajectory Projection ----------
-function getTrajectoryPoints(state, duration, dtSim) {
+function getTrajectoryWithCollision(state, duration, dtSim) {
     let points = [];
+    let collisionIndex = -1;
     let simState = {x: state.x, y: state.y, vx: state.vx, vy: state.vy};
-    const steps = duration / dtSim;
-    // Include the new planets in the gravity simulation.
-    const bodies = [sun, planetA, planetB, planetC, planetD, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+    const steps = Math.floor(duration / dtSim);
+    const gravBodies = [sun, planetA, planetB, planetC, planetD, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+    const collisionBodies = [sun, planetA, planetB, planetC, planetD, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
     for (let i = 0; i < steps; i++) {
         let ax = 0, ay = 0;
         let dBH = Math.hypot(simState.x - blackHole.x, simState.y - blackHole.y);
-        if (dBH < BH_MAX_EFFECT_RADIUS) {
-            bodies.push(blackHole);
-        }
-        for (let body of bodies) {
+        let useBH = dBH < BH_MAX_EFFECT_RADIUS;
+        for (let body of gravBodies) {
             let dx = body.x - simState.x;
             let dy = body.y - simState.y;
             let distSq = dx * dx + dy * dy;
@@ -695,33 +704,169 @@ function getTrajectoryPoints(state, duration, dtSim) {
                 ay += force * dy / dist;
             }
         }
+        if (useBH) {
+            let dx = blackHole.x - simState.x;
+            let dy = blackHole.y - simState.y;
+            let distSq = dx * dx + dy * dy;
+            let dist = Math.sqrt(distSq);
+            if (dist > blackHole.radius) {
+                let force = G * blackHole.mass / distSq;
+                ax += force * dx / dist;
+                ay += force * dy / dist;
+            }
+        }
         simState.vx += ax * dtSim;
         simState.vy += ay * dtSim;
         simState.x += simState.vx * dtSim;
         simState.y += simState.vy * dtSim;
         points.push({x: simState.x, y: simState.y});
+        // Check for collision at this trajectory point
+        if (collisionIndex === -1) {
+            for (let body of collisionBodies) {
+                if (circlesOverlap(simState.x, simState.y, spaceship.radius, body.x, body.y, body.radius)) {
+                    collisionIndex = i;
+                    break;
+                }
+            }
+            if (collisionIndex === -1) {
+                for (let ast of asteroids) {
+                    if (circlesOverlap(simState.x, simState.y, spaceship.radius, ast.x, ast.y, ast.radius)) {
+                        collisionIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (collisionIndex !== -1) break; // Stop computing past collision
+        }
     }
-    return points;
+    return {points, collisionIndex};
 }
 
 function drawTrajectoryProjection() {
-    const trajPoints = getTrajectoryPoints({
-        x: spaceship.x,
-        y: spaceship.y,
-        vx: spaceship.vx,
-        vy: spaceship.vy
-    }, 45, 0.1);
+    if (predictionDuration <= 0) {
+        trajectoryCollisionWarning = false;
+        return;
+    }
+    const result = getTrajectoryWithCollision({
+        x: spaceship.x, y: spaceship.y,
+        vx: spaceship.vx, vy: spaceship.vy
+    }, predictionDuration, 0.1);
+    const trajPoints = result.points;
+    const collisionIdx = result.collisionIndex;
+    trajectoryCollisionWarning = (collisionIdx !== -1);
     if (trajPoints.length < 2) return;
+
     ctx.save();
     ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(trajPoints[0].x - camera.x, trajPoints[0].y - camera.y);
-    for (let pt of trajPoints) {
-        ctx.lineTo(pt.x - camera.x, pt.y - camera.y);
+
+    if (collisionIdx === -1) {
+        // No collision anticipated — draw white dashed line
+        ctx.beginPath();
+        ctx.moveTo(trajPoints[0].x - camera.x, trajPoints[0].y - camera.y);
+        for (let i = 1; i < trajPoints.length; i++) {
+            ctx.lineTo(trajPoints[i].x - camera.x, trajPoints[i].y - camera.y);
+        }
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    } else {
+        // Collision anticipated — color-code the trajectory
+        const total = trajPoints.length;
+
+        if (total < 6) {
+            // Very short path to collision — draw all red
+            ctx.beginPath();
+            ctx.moveTo(trajPoints[0].x - camera.x, trajPoints[0].y - camera.y);
+            for (let i = 1; i < total; i++) {
+                ctx.lineTo(trajPoints[i].x - camera.x, trajPoints[i].y - camera.y);
+            }
+            ctx.strokeStyle = "#ff3333";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            const yellowStart = Math.floor(total * 0.5);
+            const redStart = Math.floor(total * 0.75);
+
+            // White safe portion
+            ctx.beginPath();
+            ctx.moveTo(trajPoints[0].x - camera.x, trajPoints[0].y - camera.y);
+            for (let i = 1; i <= yellowStart; i++) {
+                ctx.lineTo(trajPoints[i].x - camera.x, trajPoints[i].y - camera.y);
+            }
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Yellow warning portion
+            ctx.beginPath();
+            ctx.moveTo(trajPoints[yellowStart].x - camera.x, trajPoints[yellowStart].y - camera.y);
+            for (let i = yellowStart + 1; i <= redStart; i++) {
+                ctx.lineTo(trajPoints[i].x - camera.x, trajPoints[i].y - camera.y);
+            }
+            ctx.strokeStyle = "#ffaa00";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Red danger portion
+            ctx.beginPath();
+            ctx.moveTo(trajPoints[redStart].x - camera.x, trajPoints[redStart].y - camera.y);
+            for (let i = redStart + 1; i < total; i++) {
+                ctx.lineTo(trajPoints[i].x - camera.x, trajPoints[i].y - camera.y);
+            }
+            ctx.strokeStyle = "#ff3333";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Collision marker: pulsing ring + X
+        const cp = trajPoints[total - 1];
+        const cpx = cp.x - camera.x;
+        const cpy = cp.y - camera.y;
+        const pulse = 10 + Math.sin(gameTime * 0.5) * 5;
+        const alpha = 0.5 + Math.sin(gameTime * 0.5) * 0.3;
+
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(cpx, cpy, pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 50, 50, ${alpha})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const xSize = 6;
+        ctx.beginPath();
+        ctx.moveTo(cpx - xSize, cpy - xSize);
+        ctx.lineTo(cpx + xSize, cpy + xSize);
+        ctx.moveTo(cpx + xSize, cpy - xSize);
+        ctx.lineTo(cpx - xSize, cpy + xSize);
+        ctx.strokeStyle = "#ff3333";
+        ctx.lineWidth = 3;
+        ctx.stroke();
     }
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawCollisionWarning() {
+    if (!trajectoryCollisionWarning || !showTrajectory || predictionDuration <= 0) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const alpha = 0.6 + Math.sin(gameTime * 0.8) * 0.4;
+    // Warning banner background
+    const bannerWidth = 300;
+    const bannerHeight = 36;
+    const bx = (canvas.width - bannerWidth) / 2;
+    const by = 8;
+    ctx.fillStyle = `rgba(140, 0, 0, ${alpha * 0.5})`;
+    ctx.fillRect(bx, by, bannerWidth, bannerHeight);
+    ctx.strokeStyle = `rgba(255, 80, 80, ${alpha * 0.8})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bannerWidth, bannerHeight);
+    // Warning text
+    ctx.font = "bold 18px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = `rgba(255, 70, 70, ${alpha})`;
+    ctx.fillText("\u26A0 COLLISION WARNING \u26A0", canvas.width / 2, by + bannerHeight / 2);
     ctx.restore();
 }
 
@@ -874,6 +1019,7 @@ function drawScene() {
     drawFuelBar();
     drawShieldBar();
     drawMinimap();
+    drawCollisionWarning();
     ctx.restore();
 }
 
