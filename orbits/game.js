@@ -44,6 +44,12 @@ fsBtn.addEventListener("click", () => {
     }
 });
 
+const guideBtn = document.getElementById("guideBtn");
+guideBtn.addEventListener("click", () => {
+    guideMode = !guideMode;
+    if (!guideMode) localStorage.setItem("hasPlayedOrbits", "1");
+});
+
 // ---------- Volume Controls ----------
 const musicVolumeSlider = document.getElementById("musicVolume");
 const sfxVolumeSlider = document.getElementById("sfxVolume");
@@ -97,6 +103,7 @@ const TRAIL_DURATION = 10;  // How many ticks of trail to show
 let showTrajectory = true; // Toggle for drawing projected trajectory
 let predictionDuration = 45; // How far ahead to project trajectory (0–120 game-time units)
 let trajectoryCollisionWarning = false; // Active collision warning flag
+let guideMode = !localStorage.getItem("hasPlayedOrbits"); // auto-enable on first play
 // ADD: fast-forward and enemy globals
 const FAST_FORWARD_FACTOR = 4; // Simulation speed multiplier when fast-forward is active
 // REMOVE fastForward toggle State (superseded by hold multipliers)
@@ -114,10 +121,19 @@ const ZOOM_STEP = 1.1;
 const stars = [];
 const numStars = 800;
 for (let i = 0; i < numStars; i++) {
+    const colorRoll = Math.random();
+    let starColor;
+    if (colorRoll < 0.05) starColor = "#aaccff";       // blue-white
+    else if (colorRoll < 0.10) starColor = "#ffddaa";   // warm yellow
+    else if (colorRoll < 0.13) starColor = "#ffbbbb";   // red-tinted
+    else starColor = "#ffffff";                          // white
     stars.push({
         x: Math.random() * 8000 - 4000,
         y: Math.random() * 8000 - 4000,
-        radius: Math.random() * 1.5 + 0.5
+        radius: Math.random() * 1.5 + 0.5,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.2 + Math.random() * 0.4,
+        color: starColor
     });
 }
 
@@ -159,7 +175,7 @@ const SHIELD_DURATION = 200;  // ticks (extended duration)
 // ---------- Black Hole (with limited influence) ----------
 // Repositioned far away as an easter-egg object
 const blackHole = {x: 5000, y: 5000, mass: 3000000, radius: 140};
-const BH_MAX_EFFECT_RADIUS = 1200;
+// No strict boundary: gravity is 1/r² everywhere; at spawn (~7000 units away) BH pull is negligible
 const BH_TIME_DILATION_THRESHOLD = 200;
 const bhOrbiter1 = {orbitRadius: 100, angle: 0, angularSpeed: 0.008, mass: 1000, radius: 8, x: 0, y: 0};
 const bhOrbiter2 = {orbitRadius: 140, angle: Math.PI / 3, angularSpeed: 0.005, mass: 1200, radius: 10, x: 0, y: 0};
@@ -245,13 +261,6 @@ function updateAsteroids(dtEff) {
         let ax = 0, ay = 0;
         const gravityBodies = [sun, planetA, planetB, planetC, planetD, moon, blackHole];
         for (let b of gravityBodies) {
-            if (b === blackHole) {
-                const dBH_ast = Math.hypot(a.x - b.x, a.y - b.y);
-                if (dBH_ast > BH_MAX_EFFECT_RADIUS) {
-                    // outside BH influence
-                    continue;
-                }
-            }
             const g = computeGravity(b, a.x, a.y);
             ax += g.ax;
             ay += g.ay;
@@ -273,12 +282,46 @@ function updateAsteroids(dtEff) {
 
 function drawAsteroids() {
     for (let a of asteroids) {
-        let grad = ctx.createRadialGradient(a.x - camera.x, a.y - camera.y, a.radius * 0.3, a.x - camera.x, a.y - camera.y, a.radius);
-        grad.addColorStop(0, "#666666");
-        grad.addColorStop(1, "#333333");
+        const ax = a.x - camera.x;
+        const ay = a.y - camera.y;
+
+        // Comet tail pointing away from the sun
+        if (a.isComet) {
+            const dxSun = a.x - sun.x;
+            const dySun = a.y - sun.y;
+            const distSun = Math.hypot(dxSun, dySun);
+            if (distSun > 0) {
+                const tailAngle = Math.atan2(dySun, dxSun);
+                const tailLen = 25 + 15 * Math.sin(gameTime * 0.3);
+                ctx.save();
+                ctx.translate(ax, ay);
+                ctx.rotate(tailAngle);
+                const tailGrad = ctx.createLinearGradient(0, 0, tailLen, 0);
+                tailGrad.addColorStop(0, "rgba(150,200,255,0.6)");
+                tailGrad.addColorStop(0.4, "rgba(100,180,255,0.25)");
+                tailGrad.addColorStop(1, "rgba(80,150,255,0)");
+                ctx.fillStyle = tailGrad;
+                ctx.beginPath();
+                ctx.moveTo(0, -a.radius * 0.6);
+                ctx.lineTo(tailLen, 0);
+                ctx.lineTo(0, a.radius * 0.6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        let grad = ctx.createRadialGradient(ax, ay, a.radius * 0.3, ax, ay, a.radius);
+        if (a.isComet) {
+            grad.addColorStop(0, "#aaddff");
+            grad.addColorStop(1, "#5588aa");
+        } else {
+            grad.addColorStop(0, "#777777");
+            grad.addColorStop(1, "#333333");
+        }
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(a.x - camera.x, a.y - camera.y, a.radius, 0, Math.PI * 2);
+        ctx.arc(ax, ay, a.radius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -381,27 +424,59 @@ function spawnCollectible() {
 }
 
 function drawCollectible() {
+    const cx = collectible.x - camera.x;
+    const cy = collectible.y - camera.y;
+    const bob = Math.sin(gameTime * 0.4) * 2;
+    const pulse = 1 + 0.15 * Math.sin(gameTime * 0.6);
+    const effectiveRadius = collectible.radius * pulse;
+    const bobbedY = cy + bob;
+
+    // Glow halo
+    let glowColor;
+    if (collectible.type === "fuel") glowColor = "rgba(50,120,255,";
+    else if (collectible.type === "upgrade") glowColor = "rgba(170,50,255,";
+    else glowColor = "rgba(50,255,50,";
+
+    const glowRadius = effectiveRadius * 3;
+    const glowGrad = ctx.createRadialGradient(cx, bobbedY, effectiveRadius * 0.5, cx, bobbedY, glowRadius);
+    glowGrad.addColorStop(0, glowColor + "0.3)");
+    glowGrad.addColorStop(1, glowColor + "0)");
+    ctx.fillStyle = glowGrad;
     ctx.beginPath();
+    ctx.arc(cx, bobbedY, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+
     if (collectible.type === "fuel") {
-        ctx.fillStyle = "#00f";
-        ctx.arc(collectible.x - camera.x, collectible.y - camera.y, collectible.radius, 0, Math.PI * 2);
+        const fuelGrad = ctx.createRadialGradient(cx - 2, bobbedY - 2, effectiveRadius * 0.2, cx, bobbedY, effectiveRadius);
+        fuelGrad.addColorStop(0, "#8cf");
+        fuelGrad.addColorStop(1, "#00f");
+        ctx.fillStyle = fuelGrad;
+        ctx.beginPath();
+        ctx.arc(cx, bobbedY, effectiveRadius, 0, Math.PI * 2);
         ctx.fill();
     } else if (collectible.type === "upgrade") {
-        ctx.fillStyle = "#a0f";
-        let size = collectible.radius;
-        let cx = collectible.x - camera.x, cy = collectible.y - camera.y;
+        const spinAngle = gameTime * 0.1;
+        let size = effectiveRadius;
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
-            let a = Math.PI / 3 * i;
+            let a = Math.PI / 3 * i + spinAngle;
             let x = cx + size * Math.cos(a);
-            let y = cy + size * Math.sin(a);
+            let y = bobbedY + size * Math.sin(a);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.closePath();
+        const upGrad = ctx.createRadialGradient(cx, bobbedY, size * 0.2, cx, bobbedY, size);
+        upGrad.addColorStop(0, "#f0f");
+        upGrad.addColorStop(1, "#a0f");
+        ctx.fillStyle = upGrad;
         ctx.fill();
     } else {
-        ctx.fillStyle = "#0f0";
-        ctx.arc(collectible.x - camera.x, collectible.y - camera.y, collectible.radius, 0, Math.PI * 2);
+        const scoreGrad = ctx.createRadialGradient(cx - 2, bobbedY - 2, effectiveRadius * 0.2, cx, bobbedY, effectiveRadius);
+        scoreGrad.addColorStop(0, "#8f8");
+        scoreGrad.addColorStop(1, "#0f0");
+        ctx.fillStyle = scoreGrad;
+        ctx.beginPath();
+        ctx.arc(cx, bobbedY, effectiveRadius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -456,15 +531,36 @@ function drawSpaceStation() {
 
 function drawDriftingShip() {
     if (!driftingShip || driftingShip.delivered) return;
+    const sx = driftingShip.x - camera.x;
+    const sy = driftingShip.y - camera.y;
+
+    // Distress beacon pulse
+    const beaconAlpha = 0.3 + 0.3 * Math.sin(gameTime * 0.6);
+    const beaconR = driftingShip.radius * 2.5;
+    const beaconGrad = ctx.createRadialGradient(sx, sy, driftingShip.radius * 0.5, sx, sy, beaconR);
+    beaconGrad.addColorStop(0, `rgba(255,0,255,${beaconAlpha})`);
+    beaconGrad.addColorStop(1, "rgba(255,0,255,0)");
+    ctx.fillStyle = beaconGrad;
+    ctx.beginPath();
+    ctx.arc(sx, sy, beaconR, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.save();
-    ctx.translate(driftingShip.x - camera.x, driftingShip.y - camera.y);
+    ctx.translate(sx, sy);
+    // Tumbling rotation for drifting feel
+    const tumble = driftingShip.rescued ? 0 : gameTime * 0.05;
+    ctx.rotate(tumble);
     ctx.beginPath();
     ctx.moveTo(10, 0);
     ctx.lineTo(-6, 5);
+    ctx.lineTo(-4, 0);
     ctx.lineTo(-6, -5);
     ctx.closePath();
-    ctx.fillStyle = driftingShip.rescued ? "#f0f" : "#f0f";
+    ctx.fillStyle = driftingShip.rescued ? "#ff88ff" : "#cc44cc";
     ctx.fill();
+    ctx.strokeStyle = "#f0f";
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.restore();
 }
 
@@ -483,9 +579,104 @@ function applyUpgrade(type) {
     }
 }
 
-// ---------- Solar Flares (Dynamic Environmental Hazards) ----------
-let solarFlareTimer = 45; // ticks until next flare burst
+// ---------- Solar Flares (continuous pressure + smooth angle) ----------
+let solarFlarePressure = 0.35;  // 0..1, flare fires when >= 1 then resets
+let nextFlareAngle = Math.random() * 2 * Math.PI; // drifts smoothly, no jump on fire
 let solarFlareParticles = [];
+
+function solarFlareSmoothNoise(t, a, b, c) {
+    return 0.5 + 0.5 * Math.sin(t * a) * Math.sin(t * b) * Math.sin(t * c);
+}
+
+// ---------- Engine Exhaust Particles ----------
+let exhaustParticles = [];
+
+function updateExhaustParticles(dtEff) {
+    if (keys["ArrowUp"] && spaceship.fuel > 0 && !spaceship.disabled) {
+        for (let i = 0; i < 2; i++) {
+            const spread = (Math.sin(gameTime * 17 + i) * 0.5) * 0.6;
+            const backAngle = spaceship.angle + Math.PI + spread;
+            const speed = 3 + Math.abs(Math.sin(gameTime * 11 + i * 3)) * 4;
+            exhaustParticles.push({
+                x: spaceship.x - 8 * Math.cos(spaceship.angle),
+                y: spaceship.y - 8 * Math.sin(spaceship.angle),
+                vx: speed * Math.cos(backAngle) + spaceship.vx * 0.2,
+                vy: speed * Math.sin(backAngle) + spaceship.vy * 0.2,
+                lifetime: 12 + Math.abs(Math.sin(gameTime * 7 + i)) * 10,
+                maxLifetime: 22,
+                radius: 1.5 + Math.abs(Math.sin(gameTime * 13 + i * 2)) * 2
+            });
+        }
+    }
+    for (let i = exhaustParticles.length - 1; i >= 0; i--) {
+        let p = exhaustParticles[i];
+        p.x += p.vx * dtEff;
+        p.y += p.vy * dtEff;
+        p.lifetime -= dtEff;
+        p.radius *= 0.985;
+        if (p.lifetime <= 0 || p.radius < 0.2) {
+            exhaustParticles.splice(i, 1);
+        }
+    }
+}
+
+function drawExhaustParticles() {
+    for (let p of exhaustParticles) {
+        const lifeRatio = Math.max(0, p.lifetime / p.maxLifetime);
+        const r = 255;
+        const g = Math.floor(100 + 155 * lifeRatio);
+        const b = Math.floor(50 * lifeRatio);
+        ctx.fillStyle = `rgba(${r},${g},${b},${lifeRatio * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(p.x - camera.x, p.y - camera.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ---------- Pickup Burst Particles ----------
+let pickupParticles = [];
+
+function emitPickupParticles(x, y, color) {
+    for (let i = 0; i < 16; i++) {
+        const angle = (Math.PI * 2 / 16) * i + Math.sin(gameTime + i) * 0.3;
+        const speed = 2 + Math.abs(Math.sin(gameTime * 3 + i * 1.5)) * 5;
+        pickupParticles.push({
+            x, y,
+            vx: speed * Math.cos(angle),
+            vy: speed * Math.sin(angle),
+            lifetime: 20 + Math.abs(Math.sin(gameTime * 5 + i)) * 15,
+            maxLifetime: 35,
+            radius: 1.5 + Math.abs(Math.sin(gameTime * 7 + i * 2)) * 2.5,
+            color
+        });
+    }
+}
+
+function updatePickupParticles(dtEff) {
+    for (let i = pickupParticles.length - 1; i >= 0; i--) {
+        let p = pickupParticles[i];
+        p.x += p.vx * dtEff;
+        p.y += p.vy * dtEff;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.lifetime -= dtEff;
+        if (p.lifetime <= 0) {
+            pickupParticles.splice(i, 1);
+        }
+    }
+}
+
+function drawPickupParticles() {
+    for (let p of pickupParticles) {
+        const alpha = Math.max(0, p.lifetime / p.maxLifetime);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x - camera.x, p.y - camera.y, p.radius * alpha, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
 
 // ---------- Score Tracking ----------
 let score = 0;
@@ -502,6 +693,10 @@ window.addEventListener("keydown", (e) => {
     keys[e.key] = true;
     if (e.key.toLowerCase() === "t") {
         showTrajectory = !showTrajectory;
+    }
+    if (e.key.toLowerCase() === "g") {
+        guideMode = !guideMode;
+        if (!guideMode) localStorage.setItem("hasPlayedOrbits", "1");
     }
     if (e.key.toLowerCase() === "w") keys["ArrowUp"] = true;
     if (e.key.toLowerCase() === "a") keys["ArrowLeft"] = true;
@@ -535,16 +730,19 @@ function drawBackground() {
 }
 
 function drawStars() {
-    ctx.fillStyle = "#fff";
     for (let star of stars) {
         const sx = star.x - camera.x;
         const sy = star.y - camera.y;
         if (sx > -10 && sx < canvas.width + 10 && sy > -10 && sy < canvas.height + 10) {
+            const twinkle = 0.5 + 0.5 * Math.sin(gameTime * star.twinkleSpeed + star.phase);
+            ctx.globalAlpha = 0.3 + 0.7 * twinkle;
+            ctx.fillStyle = star.color;
             ctx.beginPath();
-            ctx.arc(sx, sy, star.radius, 0, Math.PI * 2);
+            ctx.arc(sx, sy, star.radius * (0.8 + 0.2 * twinkle), 0, Math.PI * 2);
             ctx.fill();
         }
     }
+    ctx.globalAlpha = 1;
 }
 
 // ---------- Drawing Helper for Celestial Bodies ----------
@@ -565,41 +763,315 @@ function drawBody(body, color) {
     ctx.fill();
 }
 
+// ---------- Enhanced Visual Effects ----------
+function drawSunCorona() {
+    const x = sun.x - camera.x;
+    const y = sun.y - camera.y;
+    // Outer glow haze — biased toward next flare direction
+    const hazeRadius = sun.radius * 2.2;
+    const hazeGrad = ctx.createRadialGradient(x, y, sun.radius * 0.8, x, y, hazeRadius);
+    hazeGrad.addColorStop(0, "rgba(255,200,50,0.25)");
+    hazeGrad.addColorStop(0.5, "rgba(255,120,0,0.08)");
+    hazeGrad.addColorStop(1, "rgba(255,80,0,0)");
+    ctx.fillStyle = hazeGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, hazeRadius, 0, Math.PI * 2);
+    ctx.fill();
+    // Animated corona rays with flare-direction bias (smooth buildup via solarFlarePressure)
+    ctx.save();
+    ctx.translate(x, y);
+    const numRays = 18;
+    const rotOffset = gameTime * 0.012;
+    const pressureBias = 0.3 + 0.7 * solarFlarePressure; // buildup intensifies as pressure rises
+    for (let i = 0; i < numRays; i++) {
+        const angle = (Math.PI * 2 / numRays) * i + rotOffset;
+        // How close is this ray to the upcoming flare direction?
+        let angleDiff = angle - nextFlareAngle;
+        angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+        const nearFlare = Math.max(0, 1 - Math.abs(angleDiff) / (Math.PI * 0.4));
+        // Organic variation from multiple sine waves + flare bias (smooth, no jump)
+        const baseLen = 1.15 + 0.2 * Math.sin(gameTime * 0.12 + i * 1.7)
+                       + 0.15 * Math.sin(gameTime * 0.07 + i * 3.1)
+                       + 0.1 * Math.sin(gameTime * 0.19 + i * 0.8);
+        const flareBoost = nearFlare * 0.5 * pressureBias * (0.8 + 0.2 * Math.sin(gameTime * 0.25 + i));
+        const rayLen = sun.radius * (baseLen + flareBoost);
+        const rayWidth = Math.PI / (numRays * 1.3);
+        const baseAlpha = 0.06 + 0.04 * Math.sin(gameTime * 0.18 + i);
+        const flareAlpha = nearFlare * 0.1 * pressureBias;
+        // Shift color toward orange-red near the flare buildup
+        const g = Math.floor(200 - nearFlare * 80);
+        const b = Math.floor(50 - nearFlare * 40);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, rayLen, angle - rayWidth, angle + rayWidth);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(255, ${g}, ${b}, ${baseAlpha + flareAlpha})`;
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawPlanetGlow(body, glowColor) {
+    const bx = body.x - camera.x;
+    const by = body.y - camera.y;
+    const glowRadius = body.radius * 1.6;
+    const grad = ctx.createRadialGradient(bx, by, body.radius * 0.8, bx, by, glowRadius);
+    grad.addColorStop(0, glowColor);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(bx, by, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawOrbitPaths() {
+    ctx.save();
+    ctx.setLineDash([8, 16]);
+    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    const sunX = sun.x - camera.x;
+    const sunY = sun.y - camera.y;
+    const orbits = [planetA.orbitRadius, planetB.orbitRadius, planetC.orbitRadius, planetD.orbitRadius];
+    for (let r of orbits) {
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, r, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawPlanetDRingsHalf(isFront) {
+    const bx = planetD.x - camera.x;
+    const by = planetD.y - camera.y;
+    ctx.save();
+    ctx.translate(bx, by);
+    const startAngle = isFront ? 0 : Math.PI;
+    const endAngle = isFront ? Math.PI : Math.PI * 2;
+    // Outer ring band
+    ctx.beginPath();
+    ctx.ellipse(0, 0, planetD.radius * 1.7, planetD.radius * 0.45, 0.35, startAngle, endAngle);
+    ctx.strokeStyle = isFront ? "rgba(180,130,255,0.35)" : "rgba(180,130,255,0.18)";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    // Inner ring band
+    ctx.beginPath();
+    ctx.ellipse(0, 0, planetD.radius * 1.35, planetD.radius * 0.35, 0.35, startAngle, endAngle);
+    ctx.strokeStyle = isFront ? "rgba(200,160,255,0.25)" : "rgba(200,160,255,0.12)";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    // Thin bright ring
+    ctx.beginPath();
+    ctx.ellipse(0, 0, planetD.radius * 1.5, planetD.radius * 0.4, 0.35, startAngle, endAngle);
+    ctx.strokeStyle = isFront ? "rgba(220,200,255,0.4)" : "rgba(220,200,255,0.2)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawPlanetTexture(body, type) {
+    const bx = body.x - camera.x;
+    const by = body.y - camera.y;
+    const r = body.radius;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.clip();
+
+    if (type === "gas") {
+        // Horizontal cloud bands (Jupiter-like)
+        const numBands = 7;
+        for (let i = 0; i < numBands; i++) {
+            const bandY = by - r + (2 * r / numBands) * (i + 0.5);
+            const bandH = r / numBands * 0.5;
+            const alpha = 0.08 + 0.05 * Math.sin(gameTime * 0.04 + i * 1.3);
+            ctx.fillStyle = (i % 2 === 0)
+                ? `rgba(255,255,255,${alpha})`
+                : `rgba(100,50,150,${alpha})`;
+            ctx.fillRect(bx - r, bandY - bandH / 2, r * 2, bandH);
+        }
+        // Great spot
+        const spotX = bx + r * 0.3 * Math.cos(gameTime * 0.02);
+        const spotY = by + r * 0.2;
+        ctx.beginPath();
+        ctx.ellipse(spotX, spotY, r * 0.2, r * 0.12, 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(200,100,255,0.18)";
+        ctx.fill();
+    } else if (type === "ice") {
+        // Ice caps at poles
+        ctx.fillStyle = "rgba(200,230,255,0.22)";
+        ctx.beginPath();
+        ctx.ellipse(bx, by - r * 0.72, r * 0.65, r * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(bx, by + r * 0.78, r * 0.55, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Ocean highlight
+        ctx.beginPath();
+        ctx.arc(bx + r * 0.15, by - r * 0.1, r * 0.25, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(130,210,255,0.12)";
+        ctx.fill();
+        // Continental mass hint
+        ctx.beginPath();
+        ctx.ellipse(bx - r * 0.2, by + r * 0.15, r * 0.3, r * 0.18, 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,80,60,0.12)";
+        ctx.fill();
+    } else if (type === "volcanic") {
+        // Lava flow hotspots
+        const flows = [
+            {dx: 0.25, dy: -0.2, s: 0.14},
+            {dx: -0.3, dy: 0.15, s: 0.1},
+            {dx: 0.1, dy: 0.3, s: 0.09},
+            {dx: -0.15, dy: -0.35, s: 0.11},
+        ];
+        for (let f of flows) {
+            const lavaAlpha = 0.14 + 0.08 * Math.sin(gameTime * 0.1 + f.dx * 10);
+            ctx.beginPath();
+            ctx.arc(bx + f.dx * r, by + f.dy * r, f.s * r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,100,0,${lavaAlpha})`;
+            ctx.fill();
+            // Bright core
+            ctx.beginPath();
+            ctx.arc(bx + f.dx * r, by + f.dy * r, f.s * r * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,200,50,${lavaAlpha * 0.7})`;
+            ctx.fill();
+        }
+        // Dark terrain patches
+        ctx.fillStyle = "rgba(80,20,0,0.12)";
+        ctx.beginPath();
+        ctx.ellipse(bx + r * 0.1, by - r * 0.1, r * 0.4, r * 0.25, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (type === "desert") {
+        // Sandy dune ridges
+        for (let i = 0; i < 5; i++) {
+            const lineY = by - r * 0.5 + i * r * 0.25;
+            const waveAmp = r * (0.06 + 0.03 * Math.sin(i * 2.1));
+            ctx.beginPath();
+            ctx.moveTo(bx - r, lineY);
+            ctx.quadraticCurveTo(bx - r * 0.3, lineY + waveAmp, bx, lineY - waveAmp);
+            ctx.quadraticCurveTo(bx + r * 0.3, lineY + waveAmp * 0.5, bx + r, lineY);
+            ctx.strokeStyle = "rgba(180,130,40,0.18)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        // Dark crater
+        ctx.beginPath();
+        ctx.arc(bx - r * 0.2, by + r * 0.15, r * 0.15, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(120,80,20,0.15)";
+        ctx.fill();
+        // Highlight ridge
+        ctx.beginPath();
+        ctx.ellipse(bx + r * 0.25, by - r * 0.25, r * 0.2, r * 0.08, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,220,150,0.1)";
+        ctx.fill();
+    } else if (type === "moon") {
+        // Craters
+        const craters = [
+            {dx: 0.25, dy: -0.2, s: 0.2},
+            {dx: -0.2, dy: 0.25, s: 0.15},
+            {dx: 0.05, dy: -0.4, s: 0.12},
+            {dx: -0.35, dy: -0.05, s: 0.17},
+            {dx: 0.15, dy: 0.3, s: 0.1},
+        ];
+        for (let c of craters) {
+            // Shadow
+            ctx.beginPath();
+            ctx.arc(bx + c.dx * r, by + c.dy * r, c.s * r, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0,0,0,0.12)";
+            ctx.fill();
+            // Highlight rim
+            ctx.beginPath();
+            ctx.arc(bx + c.dx * r - c.s * r * 0.15, by + c.dy * r - c.s * r * 0.15, c.s * r * 0.7, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255,255,255,0.06)";
+            ctx.fill();
+        }
+    }
+
+    ctx.restore();
+}
+
 function drawBlackHole() {
     const x = blackHole.x - camera.x;
     const y = blackHole.y - camera.y;
+
+    // Outer distortion glow (no rings)
     const outerRadius = blackHole.radius * 3;
     const grad = ctx.createRadialGradient(x, y, blackHole.radius * 0.2, x, y, outerRadius);
     grad.addColorStop(0, "#000");
-    grad.addColorStop(0.5, "#551122");
+    grad.addColorStop(0.4, "#220011");
+    grad.addColorStop(0.7, "#551122");
     grad.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
     ctx.arc(x, y, outerRadius, 0, Math.PI * 2);
     ctx.fillStyle = grad;
     ctx.fill();
+
+    // Event horizon
     ctx.beginPath();
     ctx.arc(x, y, blackHole.radius, 0, Math.PI * 2);
     ctx.fillStyle = "#000";
     ctx.fill();
 }
 
-function drawWormhole() {
-    wormhole.pulse += 0.05;
-    const pulseR = wormhole.entry.radius + Math.sin(wormhole.pulse) * 3;
+function drawWormholePortal(wx, wy, radius) {
+    const x = wx - camera.x;
+    const y = wy - camera.y;
+    const pulseR = radius + Math.sin(wormhole.pulse) * 3;
+
+    // Outer glow
+    const glowGrad = ctx.createRadialGradient(x, y, radius * 0.3, x, y, radius * 3);
+    glowGrad.addColorStop(0, "rgba(0,255,255,0.2)");
+    glowGrad.addColorStop(1, "rgba(0,100,200,0)");
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Spiral arms
+    ctx.save();
+    ctx.translate(x, y);
+    const spiralT = gameTime * 0.08;
+    for (let arm = 0; arm < 3; arm++) {
+        ctx.beginPath();
+        const baseAngle = (Math.PI * 2 / 3) * arm;
+        for (let s = 0; s < 25; s++) {
+            const t = s / 25;
+            const angle = spiralT + baseAngle + t * Math.PI * 1.5;
+            const r = 2 + t * pulseR * 1.2;
+            const px = r * Math.cos(angle);
+            const py = r * Math.sin(angle);
+            if (s === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(0,220,255,0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // Core ring
     ctx.save();
     ctx.shadowColor = "#0ff";
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 15;
     ctx.beginPath();
-    ctx.arc(wormhole.entry.x - camera.x, wormhole.entry.y - camera.y, pulseR, 0, Math.PI * 2);
+    ctx.arc(x, y, pulseR, 0, Math.PI * 2);
     ctx.strokeStyle = "#0ff";
     ctx.lineWidth = 3;
     ctx.stroke();
+
+    // Inner bright center
+    const coreGrad = ctx.createRadialGradient(x, y, 0, x, y, radius * 0.5);
+    coreGrad.addColorStop(0, "rgba(200,255,255,0.5)");
+    coreGrad.addColorStop(1, "rgba(0,200,255,0)");
+    ctx.fillStyle = coreGrad;
     ctx.beginPath();
-    ctx.arc(wormhole.exit.x - camera.x, wormhole.exit.y - camera.y, pulseR, 0, Math.PI * 2);
-    ctx.strokeStyle = "#0ff";
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
+}
+
+function drawWormhole() {
+    wormhole.pulse += 0.05;
+    drawWormholePortal(wormhole.entry.x, wormhole.entry.y, wormhole.entry.radius);
+    drawWormholePortal(wormhole.exit.x, wormhole.exit.y, wormhole.exit.radius);
 }
 
 function drawSpaceship() {
@@ -621,27 +1093,56 @@ function drawSpaceship() {
     ctx.shadowBlur = 10;
     ctx.translate(spaceship.x - camera.x, spaceship.y - camera.y);
     ctx.rotate(spaceship.angle);
+    // Pulsing shield
     if (spaceship.shieldTime > 0) {
+        const shieldPulse = spaceship.radius + 10 + Math.sin(gameTime * 0.5) * 2;
         ctx.beginPath();
-        ctx.arc(0, 0, spaceship.radius + 10, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(0,150,255,0.7)";
+        ctx.arc(0, 0, shieldPulse, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,150,255,${0.4 + 0.3 * Math.sin(gameTime * 0.8)})`;
         ctx.lineWidth = 3;
         ctx.stroke();
     }
+    // Ship hull with notched rear
     ctx.beginPath();
     ctx.moveTo(15, 0);
     ctx.lineTo(-10, 8);
+    ctx.lineTo(-6, 0);
     ctx.lineTo(-10, -8);
     ctx.closePath();
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#e8e8ff";
     ctx.fill();
+    ctx.strokeStyle = "rgba(150,150,200,0.4)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    // Cockpit window
+    ctx.beginPath();
+    ctx.arc(5, 0, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#4af";
+    ctx.fill();
+    // Engine flame (layered, flickering)
     if (keys["ArrowUp"] && spaceship.fuel > 0 && !spaceship.disabled) {
+        const flicker = Math.abs(Math.sin(gameTime * 7) * 3 + Math.sin(gameTime * 13) * 2);
         ctx.beginPath();
-        ctx.moveTo(-10, 4);
-        ctx.lineTo(-20, 0);
-        ctx.lineTo(-10, -4);
-        ctx.fillStyle = "orange";
+        ctx.moveTo(-6, 3.5);
+        ctx.lineTo(-19 - flicker, 0);
+        ctx.lineTo(-6, -3.5);
+        ctx.fillStyle = "#ff4400";
         ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-6, 2);
+        ctx.lineTo(-14 - flicker * 0.6, 0);
+        ctx.lineTo(-6, -2);
+        ctx.fillStyle = "#ffcc00";
+        ctx.fill();
+    }
+    // Disabled visual indicator
+    if (spaceship.disabled) {
+        ctx.globalAlpha = 0.3 + 0.4 * Math.sin(gameTime * 2);
+        ctx.fillStyle = "rgba(255,0,0,0.3)";
+        ctx.beginPath();
+        ctx.arc(0, 0, spaceship.radius + 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
     }
     ctx.restore();
 }
@@ -687,12 +1188,10 @@ function getTrajectoryWithCollision(state, duration, dtSim) {
     let collisionIndex = -1;
     let simState = {x: state.x, y: state.y, vx: state.vx, vy: state.vy};
     const steps = Math.floor(duration / dtSim);
-    const gravBodies = [sun, planetA, planetB, planetC, planetD, moon, satelliteA, bhOrbiter1, bhOrbiter2];
+    const gravBodies = [sun, planetA, planetB, planetC, planetD, moon, satelliteA, bhOrbiter1, bhOrbiter2, blackHole];
     const collisionBodies = [sun, planetA, planetB, planetC, planetD, blackHole, moon, satelliteA, bhOrbiter1, bhOrbiter2];
     for (let i = 0; i < steps; i++) {
         let ax = 0, ay = 0;
-        let dBH = Math.hypot(simState.x - blackHole.x, simState.y - blackHole.y);
-        let useBH = dBH < BH_MAX_EFFECT_RADIUS;
         for (let body of gravBodies) {
             let dx = body.x - simState.x;
             let dy = body.y - simState.y;
@@ -700,17 +1199,6 @@ function getTrajectoryWithCollision(state, duration, dtSim) {
             let dist = Math.sqrt(distSq);
             if (dist > body.radius) {
                 let force = G * body.mass / distSq;
-                ax += force * dx / dist;
-                ay += force * dy / dist;
-            }
-        }
-        if (useBH) {
-            let dx = blackHole.x - simState.x;
-            let dy = blackHole.y - simState.y;
-            let distSq = dx * dx + dy * dy;
-            let dist = Math.sqrt(distSq);
-            if (dist > blackHole.radius) {
-                let force = G * blackHole.mass / distSq;
                 ax += force * dx / dist;
                 ay += force * dy / dist;
             }
@@ -939,6 +1427,158 @@ function drawMinimap() {
     ctx.restore();
 }
 
+// ---------- Guide Mode Overlay ----------
+function drawGuideWorld() {
+    if (!guideMode) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    function worldToScreen(wx, wy) {
+        return { x: (wx - camera.x) * zoom, y: (wy - camera.y) * zoom };
+    }
+
+    function callout(wx, wy, label, offX, offY, color) {
+        const s = worldToScreen(wx, wy);
+        // Skip if off-screen
+        if (s.x < -200 || s.x > canvas.width + 200 || s.y < -200 || s.y > canvas.height + 200) return;
+        const lx = s.x + offX;
+        const ly = s.y + offY;
+        // Connector line
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(lx, ly);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+        // Highlight dot
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 5, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Label background
+        ctx.font = "bold 11px Arial";
+        const tw = ctx.measureText(label).width;
+        const pad = 5;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(lx - pad, ly - 13, tw + pad * 2, 19);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(lx - pad, ly - 13, tw + pad * 2, 19);
+        // Label text
+        ctx.fillStyle = color;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, lx, ly - 3);
+    }
+
+    callout(sun.x, sun.y, "SUN \u2014 Avoid! Emits solar flares", 120, -95, "#ffea00");
+    callout(spaceship.x, spaceship.y, "YOUR SHIP", -85, -35, "#fff");
+    callout(planetA.x, planetA.y, "Planet \u2014 Gravity pulls you in", 45, -40, "#00aaff");
+    callout(planetD.x, planetD.y, "Gas Giant \u2014 Strong gravity + rings", 100, -55, "#aa00ff");
+    callout(collectible.x, collectible.y, "Collectible \u2014 Fly through to collect!", 40, -30, "#0f0");
+    callout(wormhole.entry.x, wormhole.entry.y, "Wormhole \u2014 Teleport + fuel", 40, -35, "#0ff");
+    callout(wormhole.exit.x, wormhole.exit.y, "Wormhole Exit", 35, -30, "#0ff");
+    if (spaceStation) {
+        callout(spaceStation.x, spaceStation.y, "Station \u2014 Deliver rescue ship here", 55, -45, "#88f");
+    }
+    if (driftingShip && !driftingShip.delivered) {
+        callout(driftingShip.x, driftingShip.y, "Rescue Ship \u2014 Pick up & deliver (+4pts)", 45, -30, "#f0f");
+    }
+
+    ctx.restore();
+}
+
+function drawGuideHUD() {
+    if (!guideMode) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // Controls panel
+    const panelW = 360;
+    const panelH = 290;
+    const px = (canvas.width - panelW) / 2;
+    const py = 52;
+
+    ctx.fillStyle = "rgba(0,0,10,0.92)";
+    ctx.fillRect(px, py, panelW, panelH);
+    ctx.strokeStyle = "#4af";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, panelW, panelH);
+
+    // Title
+    ctx.fillStyle = "#4af";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("GUIDE MODE", px + panelW / 2, py + 10);
+
+    // Divider
+    ctx.strokeStyle = "rgba(100,170,255,0.3)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + 15, py + 32);
+    ctx.lineTo(px + panelW - 15, py + 32);
+    ctx.stroke();
+
+    // Controls list
+    ctx.textBaseline = "top";
+    const controls = [
+        {key: "W / \u2191", desc: "Thrust forward (uses fuel)", color: "#0f0"},
+        {key: "A / \u2190  D / \u2192", desc: "Rotate ship", color: "#ccc"},
+        {key: "T", desc: "Toggle trajectory prediction", color: "#ccc"},
+        {key: "G", desc: "Toggle this guide", color: "#4af"},
+        {key: "R", desc: "Reset game", color: "#f55"},
+        {key: "Scroll", desc: "Zoom in / out", color: "#ccc"},
+        {key: "C / V / B / N", desc: "Speed up time (2x/4x/8x/16x)", color: "#fa0"},
+    ];
+    for (let i = 0; i < controls.length; i++) {
+        const ly = py + 40 + i * 17;
+        ctx.font = "bold 11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillStyle = controls[i].color;
+        ctx.fillText(controls[i].key, px + 12, ly);
+        ctx.font = "11px Arial";
+        ctx.fillStyle = "#aaa";
+        ctx.fillText(controls[i].desc, px + 145, ly);
+    }
+
+    // Tips divider
+    const tipsY = py + 40 + controls.length * 17 + 6;
+    ctx.strokeStyle = "rgba(100,170,255,0.3)";
+    ctx.beginPath();
+    ctx.moveTo(px + 15, tipsY);
+    ctx.lineTo(px + panelW - 15, tipsY);
+    ctx.stroke();
+
+    ctx.font = "11px Arial";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#aaa";
+    const tips = [
+        "\u2022 Green orbs = score, Blue = fuel, Purple hex = upgrades",
+        "\u2022 Rescue the purple ship \u2192 deliver to blue station (+4pts)",
+        "\u2022 Wormholes teleport you and refuel (+3 fuel)",
+        "\u2022 Solar flares disable your ship temporarily!",
+        "\u2022 White trajectory line warns of collisions ahead",
+        "\u2022 Black hole: far down-right from the sun (south-east)r.",
+    ];
+    for (let i = 0; i < tips.length; i++) {
+        ctx.fillText(tips[i], px + 12, tipsY + 8 + i * 15);
+    }
+
+    // Close hint
+    ctx.fillStyle = "#555";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Press G to dismiss", px + panelW / 2, py + panelH - 16);
+
+    ctx.restore();
+}
+
 function drawScene() {
      // Clear with identity transform to prevent streak artifacts
      ctx.setTransform(1,0,0,1,0,0);
@@ -951,22 +1591,43 @@ function drawScene() {
     ctx.scale(zoom, zoom);
 
     drawStars();
-    // Draw celestial bodies
+    drawOrbitPaths();
+
+    // Sun: corona glow behind, then body
+    drawSunCorona();
     drawPlanet(sun, "#ffea00", "#ccaa00");
+
+    // Planets with atmospheric glow and surface textures
+    drawPlanetGlow(planetA, "rgba(0,170,255,0.15)");
     drawPlanet(planetA, "#00aaff", "#0077cc");
+    drawPlanetTexture(planetA, "ice");
+
+    drawPlanetGlow(planetB, "rgba(255,68,68,0.15)");
     drawPlanet(planetB, "#ff4444", "#cc3333");
-    // New planets with chosen colors:
+    drawPlanetTexture(planetB, "volcanic");
+
+    drawPlanetGlow(planetC, "rgba(255,170,0,0.12)");
     drawPlanet(planetC, "#ffaa00", "#cc8800");
+    drawPlanetTexture(planetC, "desert");
+
+    // Gas giant: back rings -> planet body -> texture -> front rings
+    drawPlanetGlow(planetD, "rgba(170,0,255,0.18)");
+    drawPlanetDRingsHalf(false);
     drawPlanet(planetD, "#aa00ff", "#8800cc");
+    drawPlanetTexture(planetD, "gas");
+    drawPlanetDRingsHalf(true);
+
     drawBlackHole();
     drawBody(bhOrbiter1, "#888");
     drawBody(bhOrbiter2, "#888");
     drawWormhole();
     drawPlanet(moon, "#aaaaaa", "#888888");
+    drawPlanetTexture(moon, "moon");
     drawPlanet(satelliteA, "#aaaaaa", "#888888");
     drawAsteroids();
-    // Enemies removed, no draw call
     drawSolarFlareParticles();
+    drawExhaustParticles();
+    drawPickupParticles();
     // Draw the rescue mission objects:
     drawSpaceStation();
     drawDriftingShip();
@@ -1020,6 +1681,8 @@ function drawScene() {
     drawShieldBar();
     drawMinimap();
     drawCollisionWarning();
+    drawGuideWorld();
+    drawGuideHUD();
     ctx.restore();
 }
 
@@ -1114,6 +1777,8 @@ function updateGame() {
     bhOrbiter2.y = blackHole.y + bhOrbiter2.orbitRadius * Math.sin(bhOrbiter2.angle);
 
     updateAsteroids(dtEff);
+    updateExhaustParticles(dtEff);
+    updatePickupParticles(dtEff);
     // Enemies removed, no update call
 
     const gravSun = computeGravity(sun, spaceship.x, spaceship.y);
@@ -1121,10 +1786,7 @@ function updateGame() {
     const gravPlanetB = computeGravity(planetB, spaceship.x, spaceship.y);
     const gravPlanetC = computeGravity(planetC, spaceship.x, spaceship.y);
     const gravPlanetD = computeGravity(planetD, spaceship.x, spaceship.y);
-    let gravBlackHole = {ax: 0, ay: 0};
-    if (dBH < BH_MAX_EFFECT_RADIUS) {
-        gravBlackHole = computeGravity(blackHole, spaceship.x, spaceship.y);
-    }
+    const gravBlackHole = computeGravity(blackHole, spaceship.x, spaceship.y);
     const gravMoon = computeGravity(moon, spaceship.x, spaceship.y);
     const gravSat = computeGravity(satelliteA, spaceship.x, spaceship.y);
     const gravBhOrb1 = computeGravity(bhOrbiter1, spaceship.x, spaceship.y);
@@ -1141,6 +1803,9 @@ function updateGame() {
     const dxC = spaceship.x - collectible.x;
     const dyC = spaceship.y - collectible.y;
     if (Math.sqrt(dxC * dxC + dyC * dyC) < spaceship.radius + collectible.radius) {
+        const pickupColor = collectible.type === "fuel" ? "#4af" :
+                            collectible.type === "upgrade" ? "#f0f" : "#0f0";
+        emitPickupParticles(collectible.x, collectible.y, pickupColor);
         score++;
         totalScoreLS++;
         localStorage.setItem("totalScore", totalScoreLS);
@@ -1180,9 +1845,11 @@ function updateGame() {
         spaceship.y = wormhole.entry.y + offset * Math.sin(angle);
         spaceship.fuel += 3;
     }
-    solarFlareTimer -= dtEff;
-    if (solarFlareTimer <= 0) {
-        let baseAngle = Math.random() * 2 * Math.PI;
+    // Continuous pressure: smooth variance, flare when crossing threshold
+    const pressureRate = 0.006 + 0.012 * solarFlareSmoothNoise(gameTime, 0.13, 0.27, 0.07);
+    solarFlarePressure += dtEff * pressureRate;
+    if (solarFlarePressure >= 1) {
+        let baseAngle = nextFlareAngle;
         let spread = (5 + Math.random() * 15) * Math.PI / 180;
         let halfSpread = spread / 2;
         for (let i = 0; i < 30; i++) {
@@ -1197,8 +1864,14 @@ function updateGame() {
                 radius: 3
             });
         }
-        solarFlareTimer = 30;
+        solarFlarePressure = 0;
+        // Angle drifts smoothly next frame; no jump
     }
+    // Smooth drift for next flare direction (continuous, no discontinuity)
+    nextFlareAngle += dtEff * (0.015 * Math.sin(gameTime * 0.11) + 0.012 * Math.sin(gameTime * 0.23));
+    const twoPi = Math.PI * 2;
+    if (nextFlareAngle < 0) nextFlareAngle += twoPi;
+    if (nextFlareAngle >= twoPi) nextFlareAngle -= twoPi;
     for (let j = solarFlareParticles.length - 1; j >= 0; j--) {
         let p = solarFlareParticles[j];
         p.x += p.vx * dtEff;
@@ -1267,6 +1940,48 @@ function updateStatus() {
     statusDiv.textContent = txt;
 }
 
+// ---------- Soft collision: below this relative speed, push instead of destroy ----------
+const SOFT_COLLISION_SPEED_THRESHOLD = 18;
+const SOFT_COLLISION_PUSH_OUT_EXTRA = 4;   // nudge ship this much beyond surface
+const SOFT_COLLISION_BOUNCE_SPEED = 6;     // outward velocity added on soft bounce
+
+function getBodyVelocity(body) {
+    if (body === sun || body === blackHole) return { vx: 0, vy: 0 };
+    let cx, cy;
+    if (body === moon) { cx = planetB.x; cy = planetB.y; }
+    else if (body === satelliteA) { cx = planetA.x; cy = planetA.y; }
+    else if (body === bhOrbiter1 || body === bhOrbiter2) { cx = blackHole.x; cy = blackHole.y; }
+    else { cx = sun.x; cy = sun.y; }
+    const w = body.angularSpeed || 0;
+    return { vx: -w * (body.y - cy), vy: w * (body.x - cx) };
+}
+
+function pushShipAwayFrom(body) {
+    const dx = spaceship.x - body.x;
+    const dy = spaceship.y - body.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const overlap = body.radius + spaceship.radius + SOFT_COLLISION_PUSH_OUT_EXTRA;
+    spaceship.x = body.x + (dx / dist) * overlap;
+    spaceship.y = body.y + (dy / dist) * overlap;
+    const outward = SOFT_COLLISION_BOUNCE_SPEED / dist;
+    spaceship.vx += dx * outward;
+    spaceship.vy += dy * outward;
+}
+
+function gameOverCollision(message) {
+    thrustSound.pause();
+    thrustSound.currentTime = 0;
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("highScore", score);
+    }
+    simulationRunning = false;
+    cancelAnimationFrame(animationId);
+    collisionSound.play().catch(() => {});
+    statusDiv.textContent = message;
+    return true;
+}
+
 // ---------- Collision Detection ----------
 function checkCollisions() {
     if (spaceship.shieldTime > 0) return false;
@@ -1274,36 +1989,35 @@ function checkCollisions() {
     for (let body of bodies) {
         const dx = spaceship.x - body.x;
         const dy = spaceship.y - body.y;
-        if (Math.sqrt(dx * dx + dy * dy) < body.radius + spaceship.radius) {
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem("highScore", score);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < body.radius + spaceship.radius) {
+            if (body === sun) {
+                return gameOverCollision("Game Over! You collided with the sun.");
             }
-            simulationRunning = false;
-            cancelAnimationFrame(animationId);
-            collisionSound.play().catch(() => {
-            });
-            statusDiv.textContent = "Game Over! You collided with a celestial body.";
-            return true;
+            const bv = getBodyVelocity(body);
+            const relVx = spaceship.vx - bv.vx;
+            const relVy = spaceship.vy - bv.vy;
+            const relSpeed = Math.sqrt(relVx * relVx + relVy * relVy);
+            if (relSpeed >= SOFT_COLLISION_SPEED_THRESHOLD) {
+                return gameOverCollision("Game Over! You collided with a celestial body.");
+            }
+            pushShipAwayFrom(body);
         }
     }
     for (let a of asteroids) {
         const dx = spaceship.x - a.x;
         const dy = spaceship.y - a.y;
-        if (Math.sqrt(dx * dx + dy * dy) < spaceship.radius + a.radius) {
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem("highScore", score);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < spaceship.radius + a.radius) {
+            const relVx = spaceship.vx - (a.vx || 0);
+            const relVy = spaceship.vy - (a.vy || 0);
+            const relSpeed = Math.sqrt(relVx * relVx + relVy * relVy);
+            if (relSpeed >= SOFT_COLLISION_SPEED_THRESHOLD) {
+                return gameOverCollision("Game Over! You collided with an asteroid.");
             }
-            simulationRunning = false;
-            cancelAnimationFrame(animationId);
-            collisionSound.play().catch(() => {
-            });
-            statusDiv.textContent = "Game Over! You collided with an asteroid.";
-            return true;
+            pushShipAwayFrom(a);
         }
     }
-    // Enemy collision removed
     return false;
 }
 
@@ -1345,8 +2059,11 @@ function resetGame() {
     spawnAsteroids();
     spawnDriftingShip();
     spawnSpaceStation();
-    solarFlareTimer = 30;
+    solarFlarePressure = 0.35;
     solarFlareParticles = [];
+    exhaustParticles = [];
+    pickupParticles = [];
+    nextFlareAngle = Math.random() * 2 * Math.PI;
     gameTime = 0;
     animationId = null;
     simulationRunning = true;
