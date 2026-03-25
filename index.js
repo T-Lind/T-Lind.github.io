@@ -199,8 +199,18 @@ window.addEventListener('load', function () {
 
     var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
     var segments = pathname.split('/').filter(Boolean);
-    var depth = segments.length;
-    var pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
+    // If the site is hosted under a subdirectory (e.g. "/t-lind.github.io/..."),
+    // computing the path prefix purely from URL depth can point at a non-existent URL.
+    // Instead, find the first known top-level section segment and count "up" from there.
+    var knownTopLevels = ['wormhole', 'projects', 'reading', 'profile', 'lindauerai', 'research', 'games', 'motivation'];
+    var anchorIdx = segments.findIndex(function (s) { return knownTopLevels.indexOf(s) !== -1; });
+    var pathPrefix;
+    if (anchorIdx === -1) {
+        var depth = segments.length;
+        pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
+    } else {
+        pathPrefix = '../'.repeat(segments.length - anchorIdx);
+    }
     var sidebarUrl = pathPrefix + 'sidebar.html';
 
     fetch(sidebarUrl)
@@ -229,8 +239,15 @@ window.addEventListener('load', function () {
 
     var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
     var segments = pathname.split('/').filter(Boolean);
-    var depth = segments.length;
-    var pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
+    var knownTopLevels = ['wormhole', 'projects', 'reading', 'profile', 'lindauerai', 'research', 'games', 'motivation'];
+    var anchorIdx = segments.findIndex(function (s) { return knownTopLevels.indexOf(s) !== -1; });
+    var pathPrefix;
+    if (anchorIdx === -1) {
+        var depth = segments.length;
+        pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
+    } else {
+        pathPrefix = '../'.repeat(segments.length - anchorIdx);
+    }
 
     fetch(pathPrefix + 'quotes.json')
         .then(function (r) { return r.json(); })
