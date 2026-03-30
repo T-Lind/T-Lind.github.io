@@ -1,94 +1,109 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta name="generator" content="pandoc"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
-    <meta name="author" content="Tiernan Lindauer"/>
-    <meta name="dcterms.date" content="2025-10-28"/>
+    <meta charset="utf-8" />
+    <meta name="generator" content="pandoc" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2025-10-28" />
     <title>LindauerAI – Gyro & CA</title>
-    <link rel="stylesheet" href="../reset.css"/>
-    <link rel="stylesheet" href="../index.css"/>
+    <link rel="stylesheet" href="../reset.css" />
+    <link rel="stylesheet" href="../index.css" />
 </head>
+
 <body>
-<div class="site-layout">
-    <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
-    <main class="main-content">
-<table class="header">
-    <tr>
-        <td colspan="2" rowspan="2" class="width-auto">
-            <h1 class="title">LindauerAI</h1>
-            <span class="subtitle">Two AI systems. One learning revolution.</span>
-        </td>
-        <th>Version</th>
-        <td class="width-min">v0.2.0</td>
-    </tr>
-    <tr>
-        <th>Updated</th>
-        <td class="width-min"><time style="white-space: pre;">2025-06-25</time></td>
-    </tr>
-    <tr>
-        <th class="width-min">Founder</th>
-        <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
-        <th class="width-min">Status</th>
-        <td>Closed Beta</td>
-    </tr>
-</table>
+    <div class="site-layout">
+        <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+        <main class="main-content">
+            <table class="header">
+                <tr>
+                    <td colspan="2" rowspan="2" class="width-auto">
+                        <h1 class="title">LindauerAI</h1>
+                        <span class="subtitle">Two AI systems. One learning revolution.</span>
+                    </td>
+                    <th>Version</th>
+                    <td class="width-min">v0.2.0</td>
+                </tr>
+                <tr>
+                    <th>Updated</th>
+                    <td class="width-min"><time style="white-space: pre;">2025-06-25</time></td>
+                </tr>
+                <tr>
+                    <th class="width-min">Founder</th>
+                    <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
+                    <th class="width-min">Status</th>
+                    <td>Closed Beta</td>
+                </tr>
+            </table>
 
-<h2 id="overview">Overview</h2>
-<p><strong>LindauerAI</strong> was an open-source ed-tech startup I founded in&nbsp;2024.  We built an integrated dual-AI learning platform designed to <em>think with students, not for them</em>, while empowering teachers with real-time classroom intelligence.</p>
+            <h2 id="overview">Overview</h2>
+            <p><strong>LindauerAI</strong> was an open-source ed-tech startup I founded in&nbsp;2024. We built an
+                integrated dual-AI learning platform designed to <em>think with students, not for them</em>, while
+                empowering teachers with real-time classroom intelligence.</p>
 
-<p>The platform blended two complementary systems:</p>
-<ul>
-<li><strong>Gyro</strong> – a personalized <em>Socratic</em> AI tutor for K-12 students.</li>
-<li><strong>CA&nbsp;(Classroom&nbsp;Analyzer)</strong> – a teacher dashboard that turns AI conversation data into actionable insights.</li>
-</ul>
+            <p>The platform blended two complementary systems:</p>
+            <ul>
+                <li><strong>Gyro</strong> – a personalized <em>Socratic</em> AI tutor for K-12 students.</li>
+                <li><strong>CA&nbsp;(Classroom&nbsp;Analyzer)</strong> – a teacher dashboard that turns AI conversation
+                    data into actionable insights.</li>
+            </ul>
 
-<h2 id="technology">Core Technology</h2>
-<ul>
-<li><strong>Dual-AI Architecture</strong> – separate, cooperative agents for students and teachers to prevent conflicts of interest while sharing anonymized learning signals.</li>
-<li><strong>LRAG&nbsp; (Latent Retrieval-Augmented Generation)</strong> – patent-pending method that answers with textbook-aligned content while factoring in <em>previous chat messages</em>.</li>
-<li><strong>Google Classroom Integration</strong> – OAuth 2.0 &amp; Classroom APIs sync rosters and assignments.</li>
-</ul>
+            <h2 id="technology">Core Technology</h2>
+            <ul>
+                <li><strong>Dual-AI Architecture</strong> – separate, cooperative agents for students and teachers to
+                    prevent conflicts of interest while sharing anonymized learning signals.</li>
+                <li><strong>LRAG&nbsp; (Latent Retrieval-Augmented Generation)</strong> – patent-pending method that
+                    answers with textbook-aligned content while factoring in <em>previous chat messages</em>.</li>
+                <li><strong>Google Classroom Integration</strong> – OAuth 2.0 &amp; Classroom APIs sync rosters and
+                    assignments.</li>
+            </ul>
 
-<h2 id="funding">Funding &amp; Market Interest</h2>
-<p>By mid&nbsp;2025, LindauerAI achieved a <strong>$4M valuation</strong> and is currently in the process of exiting to a private investor. The company had previously secured significant market interest, including signed letters of intent from several school districts.</p>
+            <h2 id="funding">Funding &amp; Market Interest</h2>
+            <p>By mid&nbsp;2025, LindauerAI achieved a <strong>$4M valuation</strong> and $53k raise. The company had
+                previously secured significant market interest, including signed letters of intent from several school
+                districts.</p>
 
-<h2 id="product-tour">Product Tour</h2>
-<h3>Gyro – Socratic Tutor</h3>
-<figure>
-    <img src="../public/lindauerai/gyro-introduction.png" alt="Gyro tutor interface" style="width:100%;"/>
-    <figcaption>Gyro conversation UI guiding a student through a physics problem.</figcaption>
-</figure>
-<ul>
-<li>Adaptive Socratic questioning.</li>
-<li>Document upload &amp; analysis (textbooks, PDFs ≤ 20 MB).</li>
-<li>Transparent citations with adjustable excerpt length.</li>
-</ul>
+            <h2 id="product-tour">Product Tour</h2>
+            <h3>Gyro – Socratic Tutor</h3>
+            <figure>
+                <img src="../public/lindauerai/gyro-introduction.png" alt="Gyro tutor interface" style="width:100%;" />
+                <figcaption>Gyro conversation UI guiding a student through a physics problem.</figcaption>
+            </figure>
+            <ul>
+                <li>Adaptive Socratic questioning.</li>
+                <li>Document upload &amp; analysis (textbooks, PDFs ≤ 20 MB).</li>
+                <li>Transparent citations with adjustable excerpt length.</li>
+            </ul>
 
-<h3>CA – Classroom Analyzer</h3>
-<figure>
-    <img src="../public/lindauerai/ca-detailed-profile.png" alt="CA analytics dashboard" style="width:100%;"/>
-    <figcaption>Teacher dashboard summarizing engagement &amp; misconception hotspots.</figcaption>
-</figure>
-<ul>
-<li>Class &amp; student-level analytics (engagement, misconception clusters, learning-target mastery).</li>
-<li>AI content classifier for academic-integrity checks.</li>
-<li>Conversational assignment builder with smart rubrics.</li>
-</ul>
+            <h3>CA – Classroom Analyzer</h3>
+            <figure>
+                <img src="../public/lindauerai/ca-detailed-profile.png" alt="CA analytics dashboard"
+                    style="width:100%;" />
+                <figcaption>Teacher dashboard summarizing engagement &amp; misconception hotspots.</figcaption>
+            </figure>
+            <ul>
+                <li>Class &amp; student-level analytics (engagement, misconception clusters, learning-target mastery).
+                </li>
+                <li>AI content classifier for academic-integrity checks.</li>
+                <li>Conversational assignment builder with smart rubrics.</li>
+            </ul>
 
-<h2 id="responsibility">Responsible AI</h2>
-<p>We implemented robust safeguards including automatic source citation, content-moderation filters, and an opt-out data policy compliant with <abbr title="Family Educational Rights and Privacy Act">FERPA</abbr>.  Our models never train on private student data.</p>
+            <h2 id="responsibility">Responsible AI</h2>
+            <p>We implemented robust safeguards including automatic source citation, content-moderation filters, and an
+                opt-out data policy compliant with <abbr title="Family Educational Rights and Privacy Act">FERPA</abbr>.
+                Our models never train on private student data.</p>
 
-<h2 id="help">Help &amp; Documentation</h2>
-<ul>
-<li><a href="https://lindauerai.com/help">More Information</a></li>
-</ul>
+            <h2 id="help">Help &amp; Documentation</h2>
+            <ul>
+                <li><a href="https://lindauerai.com/help">More Information</a></li>
+            </ul>
 
-<br>
-<button onclick="window.location.href='../'">Back</button>
-<script src="../index.js"></script>
-    </main>
-</div>
+            <br>
+            <button onclick="window.location.href='../'">Back</button>
+            <script src="../index.js"></script>
+        </main>
+    </div>
 </body>
+
 </html>

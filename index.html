@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta name="generator" content="pandoc"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
-    <meta name="author" content="Tiernan Lindauer"/>
-    <meta name="dcterms.date" content="2025-06-25"/>
+    <meta charset="utf-8" />
+    <meta name="generator" content="pandoc" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2025-06-25" />
     <title>The Home of T-Lind</title>
-    <link rel="stylesheet" href="reset.css"/>
-    <link rel="stylesheet" href="index.css"/>
+    <link rel="stylesheet" href="reset.css" />
+    <link rel="stylesheet" href="index.css" />
     <style>
         img {
             display: block;
@@ -16,63 +17,78 @@
         }
     </style>
 </head>
+
 <body>
-<div class="site-layout">
-    <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
-    <main class="main-content">
-<table class="header">
-    <tr>
-        <td colspan="2" rowspan="2" class="width-auto">
-            <h1 class="title">The Home of T-Lind</h1>
-            <span class="subtitle">Projects, research, and ideas.</span>
-        </td>
-        <th>Version</th>
-        <td class="width-min">v1.0.1</td>
-    </tr>
-    <tr>
-        <th>Updated</th>
-        <td class="width-min">
-            <time style="white-space: pre;">2026-02-06</time>
-        </td>
-    </tr>
-    <tr>
-        <th class="width-min">Author</th>
-        <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
-        <th class="width-min">License</th>
-        <td>MIT</td>
-    </tr>
-</table>
+    <div class="site-layout">
+        <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+        <main class="main-content">
+            <table class="header">
+                <tr>
+                    <td colspan="2" rowspan="2" class="width-auto">
+                        <h1 class="title">The Home of T-Lind</h1>
+                        <span class="subtitle">Projects, research, and ideas.</span>
+                    </td>
+                    <th>Version</th>
+                    <td class="width-min">v1.0.1</td>
+                </tr>
+                <tr>
+                    <th>Updated</th>
+                    <td class="width-min">
+                        <time style="white-space: pre;">2026-02-06</time>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="width-min">Author</th>
+                    <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
+                    <th class="width-min">License</th>
+                    <td>MIT</td>
+                </tr>
+            </table>
 
-<blockquote class="central-quote" id="quote-display">
-    <p id="quote-text">Never be discouraged. If I were sunk in the lowest pits of Nova Scotia, with the Rocky Mountains piled on me, I would hang on, exercise faith, and keep up good courage; and I would come out on top.</p>
-    <p class="attribution" id="quote-attribution">— Joseph Smith Jr.</p>
-</blockquote>
+            <blockquote class="central-quote" id="quote-display">
+                <p id="quote-text">Never be discouraged. If I were sunk in the lowest pits of Nova Scotia, with the
+                    Rocky Mountains piled on me, I would hang on, exercise faith, and keep up good courage; and I would
+                    come out on top.</p>
+                <p class="attribution" id="quote-attribution">— Joseph Smith Jr.</p>
+            </blockquote>
 
-<h2 id="introduction">Introduction</h2>
-<div class="intro-container">
-    <img src="public/angularized_300.png" alt="A stylized, low-poly portrait of Tiernan Lindauer" class="profile-pic">
-    <div id="intro-text">
-        <p>> Well hi there!</p>
-        <p>This site has all sorts of stuff about me — my profile, patent-pending inventions, research papers, and more. If you're unsure where to start, <a href="motivation">My Motivation</a> sums me up well; <a href="projects">Projects</a> and <a href="research">Research</a> are great too.</p>
-        <p>In&nbsp;2024&nbsp;I founded <a href="lindauerai">LindauerAI</a>, an ed-tech startup that built a dual-AI learning platform (<em>Gyro</em> for students, <em>CA</em> for teachers). The company achieved a $4M valuation and is currently exiting. You can explore the full story on its dedicated page.</p>
-        <p>Have fun exploring!</p>
+            <h2 id="introduction">Introduction</h2>
+            <div class="intro-container">
+                <img src="public/angularized_300.png" alt="A stylized, low-poly portrait of Tiernan Lindauer"
+                    class="profile-pic">
+                <div id="intro-text">
+                    <p>> Well hi there!</p>
+                    <p>This site has all sorts of stuff about me — my profile, patent-pending inventions, research
+                        papers, and more. If you're unsure where to start, <a href="motivation">My Motivation</a> sums
+                        me up well; <a href="projects">Projects</a> and <a href="research">Research</a> are great too.
+                    </p>
+                    <p>In&nbsp;2024&nbsp;I founded <a href="lindauerai">LindauerAI</a>, an ed-tech startup that built a
+                        dual-AI learning platform (<em>Gyro</em> for students, <em>CA</em> for teachers). The company
+                        achieved a $4M valuation and $53k raise. You can explore the full story on its dedicated page.
+                    </p>
+                    <p>Have fun exploring!</p>
+                </div>
+            </div>
+
+            <h2 id="live-data">Space Data</h2>
+            <div class="widgets-grid">
+                <div class="widget-card" id="apod-widget">
+                    <h3 class="widget-title">NASA Astronomy Picture of the Day</h3>
+                    <div id="apod-content">
+                        <p class="widget-loading">Loading...</p>
+                    </div>
+                </div>
+                <div class="widget-card" id="launch-widget">
+                    <h3 class="widget-title">Next Rocket Launch</h3>
+                    <div id="launch-content">
+                        <p class="widget-loading">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
-</div>
-
-<h2 id="live-data">Space Data</h2>
-<div class="widgets-grid">
-    <div class="widget-card" id="apod-widget">
-        <h3 class="widget-title">NASA Astronomy Picture of the Day</h3>
-        <div id="apod-content"><p class="widget-loading">Loading...</p></div>
-    </div>
-    <div class="widget-card" id="launch-widget">
-        <h3 class="widget-title">Next Rocket Launch</h3>
-        <div id="launch-content"><p class="widget-loading">Loading...</p></div>
-    </div>
-</div>
-
-    </main>
-</div>
-<script src="index.js"></script>
+    <script src="index.js"></script>
 </body>
+
 </html>
