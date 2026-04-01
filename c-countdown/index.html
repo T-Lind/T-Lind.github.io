@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-04-01" />
+    <title>C-Countdown</title>
+    <link rel="stylesheet" href="../reset.css" />
+    <link rel="stylesheet" href="../index.css" />
+    <style>
+        .countdown-display {
+            border: var(--border-thickness) solid var(--text-color);
+            background: var(--background-color);
+            padding: calc(var(--line-height) * 1.5) 2ch calc(var(--line-height) * 1);
+            margin: calc(var(--line-height) * 2) 0 0;
+            position: relative;
+        }
+
+        .countdown-values-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0;
+        }
+
+        .countdown-unit {
+            text-align: center;
+            flex: 1;
+        }
+
+        .countdown-value {
+            display: block;
+            font-size: 3.5rem;
+            font-weight: var(--font-weight-bold);
+            line-height: 1.2;
+            letter-spacing: -2px;
+        }
+
+        .countdown-label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: var(--font-weight-bold);
+            color: var(--text-color-alt);
+            margin-top: calc(var(--line-height) / 4);
+        }
+
+        .countdown-sep {
+            font-size: 2rem;
+            font-weight: var(--font-weight-normal);
+            color: var(--text-color-alt);
+            opacity: 0.3;
+            align-self: flex-start;
+            line-height: 1.2;
+            padding: 0 0.5ch;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 3ch;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: var(--font-weight-bold);
+            border: var(--border-thickness) solid var(--text-color);
+            border-top: none;
+            padding: calc(var(--line-height) / 2) 2ch;
+            background: var(--background-color-alt);
+            color: var(--text-color-alt);
+        }
+
+        .status-blink {
+            animation: blink 1s step-end infinite;
+            color: #00ff00;
+            /* Subtle green for "active" */
+        }
+
+        .expired-message {
+            display: none;
+            font-size: 3rem;
+            text-align: center;
+            font-weight: var(--font-weight-bold);
+            color: #ff4444;
+            padding: calc(var(--line-height) * 2);
+            border: var(--border-thickness) double #ff4444;
+            margin: calc(var(--line-height) * 2) 0;
+            letter-spacing: 4px;
+        }
+
+        .target-info {
+            text-align: center;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-color-alt);
+            margin-top: calc(var(--line-height) * 2);
+        }
+
+        @media (max-width: 720px) {
+            .countdown-values-row {
+                flex-wrap: wrap;
+                gap: calc(var(--line-height) / 2);
+            }
+
+            .countdown-sep {
+                display: none;
+            }
+
+            .countdown-unit {
+                min-width: 30%;
+            }
+
+            .countdown-value {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .countdown-unit {
+                min-width: 45%;
+            }
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="site-layout">
+        <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+        <main class="main-content">
+            <table class="header">
+                <tr>
+                    <td colspan="2" rowspan="2" class="width-auto">
+                        <h1 class="title">C-Countdown</h1>
+                    </td>
+                    <th>Version</th>
+                    <td class="width-min">v1.1.0</td>
+                </tr>
+                <tr>
+                    <th>Updated</th>
+                    <td class="width-min">
+                        <time style="white-space: pre;">2026-04-01</time>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="width-min">Author</th>
+                    <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
+                    <th class="width-min">License</th>
+                    <td>MIT</td>
+                </tr>
+            </table>
+
+            <div id="countdown-wrapper">
+                <div id="countdown" class="countdown-display">
+                    <div class="countdown-values-row">
+                        <div class="countdown-unit">
+                            <span class="countdown-value" id="months">00</span>
+                            <span class="countdown-label">Mon</span>
+                        </div>
+                        <span class="countdown-sep">:</span>
+                        <div class="countdown-unit">
+                            <span class="countdown-value" id="weeks">00</span>
+                            <span class="countdown-label">Wks</span>
+                        </div>
+                        <span class="countdown-sep">:</span>
+                        <div class="countdown-unit">
+                            <span class="countdown-value" id="days">00</span>
+                            <span class="countdown-label">Day</span>
+                        </div>
+                        <span class="countdown-sep">:</span>
+                        <div class="countdown-unit">
+                            <span class="countdown-value" id="hours">00</span>
+                            <span class="countdown-label">Hrs</span>
+                        </div>
+                        <span class="countdown-sep">:</span>
+                        <div class="countdown-unit">
+                            <span class="countdown-value" id="minutes">00</span>
+                            <span class="countdown-label">Min</span>
+                        </div>
+                        <span class="countdown-sep">:</span>
+                        <div class="countdown-unit">
+                            <span class="countdown-value" id="seconds">00</span>
+                            <span class="countdown-label">Sec</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class="status-bar">
+                    <span><span class="status-blink">&#9679;</span> ACTIVE</span>
+                    <span>&#8212;</span>
+                    <span>MON AUG 17 2026 10:00 CDT</span>
+                </div> -->
+            </div>
+
+            <div id="expired" class="expired-message">
+                COUNTDOWN COMPLETE
+            </div>
+
+            <p class="target-info">
+                Target: Monday, August 17th, 2026 &#8212; 10:00 AM CDT
+            </p>
+
+            <script src="../index.js"></script>
+            <script src="countdown.js"></script>
+        </main>
+    </div>
+</body>
+
+</html>
