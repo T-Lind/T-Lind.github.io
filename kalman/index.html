@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="Interactive INS/GPS Kalman filter demo: a 2D rocket ascent with noisy sensors, live filter tuning, and covariance ellipses." />
+    <title>Kalman Filter Flight Demo</title>
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23ffd9c4'/%3E%3Cellipse cx='16' cy='16' rx='12' ry='7' fill='%23b9a7e6' opacity='.65'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23ff9e9e'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="app" id="app">
+        <main class="stage">
+            <header class="topbar">
+                <div class="titles">
+                    <h1>Kalman Filter Flight Demo</h1>
+                    <p>A noisy IMU predicts, sparse GPS corrects &mdash; the violet ellipse is what the filter thinks it
+                        doesn't know.</p>
+                </div>
+                <a class="backlink" href="../">&larr; back to t-lind.github.io</a>
+            </header>
+
+            <section class="world-card">
+                <canvas id="world" aria-label="Rocket flight, true and estimated trajectories"></canvas>
+
+                <div class="hud" id="hud">
+                    <span class="chip"><b>t</b><span id="hud-t">0.00 s</span></span>
+                    <span class="chip"><b>phase</b><span id="hud-phase">boost</span></span>
+                    <span class="chip"><b>alt</b><span id="hud-alt">0 m</span></span>
+                    <span class="chip"><b>speed</b><span id="hud-vel">0 m/s</span></span>
+                    <span class="chip chip-err"><b>|err|</b><span id="hud-err">0.0 m</span></span>
+                    <span class="chip chip-sig"><b>1&sigma;</b><span id="hud-sigma">0.0 m</span></span>
+                    <span class="chip chip-gps" id="hud-gps-chip"><b>GPS</b><span id="hud-gps">lock</span></span>
+                </div>
+
+                <div class="legend" aria-hidden="true">
+                    <span><i class="sw sw-truth"></i>truth</span>
+                    <span><i class="sw sw-est"></i>estimate</span>
+                    <span><i class="sw sw-gps"></i>GPS fix</span>
+                    <span><i class="sw sw-cov"></i>1/2/3&sigma;</span>
+                </div>
+
+                <div class="paused-veil" id="paused-veil" hidden><span>paused</span></div>
+            </section>
+
+            <section class="chart-card">
+                <div class="chart-head">
+                    <h2>Position error vs. 3&sigma; envelope</h2>
+                    <span class="chart-note">last 60 s &middot; coral = |est &minus; truth| &middot; lavender = filter's
+                        3&sigma;</span>
+                </div>
+                <canvas id="chart" aria-label="Position error over time with three sigma envelope"></canvas>
+            </section>
+        </main>
+
+        <aside class="panel" id="panel">
+            <div class="panel-inner">
+
+                <div class="buttons">
+                    <button type="button" id="btn-pause" class="btn btn-primary">Pause</button>
+                    <button type="button" id="btn-restart" class="btn">Restart</button>
+                </div>
+                <p class="restart-hint" id="restart-hint" hidden>Mission changes queued &mdash; press
+                    <b>Restart</b> to apply.</p>
+
+                <section class="card" data-group="mission">
+                    <h3>Mission <span class="tag tag-restart">restart to apply</span></h3>
+
+                    <div class="ctl">
+                        <label for="thrustAccel">Thrust accel <span class="val"
+                                id="thrustAccel-val">35.0 m/s&sup2;</span></label>
+                        <input type="range" id="thrustAccel" data-key="thrustAccel" data-apply="restart"
+                            data-unit="m/s&sup2;" data-dec="1" min="12" max="70" step="0.5" />
+                    </div>
+                    <div class="ctl">
+                        <label for="burnTime">Burn time <span class="val" id="burnTime-val">14.0 s</span></label>
+                        <input type="range" id="burnTime" data-key="burnTime" data-apply="restart" data-unit="s"
+                            data-dec="1" min="3" max="30" step="0.5" />
+                    </div>
+                    <div class="ctl">
+                        <label for="pitchOverStart">Pitch-over start <span class="val"
+                                id="pitchOverStart-val">2.0 s</span></label>
+                        <input type="range" id="pitchOverStart" data-key="pitchOverStart" data-apply="restart"
+                            data-unit="s" data-dec="1" min="0" max="12" step="0.5" />
+                    </div>
+                    <div class="ctl">
+                        <label for="pitchOverRate">Pitch-over rate <span class="val"
+                                id="pitchOverRate-val">3.5 &deg;/s</span></label>
+                        <input type="range" id="pitchOverRate" data-key="pitchOverRate" data-apply="restart"
+                            data-unit="&deg;/s" data-dec="1" min="0" max="10" step="0.1" />
+                    </div>
+                    <div class="ctl">
+                        <label for="dragCoeff">Drag coefficient <span class="val"
+                                id="dragCoeff-val">0.0040 1/m</span></label>
+                        <input type="range" id="dragCoeff" data-key="dragCoeff" data-apply="restart" data-unit="1/m"
+                            data-dec="4" min="0" max="0.02" step="0.0005" />
+                    </div>
+                    <div class="ctl">
+                        <label for="windGustStd">Wind gusts <span class="val"
+                                id="windGustStd-val">1.5 m/s&sup2;</span></label>
+                        <input type="range" id="windGustStd" data-key="windGustStd" data-apply="live"
+                            data-unit="m/s&sup2;" data-dec="1" min="0" max="8" step="0.1" />
+                    </div>
+                </section>
+
+                <section class="card" data-group="sensors">
+                    <h3>Sensors <span class="tag tag-live">live</span></h3>
+
+                    <div class="switch-row">
+                        <label class="switch" for="gpsEnabled">
+                            <input type="checkbox" id="gpsEnabled" data-key="gpsEnabled" data-apply="live"
+                                data-type="bool" checked />
+                            <span class="track" aria-hidden="true"><span class="knob"></span></span>
+                            <span class="switch-label">GPS receiver <em id="gps-state">on</em></span>
+                        </label>
+                    </div>
+                    <p class="hint">Flip it off mid-flight: the updates stop, and the uncertainty ellipse blooms.</p>
+
+                    <div class="ctl">
+                        <label for="imuNoiseStd">IMU noise <span class="val"
+                                id="imuNoiseStd-val">0.60 m/s&sup2;</span></label>
+                        <input type="range" id="imuNoiseStd" data-key="imuNoiseStd" data-apply="live"
+                            data-unit="m/s&sup2;" data-dec="2" min="0" max="3" step="0.05" />
+                    </div>
+                    <div class="ctl">
+                        <label for="biasX">Accel bias x <span class="val" id="biasX-val">0.25 m/s&sup2;</span></label>
+                        <input type="range" id="biasX" data-key="biasX" data-apply="live" data-unit="m/s&sup2;"
+                            data-dec="2" min="-1.5" max="1.5" step="0.01" />
+                    </div>
+                    <div class="ctl">
+                        <label for="biasY">Accel bias y <span class="val" id="biasY-val">-0.18 m/s&sup2;</span></label>
+                        <input type="range" id="biasY" data-key="biasY" data-apply="live" data-unit="m/s&sup2;"
+                            data-dec="2" min="-1.5" max="1.5" step="0.01" />
+                    </div>
+                    <div class="ctl">
+                        <label for="gpsNoiseStd">GPS noise <span class="val" id="gpsNoiseStd-val">18.0 m</span></label>
+                        <input type="range" id="gpsNoiseStd" data-key="gpsNoiseStd" data-apply="live" data-unit="m"
+                            data-dec="1" min="1" max="80" step="0.5" />
+                    </div>
+                    <div class="ctl">
+                        <label for="gpsRate">GPS rate <span class="val" id="gpsRate-val">4.0 Hz</span></label>
+                        <input type="range" id="gpsRate" data-key="gpsRate" data-apply="live" data-unit="Hz"
+                            data-dec="1" min="1" max="10" step="0.5" />
+                    </div>
+                </section>
+
+                <section class="card" data-group="filter">
+                    <h3>Filter tuning <span class="tag tag-live">live</span></h3>
+                    <div class="ctl">
+                        <label for="qAccel">Process noise <i>q</i> <span class="val"
+                                id="qAccel-val">1.20 m/s&sup2;</span></label>
+                        <input type="range" id="qAccel" data-key="qAccel" data-apply="live" data-unit="m/s&sup2;"
+                            data-dec="2" min="0.05" max="10" step="0.05" />
+                    </div>
+                    <div class="ctl">
+                        <label for="rGps">Assumed GPS &sigma; <i>R</i> <span class="val"
+                                id="rGps-val">18.0 m</span></label>
+                        <input type="range" id="rGps" data-key="rGps" data-apply="live" data-unit="m" data-dec="1"
+                            min="1" max="120" step="0.5" />
+                    </div>
+                    <p class="hint">Mistune these against the sensor truth and watch the filter over- or under-trust its
+                        inputs.</p>
+                </section>
+
+                <section class="card" data-group="view">
+                    <h3>View</h3>
+                    <div class="checks">
+                        <label class="check"><input type="checkbox" id="layer-truth" data-layer="truth" checked /><span
+                                class="box"></span>Truth path &amp; rocket</label>
+                        <label class="check"><input type="checkbox" id="layer-meas" data-layer="meas" checked /><span
+                                class="box"></span>GPS measurements</label>
+                        <label class="check"><input type="checkbox" id="layer-est" data-layer="est" checked /><span
+                                class="box"></span>Estimate path</label>
+                        <label class="check"><input type="checkbox" id="layer-cov" data-layer="cov" checked /><span
+                                class="box"></span>Uncertainty ellipses</label>
+                    </div>
+                    <div class="ctl">
+                        <label for="speed">Sim speed <span class="val" id="speed-val">1.0&times;</span></label>
+                        <input type="range" id="speed" min="0.5" max="4" step="0.1" value="1" />
+                    </div>
+                </section>
+
+                <footer class="panel-foot">
+                    <p>The rocket's true motion is hidden from the navigator. A biased, noisy accelerometer is
+                        integrated forward every 10 ms (<b>predict</b>), which drifts; a GPS fix a few times a second
+                        pulls the estimate back (<b>update</b>). The Kalman filter weighs the two by how much it trusts
+                        each, and carries a covariance that says how wrong it expects to be.</p>
+                    <p class="sizes">State <b>x</b> = [x, y, v<sub>x</sub>, v<sub>y</sub>] (4&times;1) &middot; F, P, Q
+                        4&times;4 &middot; H 2&times;4 &middot; R 2&times;2 &middot; K 4&times;2</p>
+                    <p class="keys">Keys: <kbd>Space</kbd> pause &middot; <kbd>R</kbd> restart &middot; <kbd>G</kbd>
+                        GPS</p>
+                </footer>
+            </div>
+        </aside>
+    </div>
+
+    <div class="fatal" id="fatal" hidden></div>
+
+    <script src="./engine.js"></script>
+    <script src="./app.js"></script>
+</body>
+
+</html>
