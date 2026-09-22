@@ -193,34 +193,44 @@ window.addEventListener('load', function () {
     if (document.getElementById('typing-container')) typeIntroduction();
 });
 
+// Resolve the relative prefix back to the site root.
+// If the site is hosted under a subdirectory (e.g. "/t-lind.github.io/..."),
+// computing the prefix purely from URL depth can point at a non-existent URL.
+// Instead, find the first known top-level section segment and count "up" from there.
+// Keep this list in sync with sidebar.html when adding a new top-level section.
+function getPathPrefix() {
+    var knownTopLevels = ['wormhole', 'projects', 'reading', 'profile', 'lindauerai',
+        'research', 'games', 'motivation', 'intellistream', 'syngrafi', 'kalman', 'orbits'];
+    var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
+    var segments = pathname.split('/').filter(Boolean);
+    var anchorIdx = segments.findIndex(function (s) { return knownTopLevels.indexOf(s) !== -1; });
+    if (anchorIdx === -1) {
+        return segments.length === 0 ? '' : '../'.repeat(segments.length);
+    }
+    return '../'.repeat(segments.length - anchorIdx);
+}
+
 (function injectSidebar() {
     var container = document.getElementById('sidebar-container');
     if (!container) return;
 
-    var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
-    var segments = pathname.split('/').filter(Boolean);
-    // If the site is hosted under a subdirectory (e.g. "/t-lind.github.io/..."),
-    // computing the path prefix purely from URL depth can point at a non-existent URL.
-    // Instead, find the first known top-level section segment and count "up" from there.
-    var knownTopLevels = ['wormhole', 'projects', 'reading', 'profile', 'lindauerai', 'research', 'games', 'motivation'];
-    var anchorIdx = segments.findIndex(function (s) { return knownTopLevels.indexOf(s) !== -1; });
-    var pathPrefix;
-    if (anchorIdx === -1) {
-        var depth = segments.length;
-        pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
-    } else {
-        pathPrefix = '../'.repeat(segments.length - anchorIdx);
-    }
+    var pathPrefix = getPathPrefix();
     var sidebarUrl = pathPrefix + 'sidebar.html';
 
     fetch(sidebarUrl)
         .then(function (r) { return r.text(); })
         .then(function (html) {
             container.innerHTML = html;
+            var herePath = window.location.pathname.replace(/\/?index\.html?$/i, '').replace(/\/+$/, '');
             container.querySelectorAll('.site-sidebar-list a').forEach(function (a) {
                 var href = a.getAttribute('href');
                 if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return;
                 a.setAttribute('href', pathPrefix + href);
+                try {
+                    var linkPath = new URL(a.href, window.location.href).pathname
+                        .replace(/\/?index\.html?$/i, '').replace(/\/+$/, '');
+                    if (linkPath === herePath) a.classList.add('active');
+                } catch (e) {}
             });
         })
         .catch(function () { container.innerHTML = '<p class="site-sidebar-title">Site Directory</p><p>Navigation unavailable.</p>'; });
@@ -237,17 +247,7 @@ window.addEventListener('load', function () {
         return;
     }
 
-    var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
-    var segments = pathname.split('/').filter(Boolean);
-    var knownTopLevels = ['wormhole', 'projects', 'reading', 'profile', 'lindauerai', 'research', 'games', 'motivation'];
-    var anchorIdx = segments.findIndex(function (s) { return knownTopLevels.indexOf(s) !== -1; });
-    var pathPrefix;
-    if (anchorIdx === -1) {
-        var depth = segments.length;
-        pathPrefix = depth === 0 ? '' : '../'.repeat(depth);
-    } else {
-        pathPrefix = '../'.repeat(segments.length - anchorIdx);
-    }
+    var pathPrefix = getPathPrefix();
 
     fetch(pathPrefix + 'quotes.json')
         .then(function (r) { return r.json(); })
@@ -384,7 +384,130 @@ function updateLaunchCountdown() {
 
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
+/* ===== GitHub Recent Commits ===== */
+(function loadGitHubCommits() {
+    var container = document.getElementById('github-content');
+    if (!container) return;
+
+    var CACHE_KEY = 'tlind_github_cache';
+    var CACHE_TTL = 900000; // 15 minutes
+    var HEADERS = { 'Accept': 'application/vnd.github+json' };
+
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem(CACHE_KEY)); } catch (e) {}
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        renderCommits(cached.data, container);
+        return;
+    }
+
+    // The public events feed no longer includes commit messages, so instead list
+    // the most recently pushed repos and pull their latest commits.
+    fetch('https://api.github.com/users/T-Lind/repos?sort=pushed&direction=desc&per_page=4', { headers: HEADERS })
+        .then(function (r) {
+            if (!r.ok) throw new Error('GitHub API error ' + r.status);
+            return r.json();
+        })
+        .then(function (repos) {
+            var targets = repos.filter(function (r) { return !r.fork; }).slice(0, 3);
+            return Promise.all(targets.map(function (repo) {
+                return fetch('https://api.github.com/repos/' + repo.full_name + '/commits?per_page=3', { headers: HEADERS })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (cs) {
+                        return (cs || []).map(function (c) {
+                            return {
+                                repo: repo.name,
+                                message: ((c.commit && c.commit.message) || '').split('\n')[0],
+                                sha: (c.sha || '').substring(0, 7),
+                                date: (c.commit && c.commit.author && c.commit.author.date) || repo.pushed_at,
+                                url: c.html_url || ''
+                            };
+                        });
+                    })
+                    .catch(function () { return []; });
+            }));
+        })
+        .then(function (groups) {
+            var commits = [].concat.apply([], groups);
+            commits.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+            commits = commits.slice(0, 6);
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: commits, ts: Date.now() })); } catch (e) {}
+            renderCommits(commits, container);
+        })
+        .catch(function () {
+            container.innerHTML = '<p class="widget-loading">GitHub activity unavailable right now.</p>';
+        });
+})();
+
+function renderCommits(commits, container) {
+    if (!commits || !commits.length) {
+        container.innerHTML = '<p class="widget-loading">No recent public commits.</p>';
+        return;
+    }
+    var html = '<ul class="commit-list">';
+    commits.forEach(function (c) {
+        var link = c.url ? '<a href="' + escapeHTML(c.url) + '" target="_blank" rel="noopener">' +
+            escapeHTML(c.message) + '</a>' : escapeHTML(c.message);
+        html += '<li class="commit-item">' +
+            '<div class="commit-message" title="' + escapeHTML(c.message) + '">' + link + '</div>' +
+            '<div class="commit-meta"><span class="commit-repo">' + escapeHTML(c.repo) + '</span> · <code>' +
+            escapeHTML(c.sha) + '</code> · ' + timeAgo(c.date) + '</div>' +
+            '</li>';
+    });
+    html += '</ul>';
+    container.innerHTML = html;
+}
+
+/* ===== International Space Station Position ===== */
+(function loadISS() {
+    var container = document.getElementById('iss-content');
+    if (!container) return;
+
+    function fetchISS() {
+        fetch('https://api.wheretheiss.at/v1/satellites/25544')
+            .then(function (r) {
+                if (!r.ok) throw new Error('ISS API error ' + r.status);
+                return r.json();
+            })
+            .then(function (data) { renderISS(data, container); })
+            .catch(function () {
+                if (!container.querySelector('.iss-coords')) {
+                    container.innerHTML = '<p class="widget-loading">ISS data unavailable right now.</p>';
+                }
+            });
+    }
+
+    fetchISS();
+    var timer = setInterval(fetchISS, 10000);
+    window.addEventListener('beforeunload', function () { clearInterval(timer); });
+})();
+
+function renderISS(data, container) {
+    var lat = Number(data.latitude);
+    var lon = Number(data.longitude);
+    var html = '<div class="iss-coords">' +
+        '<div class="iss-coord"><span class="iss-label">Lat</span><span class="iss-value">' +
+        Math.abs(lat).toFixed(2) + '\u00B0 ' + (lat >= 0 ? 'N' : 'S') + '</span></div>' +
+        '<div class="iss-coord"><span class="iss-label">Lon</span><span class="iss-value">' +
+        Math.abs(lon).toFixed(2) + '\u00B0 ' + (lon >= 0 ? 'E' : 'W') + '</span></div>' +
+        '</div>' +
+        '<p class="iss-stats"><strong>' + Number(data.altitude).toFixed(0) + '</strong> km altitude · <strong>' +
+        Number(data.velocity).toFixed(0) + '</strong> km/h</p>' +
+        '<p class="iss-updated">Updated ' + timeAgo(data.timestamp * 1000) + '</p>';
+    container.innerHTML = html;
+}
+
 /* ===== Utility ===== */
+function timeAgo(input) {
+    var then = typeof input === 'number' ? input : Date.parse(input);
+    if (isNaN(then)) return '';
+    var s = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (s < 60) return s + 's ago';
+    var m = Math.floor(s / 60);
+    if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h / 24) + 'd ago';
+}
 function escapeHTML(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

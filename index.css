@@ -1014,6 +1014,88 @@ label input {
     margin: calc(var(--line-height) / 2) 0 0;
 }
 
+/* GitHub commit tracker */
+.commit-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--line-height) 0 0;
+}
+
+.commit-item {
+    padding: calc(var(--line-height) / 2) 0;
+    border-top: var(--border-thickness) solid var(--text-color-alt);
+}
+
+.commit-item:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.commit-message {
+    margin-top: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.commit-meta {
+    font-size: 0.75rem;
+    color: var(--text-color-alt);
+    margin-top: 0;
+}
+
+.commit-repo {
+    font-weight: var(--font-weight-medium);
+}
+
+/* ISS position tracker */
+.iss-coords {
+    display: flex;
+    gap: 1ch;
+    margin: calc(var(--line-height) / 2) 0;
+}
+
+.iss-coord {
+    flex: 1;
+    border: var(--border-thickness) solid var(--text-color);
+    padding: calc(var(--line-height) / 2) 1ch;
+    text-align: center;
+}
+
+.iss-label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-color-alt);
+    margin-top: 0;
+}
+
+.iss-value {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: var(--font-weight-bold);
+    margin-top: 0;
+}
+
+.iss-stats {
+    margin: calc(var(--line-height) / 2) 0 0;
+    text-align: center;
+}
+
+.iss-updated {
+    font-size: 0.75rem;
+    color: var(--text-color-alt);
+    text-align: center;
+    margin: calc(var(--line-height) / 4) 0 0;
+}
+
+/* Active sidebar link */
+.site-sidebar-list a.active {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    color: var(--text-color-alt);
+}
+
 @media screen and (max-width: 720px) {
     .widgets-grid {
         grid-template-columns: 1fr;
