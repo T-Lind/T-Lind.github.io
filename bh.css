@@ -291,46 +291,148 @@ canvas[data-cosmos] {
     pointer-events: none;
 }
 
-/* ---------- resume block (profile) ---------- */
-.resume {
-    border: 1px solid rgba(255, 255, 255, .09);
-    border-radius: 12px;
-    padding: 0 1.3rem 1.4rem;
-    background: rgba(255, 255, 255, .02);
-    margin: 1.6rem 0 2rem;
+/* ---------- resume (profile) ---------- */
+.resume { margin: 1.8rem 0 2.8rem; }
+.resume > h2 { margin-top: 0; }
+
+.resume-section {
+    font-size: .72rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .22em;
+    color: #ffc98d;
+    margin: 2.6rem 0 1.2rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid rgba(255, 178, 107, .22);
 }
-.resume > summary {
-    cursor: pointer;
-    list-style: none;
-    padding: 1.1rem 0 .9rem;
+
+/* experience timeline */
+.timeline {
+    position: relative;
+    padding: 0 0 0 1.3rem;
+}
+.timeline::before {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: .55rem;
+    bottom: .55rem;
+    width: 1px;
+    background: linear-gradient(180deg, rgba(255, 178, 107, .65), rgba(255, 178, 107, .05));
+}
+.timeline-item {
+    position: relative;
+    padding: 0 0 1.5rem;
+}
+.timeline-item:last-child { padding-bottom: 0; }
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -1.3rem;
+    top: .5rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffb26b;
+    box-shadow: 0 0 0 3px rgba(255, 178, 107, .12), 0 0 12px rgba(255, 178, 107, .6);
+}
+.timeline-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .2rem 1rem;
+}
+.timeline-role {
+    color: #fff;
+    font-weight: 650;
+    font-size: 1.02rem;
+    line-height: 1.4;
+}
+.timeline-dates {
     font-family: var(--bh-mono);
     font-size: .7rem;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: #cfd3da;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
-    margin-bottom: 1.2rem;
+    letter-spacing: .04em;
+    color: #9aa1a9;
+    white-space: nowrap;
 }
-.resume > summary::-webkit-details-marker { display: none; }
-.resume > summary::before { content: "\25B8"; color: var(--bh-amber); margin-right: .7em; }
-.resume[open] > summary::before { content: "\25BE"; }
-.resume h3 {
-    font-size: .72rem;
-    text-transform: uppercase;
-    letter-spacing: .2em;
+.timeline-org {
+    margin-top: .1rem;
+    font-family: var(--bh-mono);
+    font-size: .74rem;
+    letter-spacing: .05em;
     color: #ffc98d;
-    margin: 1.9rem 0 .9rem;
 }
-.resume ul { list-style: none; margin: 0; padding: 0; }
-.resume li {
-    margin: 0 0 1.05rem;
-    padding: .05rem 0 .05rem 1rem;
-    border-left: 2px solid rgba(255, 255, 255, .12);
-    line-height: 1.65;
+.timeline-desc {
+    margin: .5rem 0 0;
+    color: #c6cad1;
 }
-.resume li:last-child { margin-bottom: 0; }
-.resume li strong { color: #fff; }
-.resume p { margin: .6rem 0 0; line-height: 1.7; }
+
+/* education card */
+.edu-card {
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    padding: 1.2rem 1.3rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012));
+}
+.edu-school { color: #fff; font-weight: 650; font-size: 1.05rem; }
+.edu-degree { margin-top: .3rem; color: #c6cad1; line-height: 1.6; }
+
+/* chips: education stats + technical skills */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-top: .95rem;
+}
+.chip {
+    font-family: var(--bh-mono);
+    font-size: .68rem;
+    letter-spacing: .04em;
+    color: #cfd3da;
+    padding: .32em .72em;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .03);
+}
+.chip.accent {
+    color: #ffc98d;
+    border-color: rgba(255, 178, 107, .38);
+    background: rgba(255, 178, 107, .07);
+}
+
+/* generic entry list: patents, projects, activities */
+.entry-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.entry-list > li {
+    padding: 1.05rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, .08);
+}
+.entry-list > li:first-child { padding-top: 0; }
+.entry-list > li:last-child { padding-bottom: 0; border-bottom: none; }
+.entry-title { color: #fff; font-weight: 600; line-height: 1.5; }
+.entry-year {
+    font-family: var(--bh-mono);
+    font-size: .7rem;
+    font-weight: 500;
+    color: #9aa1a9;
+    margin-left: .3rem;
+}
+.entry-meta {
+    margin-top: .15rem;
+    font-family: var(--bh-mono);
+    font-size: .7rem;
+    letter-spacing: .04em;
+    color: #8b9199;
+}
+.entry-list > li p {
+    margin: .5rem 0 0;
+    color: #c6cad1;
+    line-height: 1.7;
+}
 
 /* ---------- reading list ---------- */
 .reading-list { margin: 1.4rem 0 0; }
