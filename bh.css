@@ -5,18 +5,23 @@
    ============================================================ */
 
 :root {
-    --text-color: #c9cdd4;
-    --text-color-alt: #8b9199;
-    --background-color: #07070a;
-    --background-color-alt: #101016;
-    --bh-amber: #ffb26b;
+    --text-color: #c9c9cc;
+    --text-color-alt: #8a8a8f;
+    --background-color: #070708;
+    --background-color-alt: #101012;
+    --bh-accent: #e9e9ec;
     --bh-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --bh-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 html {
-    background-color: #07070a;
+    background-color: #070708;
     color: var(--text-color);
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
 }
 
 body {
@@ -36,9 +41,9 @@ body::before {
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-image:
-        radial-gradient(70% 55% at 84% 6%, rgba(255, 150, 60, .11), transparent 62%),
-        radial-gradient(62% 52% at 6% 90%, rgba(96, 120, 255, .11), transparent 62%),
-        radial-gradient(42% 36% at 32% 22%, rgba(255, 90, 150, .05), transparent 60%),
+        radial-gradient(70% 55% at 84% 6%, rgba(255, 255, 255, .07), transparent 62%),
+        radial-gradient(62% 52% at 6% 90%, rgba(200, 200, 210, .06), transparent 62%),
+        radial-gradient(42% 36% at 32% 22%, rgba(255, 255, 255, .035), transparent 60%),
         radial-gradient(1.3px 1.3px at 12% 18%, #ffffff, transparent),
         radial-gradient(1px 1px at 27% 42%, rgba(255,255,255,.9), transparent),
         radial-gradient(1.1px 1.1px at 38% 9%, #fff, transparent),
@@ -62,37 +67,64 @@ body::before {
         radial-gradient(1px 1px at 41% 31%, rgba(255,255,255,.75), transparent),
         radial-gradient(1px 1px at 67% 68%, #fff, transparent),
         radial-gradient(1px 1px at 86% 18%, rgba(255,255,255,.8), transparent);
-    animation: bh-twinkle 11s ease-in-out infinite;
 }
-@keyframes bh-twinkle { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
 
-/* ---------- long thin lines of light (drifting) ---------- */
+/* ---------- the hero itself: a real render of the homepage black hole ---------- */
 body::after {
     content: "";
     position: fixed;
-    inset: -35%;
+    top: -16vmin;
+    right: -20vmin;
+    width: min(112vmin, 1150px);
+    height: min(112vmin, 1150px);
     z-index: -1;
     pointer-events: none;
-    background-repeat: no-repeat;
-    background-image:
-        linear-gradient(74deg, transparent 49.86%, rgba(255, 200, 140, .55) 49.95%, transparent 50.06%),
-        linear-gradient(74deg, transparent 66.86%, rgba(255, 255, 255, .26) 66.95%, transparent 67.06%),
-        linear-gradient(104deg, transparent 33.86%, rgba(150, 190, 255, .34) 33.95%, transparent 34.06%),
-        linear-gradient(104deg, transparent 72.86%, rgba(255, 255, 255, .16) 72.95%, transparent 73.06%),
-        linear-gradient(150deg, transparent 18.86%, rgba(255, 178, 107, .22) 18.95%, transparent 19.06%);
-    filter: blur(.4px);
-    opacity: .55;
-    animation: bh-drift 70s linear infinite alternate;
+    background: url("public/bh-hero.png") center / contain no-repeat;
+    mix-blend-mode: screen;
+    opacity: .52;
+    -webkit-mask-image: radial-gradient(closest-side, #000 48%, transparent 90%);
+    mask-image: radial-gradient(closest-side, #000 48%, transparent 90%);
+    transform: translateZ(0);
 }
-@keyframes bh-drift {
-    from { transform: translate3d(-3.5%, -2%, 0) rotate(-1deg); }
-    to   { transform: translate3d(3.5%, 2%, 0) rotate(1deg); }
+
+@media (max-width: 720px) {
+    body::after {
+        top: -8vmin;
+        right: -34vmin;
+        width: 132vmin;
+        height: 132vmin;
+        opacity: .4;
+    }
 }
 
 /* old left sidebar retired in favour of the top-right nav */
 .site-sidebar { display: none !important; }
 .site-layout { max-width: none !important; justify-content: center; gap: 0 !important; }
 .main-content { max-width: min(78ch, 100%); margin: 0 auto; }
+
+/* index.css applies `* + * { margin-top: var(--line-height) }` for vertical
+   rhythm. Inside flex/grid containers that margin is unwanted: it stretches
+   chips into tall empty pills and warps card/timeline spacing. Neutralise it
+   for the containers we control; gaps handle the spacing instead. */
+.site-layout > *,
+.chips > *,
+.project-tags > *,
+.project-card > *,
+.project-card-noimg > *,
+.project-card-noimg-tall > *,
+.timeline-head > *,
+.timeline-item > *,
+.iss-coords > *,
+.book-list > *,
+.book-list li > *,
+.widgets-grid > *,
+.intro-container > *,
+.entry-list > li > *,
+.page-head > *,
+.page-head-meta > *,
+.page-head-meta-item > * {
+    margin-top: 0;
+}
 
 /* ---------- typography ---------- */
 .main-content p,
@@ -102,10 +134,10 @@ body::after {
     font-family: var(--bh-sans);
     font-size: 1.02rem;
     line-height: 1.78;
-    color: #c6cad1;
+    color: #c6c6c9;
 }
 .main-content strong { color: #fff; font-weight: 650; }
-.main-content em { color: #dfe3e8; }
+.main-content em { color: #e0e0e2; }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--bh-sans);
@@ -128,14 +160,14 @@ h2::after {
     bottom: 0;
     height: 1px;
     width: 100%;
-    background: linear-gradient(90deg, rgba(255, 178, 107, .9), rgba(255, 178, 107, .12) 55%, transparent);
+    background: linear-gradient(90deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, .1) 55%, transparent);
 }
-h3 { font-size: 1.12rem; margin: 2rem 0 .6rem; color: #eef1f4; }
+h3 { font-size: 1.12rem; margin: 2rem 0 .6rem; color: #eeeef0; }
 
 a:link, a:visited {
-    color: #ffc98d;
+    color: #e6e6ea;
     text-decoration: none;
-    border-bottom: 1px solid rgba(255, 201, 141, .32);
+    border-bottom: 1px solid rgba(255, 255, 255, .28);
 }
 a:hover { color: #fff; border-color: #fff; }
 
@@ -144,7 +176,7 @@ blockquote {
     border-left: none;
     margin: 2rem 0;
     padding: .1rem 0 .1rem 1.3rem;
-    color: #d7dbe0;
+    color: #d7d7da;
     font-style: italic;
 }
 blockquote::before {
@@ -152,7 +184,7 @@ blockquote::before {
     position: absolute;
     left: 0; top: 0; bottom: 0;
     width: 2px;
-    background: linear-gradient(180deg, rgba(255, 178, 107, .9), rgba(255, 178, 107, .1));
+    background: linear-gradient(180deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, .08));
 }
 
 hr {
@@ -188,54 +220,64 @@ img {
 figure { margin: 2rem 0; }
 figcaption { font-size: .78rem; color: var(--text-color-alt); margin-top: .6rem; letter-spacing: .04em; }
 
-/* ---------- article header (the old .header table, restyled) ---------- */
-table.header {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0 0 2.9rem;
+/* ---------- article masthead ---------- */
+.page-head {
+    position: relative;
+    margin: 0 0 3rem;
+    padding: 1.5rem 0 0;
+    border-top: 1px solid rgba(255, 255, 255, .16);
 }
-table.header th,
-table.header td {
-    padding: .5rem .85rem;
-    text-align: left;
-    vertical-align: top;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
+.page-head::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0;
+    width: 3.2rem;
+    height: 2px;
+    background: #fff;
 }
-table.header tr:first-child th,
-table.header tr:first-child td { border-top: 1px solid rgba(255, 255, 255, .08); }
-table.header td.width-auto { border-right: 1px solid rgba(255, 255, 255, .08); }
-table.header h1.title {
-    font-size: clamp(1.9rem, 4.4vw, 2.9rem);
-    line-height: 1.06;
+.page-head-title {
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+    line-height: 1.02;
+    letter-spacing: -.03em;
     margin: 0;
     text-transform: none;
-    letter-spacing: -.02em;
+    color: #fff;
 }
-table.header .subtitle {
-    display: block;
-    margin-top: .5rem;
-    font-family: var(--bh-sans);
-    font-size: .95rem;
-    color: #9aa1a9;
+.page-head-subtitle {
+    margin: .85rem 0 0;
+    max-width: 48ch;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #9a9a9e;
 }
-table.header th {
-    font-family: var(--bh-mono);
-    font-size: .64rem;
+.page-head-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: 1.9rem;
+}
+.page-head-meta-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .5rem;
+    padding: .5em .8em;
+    border: 1px solid rgba(255, 255, 255, .14);
+}
+.page-head-meta-label {
+    font-size: .58rem;
     text-transform: uppercase;
-    letter-spacing: .2em;
-    color: #797f88;
+    letter-spacing: .18em;
+    color: #7a7a7e;
     font-weight: 600;
-    white-space: nowrap;
 }
-table.header td {
-    font-family: var(--bh-mono);
-    font-size: .78rem;
-    color: #c6cad1;
-    white-space: pre-wrap;
+.page-head-meta-value {
+    font-size: .8rem;
+    color: #e6e6ea;
 }
-table.header cite { font-style: normal; }
+.page-head-meta-value time { white-space: nowrap; }
 
-/* generic content tables (not the header) */
+/* generic content tables */
 .main-content table:not(.header) {
     width: 100%;
     border-collapse: collapse;
@@ -249,7 +291,8 @@ table.header cite { font-style: normal; }
 
 /* small screens */
 @media (max-width: 520px) {
-    table.header h1.title { font-size: 1.8rem; }
+    .page-head-title { font-size: 1.9rem; }
+    .page-head-meta { gap: .4rem; }
 }
 
 /* ---------- project cards: never inherit the link colour ---------- */
@@ -258,7 +301,7 @@ table.header cite { font-style: normal; }
 .project-card:hover,
 .project-card-noimg,
 .project-card-noimg-tall {
-    color: #c6cad1;
+    color: #c6c6c9;
     border-bottom: none;
     text-decoration: none;
 }
@@ -267,7 +310,7 @@ table.header cite { font-style: normal; }
 .project-card-noimg-tall .project-title { color: #fff; }
 .project-card .project-description,
 .project-card-noimg .project-description,
-.project-card-noimg-tall .project-description { color: #aab0b8; }
+.project-card-noimg-tall .project-description { color: #aaaaae; }
 .project-card,
 .project-card-noimg,
 .project-card-noimg-tall {
@@ -278,7 +321,8 @@ table.header cite { font-style: normal; }
 .project-card:hover,
 .project-card-noimg:hover,
 .project-card-noimg-tall:hover { transform: translateY(-2px); }
-.project-tag { color: #e7eaee; }
+.project-tags { align-items: center; gap: .4rem; }
+.project-tag { color: #e7e7ea; }
 
 /* ---------- interactive cosmic objects (bh-cosmos.js) ---------- */
 canvas[data-cosmos] {
@@ -300,10 +344,10 @@ canvas[data-cosmos] {
     font-weight: 650;
     text-transform: uppercase;
     letter-spacing: .22em;
-    color: #ffc98d;
+    color: #dcdce0;
     margin: 2.6rem 0 1.2rem;
     padding-bottom: .5rem;
-    border-bottom: 1px solid rgba(255, 178, 107, .22);
+    border-bottom: 1px solid rgba(255, 255, 255, .16);
 }
 
 /* experience timeline */
@@ -318,7 +362,7 @@ canvas[data-cosmos] {
     top: .55rem;
     bottom: .55rem;
     width: 1px;
-    background: linear-gradient(180deg, rgba(255, 178, 107, .65), rgba(255, 178, 107, .05));
+    background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .04));
 }
 .timeline-item {
     position: relative;
@@ -333,8 +377,8 @@ canvas[data-cosmos] {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #ffb26b;
-    box-shadow: 0 0 0 3px rgba(255, 178, 107, .12), 0 0 12px rgba(255, 178, 107, .6);
+    background: #e9e9ec;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .1), 0 0 12px rgba(255, 255, 255, .5);
 }
 .timeline-head {
     display: flex;
@@ -350,22 +394,22 @@ canvas[data-cosmos] {
     line-height: 1.4;
 }
 .timeline-dates {
-    font-family: var(--bh-mono);
+    font-family: var(--bh-sans);
     font-size: .7rem;
     letter-spacing: .04em;
-    color: #9aa1a9;
+    color: #9a9a9e;
     white-space: nowrap;
 }
 .timeline-org {
     margin-top: .1rem;
-    font-family: var(--bh-mono);
+    font-family: var(--bh-sans);
     font-size: .74rem;
     letter-spacing: .05em;
-    color: #ffc98d;
+    color: #cfcfd4;
 }
 .timeline-desc {
     margin: .5rem 0 0;
-    color: #c6cad1;
+    color: #c6c6c9;
 }
 
 /* education card */
@@ -376,29 +420,30 @@ canvas[data-cosmos] {
     background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012));
 }
 .edu-school { color: #fff; font-weight: 650; font-size: 1.05rem; }
-.edu-degree { margin-top: .3rem; color: #c6cad1; line-height: 1.6; }
+.edu-degree { margin-top: .3rem; color: #c6c6c9; line-height: 1.6; }
 
 /* chips: education stats + technical skills */
 .chips {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: .45rem;
     margin-top: .95rem;
 }
 .chip {
-    font-family: var(--bh-mono);
+    font-family: var(--bh-sans);
     font-size: .68rem;
     letter-spacing: .04em;
-    color: #cfd3da;
+    color: #d0d0d3;
     padding: .32em .72em;
     border: 1px solid rgba(255, 255, 255, .14);
     border-radius: 999px;
     background: rgba(255, 255, 255, .03);
 }
 .chip.accent {
-    color: #ffc98d;
-    border-color: rgba(255, 178, 107, .38);
-    background: rgba(255, 178, 107, .07);
+    color: #fff;
+    border-color: rgba(255, 255, 255, .34);
+    background: rgba(255, 255, 255, .07);
 }
 
 /* generic entry list: patents, projects, activities */
@@ -415,22 +460,22 @@ canvas[data-cosmos] {
 .entry-list > li:last-child { padding-bottom: 0; border-bottom: none; }
 .entry-title { color: #fff; font-weight: 600; line-height: 1.5; }
 .entry-year {
-    font-family: var(--bh-mono);
+    font-family: var(--bh-sans);
     font-size: .7rem;
     font-weight: 500;
-    color: #9aa1a9;
+    color: #9a9a9e;
     margin-left: .3rem;
 }
 .entry-meta {
     margin-top: .15rem;
-    font-family: var(--bh-mono);
+    font-family: var(--bh-sans);
     font-size: .7rem;
     letter-spacing: .04em;
-    color: #8b9199;
+    color: #8a8a8f;
 }
 .entry-list > li p {
     margin: .5rem 0 0;
-    color: #c6cad1;
+    color: #c6c6c9;
     line-height: 1.7;
 }
 
@@ -462,9 +507,9 @@ canvas[data-cosmos] {
     transform: translateY(-.02em);
 }
 .book-list li:has(input:checked)::before {
-    background: var(--bh-amber);
-    border-color: var(--bh-amber);
+    background: var(--bh-accent);
+    border-color: var(--bh-accent);
 }
-.book-list label { color: #c6cad1; font-size: .92rem; }
-.book-list li:has(input:checked) label { color: #8b9199; }
+.book-list label { color: #c6c6c9; font-size: .92rem; }
+.book-list li:has(input:checked) label { color: #8a8a8f; }
 @media (max-width: 680px) { .book-list { grid-template-columns: 1fr; } }

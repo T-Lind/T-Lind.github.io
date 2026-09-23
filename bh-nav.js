@@ -18,18 +18,21 @@
 
     var css =
         "#site-nav,#site-nav *{margin:0;box-sizing:border-box}" +
-        "#site-nav{position:fixed;top:max(.9rem,env(safe-area-inset-top));" +
-        "right:max(1rem,env(safe-area-inset-right));z-index:2147483000;" +
-        "display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:.12rem;" +
-        "padding:.3rem;border-radius:9px;background:rgba(8,6,4,.5);" +
-        "border:1px solid rgba(255,170,90,.28);-webkit-backdrop-filter:blur(6px);" +
-        "backdrop-filter:blur(6px);font-family:ui-monospace,\"SFMono-Regular\"," +
-        "Menlo,Consolas,monospace}" +
-        "#site-nav a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;" +
-        "text-decoration:none;color:rgba(255,225,195,.85);padding:.45em .62em;" +
-        "border-radius:6px;transition:background .18s,color .18s}" +
-        "#site-nav a:hover,#site-nav a:focus-visible{background:rgba(255,170,90,.16);color:#fff}" +
-        "#site-nav a[aria-current=page]{color:#fff;background:rgba(255,170,90,.22)}";
+        "#site-nav{position:fixed;top:0;left:0;right:0;z-index:2147483000;" +
+        "display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.4rem;" +
+        "padding:.6rem clamp(.8rem,4vw,2rem);" +
+        "background:rgba(8,8,10,.72);border-bottom:1px solid rgba(255,255,255,.09);" +
+        "-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);" +
+        "font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif}" +
+        "#site-nav a{font-size:.82rem;letter-spacing:.01em;text-transform:none;" +
+        "text-decoration:none;color:rgba(255,255,255,.66);padding:.45em .9em;" +
+        "border:1px solid rgba(255,255,255,.14);border-radius:0;" +
+        "transition:color .18s ease,background .18s ease,border-color .18s ease}" +
+        "#site-nav a:hover,#site-nav a:focus-visible{color:#fff;" +
+        "border-color:rgba(255,255,255,.42);background:rgba(255,255,255,.06);outline:none}" +
+        "#site-nav a[aria-current=page]{color:#0b0b0d;background:#fff;border-color:#fff}" +
+        "@media(max-width:720px){#site-nav{padding:.5rem .5rem;gap:.3rem}" +
+        "#site-nav a{font-size:.74rem;padding:.4em .6em}}";
 
     var style = document.createElement("style");
     style.textContent = css;

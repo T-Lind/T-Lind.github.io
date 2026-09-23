@@ -34,26 +34,16 @@ $endif$
 $for(include-before)$
 $include-before$
 $endfor$
-<table class="header">
-  <tr>
-    <td colspan="2" rowspan="2" class="width-auto">
-      <h1 class="title">$title$</h1>
-      <span class="subtitle">$subtitle$</span>
-    </td>
-    <th>Version</th>
-    <td class="width-min">$version$</td>
-  </tr>
-  <tr>
-    <th>Updated</th>
-    <td class="width-min"><time style="white-space: pre;">$date$</time></td>
-  </tr>
-  <tr>
-    <th class="width-min">Author</th>
-    <td class="width-auto"><a href="$author-url$"><cite>$author$</cite></a></td>
-    <th class="width-min">License</th>
-    <td>MIT</td>
-  </tr>
-</table>
+<header class="page-head">
+    <h1 class="page-head-title">$title$</h1>
+    <p class="page-head-subtitle">$subtitle$</p>
+    <div class="page-head-meta">
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">$version$</span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value"><time style="white-space: pre;">$date$</time></span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Author</span><span class="page-head-meta-value"><a href="$author-url$"><cite>$author$</cite></a></span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">License</span><span class="page-head-meta-value">MIT</span></span>
+    </div>
+</header>
 <label class="debug-toggle-label"><input type="checkbox" class="debug-toggle" /> Debug mode</label>
 $if(abstract)$
 <div class="abstract">

@@ -9,40 +9,21 @@
     <link rel="stylesheet" href="../reset.css"/>
     <link rel="stylesheet" href="../index.css"/>
     <link rel="stylesheet" href="../bh.css" />
-    <style>
-        /* keep the masthead legible where it overlaps the star */
-        table.header {
-            background: linear-gradient(180deg, rgba(6, 6, 9, .55), rgba(6, 6, 9, .12));
-            border-radius: 12px;
-        }
-    </style>
 </head>
 <body>
 <div class="site-layout">
     <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
     <main class="main-content">
-<table class="header">
-    <tr>
-        <td colspan="2" rowspan="2" class="width-auto">
-            <h1 class="title">My Projects</h1>
-            <span class="subtitle">Personal projects that are not confidential (patents) or research.</span>
-        </td>
-        <th>Version</th>
-        <td class="width-min">v0.0.5</td>
-    </tr>
-    <tr>
-        <th>Updated</th>
-        <td class="width-min">
-            <time style="white-space: pre;">2026-07-31</time>
-        </td>
-    </tr>
-    <tr>
-        <th class="width-min">Author</th>
-        <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
-        <th class="width-min">License</th>
-        <td>MIT</td>
-    </tr>
-</table>
+<header class="page-head">
+    <h1 class="page-head-title">My Projects</h1>
+    <p class="page-head-subtitle">Personal projects that are not confidential (patents) or research.</p>
+    <div class="page-head-meta">
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">v0.0.5</span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value"><time datetime="2026-07-31">Jul 31, 2026</time></span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Author</span><span class="page-head-meta-value">Tiernan Lindauer</span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">License</span><span class="page-head-meta-value">MIT</span></span>
+    </div>
+</header>
 
 <!--<div class="portfolio-link">-->
 <!--    &lt;!&ndash;    TODO: UPDATE FOR NEW PORTFOLIOS&ndash;&gt;-->
