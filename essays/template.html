@@ -1,52 +1,56 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<html lang="en">
 <head>
     <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="author" content="Tiernan Lindauer"/>
     <meta name="dcterms.date" content="YYYY-MM-DD"/>
     <title>[Essay Title]</title>
     <link rel="stylesheet" href="../reset.css"/>
     <link rel="stylesheet" href="../index.css"/>
+    <link rel="stylesheet" href="../bh.css" />
 </head>
 <body>
-<table class="header">
-    <tr>
-        <td colspan="2" rowspan="2" class="width-auto">
-            <h1 class="title">[Essay Title]</h1>
-            <span class="subtitle">[Optional Subtitle]</span>
-        </td>
-        <th>Version</th>
-        <td class="width-min">v1.0.0</td>
-    </tr>
-    <tr>
-        <th>Updated</th>
-        <td class="width-min">
-            <time style="white-space: pre;">YYYY-MM-DD</time>
-        </td>
-    </tr>
-    <tr>
-        <th class="width-min">Author</th>
-        <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
-        <th class="width-min">License</th>
-        <td>MIT</td>
-    </tr>
-</table>
+<div class="site-layout">
+    <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+    <main class="main-content">
+        <table class="header">
+            <tr>
+                <td colspan="2" rowspan="2" class="width-auto">
+                    <h1 class="title">[Essay Title]</h1>
+                    <span class="subtitle">[Optional Subtitle]</span>
+                </td>
+                <th>Version</th>
+                <td class="width-min">v1.0.0</td>
+            </tr>
+            <tr>
+                <th>Updated</th>
+                <td class="width-min"><time style="white-space: pre;">YYYY-MM-DD</time></td>
+            </tr>
+            <tr>
+                <th class="width-min">Author</th>
+                <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
+                <th class="width-min">License</th>
+                <td>MIT</td>
+            </tr>
+        </table>
 
-<div class="essay-content">
-    <p>
-        Start writing your essay here. This is a paragraph.
-    </p>
-    <p>
-        This is another paragraph. You can add as many as you like.
-    </p>
-    <h2>This is a subheading</h2>
-    <p>
-        You can also use subheadings to structure your essay.
-    </p>
+        <div class="essay-content">
+            <p>Start writing your essay here. This is a paragraph.</p>
+            <h2>This is a subheading</h2>
+            <p>Use subheadings to structure the piece. Links look like <a href="#">this</a>, and you can
+                <strong>emphasize</strong> or <em>italicize</em> text, or drop in a quote:</p>
+            <blockquote>
+                <p>A quote worth keeping.</p>
+                <span class="attribution">&mdash; Someone</span>
+            </blockquote>
+            <p>Copy this file to a new name, replace the bracketed parts, and add it to the list on the
+                <a href="./">Essays</a> page.</p>
+        </div>
+
+        <p class="note">&uarr; <a href="./">Back to Essays</a></p>
+    </main>
 </div>
-
-<button onclick="window.location.href='../essays'">Back to Essays</button>
-<script src="../index.js"></script>
+    <script src="../bh-nav.js"></script>
 </body>
 </html>

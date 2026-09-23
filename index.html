@@ -1,114 +1,838 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
-
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="generator" content="pandoc" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-    <meta name="author" content="Tiernan Lindauer" />
-    <meta name="dcterms.date" content="2025-06-25" />
-    <meta name="description" content="Tiernan Lindauer — projects, research, patent-pending inventions, and ideas." />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#222222" media="(prefers-color-scheme: dark)" />
-    <meta property="og:title" content="The Home of T-Lind" />
-    <meta property="og:description" content="Projects, research, and ideas from Tiernan Lindauer." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://t-lind.github.io/" />
-    <meta name="twitter:card" content="summary" />
-    <title>The Home of T-Lind</title>
-    <link rel="stylesheet" href="reset.css" />
-    <link rel="stylesheet" href="index.css" />
-    <style>
-        img {
-            display: block;
-            margin: auto;
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>The Home of T-Lind</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; background: #000; }
+  body { overflow-x: hidden; }
+  body {
+    font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    -webkit-font-smoothing: antialiased;
+  }
+  #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  body.immersive #gl { cursor: grab; }
+  body.immersive #gl:active { cursor: grabbing; }
+
+  /* ---- Welcome / header, sitting inside the black hole's shadow ---- */
+  #hero { position: relative; height: 100vh; height: 100svh; overflow: hidden; }
+  #welcome {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 22vh;
+    text-align: center;
+    pointer-events: none;
+    user-select: none;
+    z-index: 3;
+    opacity: 1;
+  }
+  #welcome .inner {
+    position: relative;
+    left: clamp(0px, 29vw, 720px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 96vw;
+  }
+  .eyebrow {
+    font-size: clamp(.62rem, 1.5vw, .82rem);
+    letter-spacing: .62em;
+    text-indent: .62em;
+    color: #ffb26b;
+    text-shadow: 0 0 18px rgba(255,140,50,.75);
+    opacity: .92;
+    margin-bottom: clamp(.7rem, 2.4vh, 1.5rem);
+  }
+  #welcome h1 {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(2.2rem, 5.4vw, 5rem);
+    font-weight: 600;
+    letter-spacing: -.015em;
+    line-height: .98;
+    white-space: nowrap;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,.85), 0 0 44px rgba(0,0,0,.7), 0 0 70px rgba(255,170,90,.35);
+  }
+  body.immersive #welcome { display: none; }
+  body.immersive #scroll-cue { display: none; }
+  .sub {
+    margin-top: clamp(.7rem, 2.2vh, 1.4rem);
+    font-size: clamp(.7rem, 1.9vw, .95rem);
+    letter-spacing: .18em;
+    max-width: 24rem;
+    text-wrap: balance;
+    color: rgba(255,242,232,.92);
+    text-shadow: 0 0 4px #000, 0 0 10px rgba(0,0,0,.9);
+  }
+
+  #ui {
+    position: absolute;
+    left: max(1rem, env(safe-area-inset-left));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 4;
+  }
+  #admire {
+    font-family: inherit;
+    font-size: clamp(.58rem, 1.3vw, .72rem);
+    letter-spacing: .26em;
+    text-indent: .26em;
+    color: rgba(255,222,182,.78);
+    background: rgba(22,11,4,.34);
+    border: 1px solid rgba(255,170,90,.34);
+    border-radius: 2px;
+    padding: .55em .95em;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    transition: color .2s ease, border-color .2s ease, background .2s ease;
+  }
+  #admire:hover, #admire:focus-visible {
+    color: #fff;
+    border-color: rgba(255,196,130,.85);
+    background: rgba(46,20,7,.55);
+    outline: none;
+  }
+
+  #hint {
+    position: absolute;
+    left: 0; right: 0; bottom: max(6.6rem, calc(env(safe-area-inset-bottom) + 6.6rem));
+    text-align: center;
+    font-size: clamp(.56rem, 1.5vw, .74rem);
+    letter-spacing: .34em;
+    text-indent: .34em;
+    color: rgba(255,255,255,.4);
+    pointer-events: none;
+    z-index: 3;
+    transition: opacity 1.2s ease;
+  }
+  #hint.dim { opacity: 0; }
+
+  #scroll-cue {
+    position: absolute; left: 50%; bottom: 2.2rem; transform: translateX(-50%);
+    width: 3.4rem; height: 3.4rem; display: grid; place-items: center;
+    font-size: 1.8rem; line-height: 1; text-decoration: none;
+    color: #fff; background: rgba(10,6,4,.55);
+    border: 2px solid rgba(255,255,255,.95); border-radius: 8px;
+    z-index: 4; box-shadow: 0 0 26px rgba(0,0,0,.7), 0 0 44px rgba(255,150,60,.28);
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+    animation: bob 2.2s ease-in-out infinite;
+  }
+  #scroll-cue:hover, #scroll-cue:focus-visible {
+    background: rgba(255,170,90,.92); border-color: #fff; color: #160a04; outline: none;
+  }
+  body.scrolled #scroll-cue { opacity: 0; pointer-events: none; }
+  @keyframes bob { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(9px); } }
+
+  /* ---- compact top-right navigation ---- */
+  #site-nav {
+    position: absolute;
+    top: max(.9rem, env(safe-area-inset-top));
+    right: max(1rem, env(safe-area-inset-right));
+    z-index: 5;
+    display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: .12rem;
+    padding: .3rem; border-radius: 9px;
+    background: rgba(8,6,4,.44); border: 1px solid rgba(255,170,90,.28);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  #site-nav a {
+    font-size: clamp(.54rem, 1.15vw, .7rem);
+    letter-spacing: .14em; text-transform: uppercase; text-decoration: none;
+    color: rgba(255,225,195,.82); padding: .45em .62em; border-radius: 6px;
+    transition: background .18s ease, color .18s ease;
+  }
+  #site-nav a:hover, #site-nav a:focus-visible { background: rgba(255,170,90,.16); color: #fff; outline: none; }
+  #site-nav a[aria-current="page"] { color: #fff; background: rgba(255,170,90,.22); }
+  body.immersive #site-nav { display: none; }
+
+  /* ---- Scrolled content (styled after the main monospace site) ---- */
+  #content {
+    position: relative; z-index: 2; background: #08080a; color: #b8bdc4;
+    border-top: 1px solid rgba(255,170,90,.18);
+  }
+  #content .wrap { max-width: 46rem; margin: 0 auto; padding: clamp(2.6rem,7vh,5rem) 1.4rem 5rem; }
+  #content h2 {
+    font-weight: 600; color: #fff; font-size: .82rem; text-transform: uppercase;
+    letter-spacing: .22em; margin: 2.8rem 0 1rem;
+  }
+  #content h2:first-child { margin-top: 0; }
+  #content p { line-height: 1.8; margin: .7rem 0; font-size: .84rem; }
+  #content a { color: #ffb26b; text-decoration: none; border-bottom: 1px solid rgba(255,178,107,.35); }
+  #content a:hover { color: #fff; border-color: #fff; }
+  #content blockquote { border-left: 2px solid rgba(255,170,90,.5); padding-left: 1.1rem; margin: 1.7rem 0; color: #d8dce1; }
+  #content blockquote p { font-style: italic; }
+  #content .attribution { display: block; margin-top: .5rem; font-style: normal; font-size: .74rem; color: #8b9099; }
+  #content .about { display: flex; gap: 1.7rem; align-items: flex-start; flex-wrap: wrap; }
+  #content .about img { width: 176px; height: auto; border-radius: 4px; flex: 0 0 auto; }
+  #content .about .txt { flex: 1 1 16rem; min-width: 230px; }
+  #content ul { list-style: none; margin: 1rem 0; }
+  #content li { padding: .55rem 0; border-bottom: 1px dashed rgba(255,255,255,.08); font-size: .84rem; }
+  #content li .k { color: #ffb26b; }
+  #content figure { margin: 2rem 0; }
+  #content figure img { width: 100%; display: block; border-radius: 6px; }
+  #content figcaption { font-size: .72rem; color: #7f858d; margin-top: .6rem; letter-spacing: .06em; }
+  #content .note { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px dashed rgba(255,255,255,.1); font-size: .72rem; color: #6f757d; letter-spacing: .08em; }
+  body.immersive #content { display: none; }
+
+  /* single-column live widgets */
+  #content .widgets { display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 1.2rem 0 0; }
+  #content .widget { border: 1px solid rgba(255,255,255,.09); border-radius: 10px; padding: 1.1rem 1.2rem; background: rgba(255,255,255,.02); }
+  #content .widget h3 { font-size: .66rem; text-transform: uppercase; letter-spacing: .2em; color: #8b9199; margin: 0 0 .8rem; font-weight: 600; }
+  #content .widget img { width: 100%; border-radius: 6px; margin-bottom: .7rem; }
+  #content .widget p { margin: .3rem 0; }
+  #content .loading { color: #777d85; }
+  #content .apod-title, #content .launch-name { color: #fff; }
+  #content .apod-desc, #content .launch-provider, #content .launch-pad, #content .iss-stats, #content .iss-updated { color: #aab0b8; font-size: .8rem; }
+  #content .commit-list { list-style: none; margin: 0; padding: 0; }
+  #content .commit-item { padding: .5rem 0; border-bottom: 1px dashed rgba(255,255,255,.08); }
+  #content .commit-message a { color: #ffc98d; }
+  #content .commit-meta { font-size: .72rem; color: #8b9199; margin-top: .2rem; font-family: ui-monospace, monospace; }
+  #content .iss-coords { display: flex; gap: 1.8rem; margin-bottom: .6rem; }
+  #content .iss-label { display: block; font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: #8b9199; }
+  #content .iss-value { font-size: 1.15rem; color: #fff; font-family: ui-monospace, monospace; }
+  #content .launch-countdown { font-size: 1.5rem; color: #ffc98d; font-family: ui-monospace, monospace; margin-top: .4rem; }
+  #content .launch-countdown-label { font-size: .64rem; letter-spacing: .2em; text-transform: uppercase; color: #8b9199; }
+
+  #fallback {
+    position: fixed; inset: 0; display: none; place-items: center; z-index: 9;
+    background: #000; color: #ffb26b; text-align: center; padding: 2rem;
+    font-size: .9rem; line-height: 1.7; letter-spacing: .08em;
+  }
+  #fallback b { color: #fff; }
+  #content .commit-counts { color: #8b9199; font-size: .72rem; font-family: ui-monospace, monospace; letter-spacing: .04em; margin: 0 0 .6rem; }
+  #content .apod-desc.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  #content .apod-toggle { margin-top: .4rem; background: none; border: 1px solid rgba(255,201,141,.4); color: #ffc98d; font: inherit; font-size: .72rem; letter-spacing: .1em; padding: .35em .7em; border-radius: 6px; cursor: pointer; }
+  #content .apod-toggle:hover { color: #fff; border-color: #fff; }
+</style>
 </head>
-
 <body>
-    <div class="site-layout">
-        <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
-        <main class="main-content">
-            <table class="header">
-                <tr>
-                    <td colspan="2" rowspan="2" class="width-auto">
-                        <h1 class="title">The Home of T-Lind</h1>
-                        <span class="subtitle">Projects, research, and ideas.</span>
-                    </td>
-                    <th>Version</th>
-                    <td class="width-min">v1.1.0</td>
-                </tr>
-                <tr>
-                    <th>Updated</th>
-                    <td class="width-min">
-                        <time style="white-space: pre;">2026-09-22</time>
-                    </td>
-                </tr>
-                <tr>
-                    <th class="width-min">Author</th>
-                    <td class="width-auto"><cite>Tiernan Lindauer</cite></td>
-                    <th class="width-min">License</th>
-                    <td>MIT</td>
-                </tr>
-            </table>
+<canvas id="gl"></canvas>
 
-            <blockquote class="central-quote" id="quote-display">
-                <p id="quote-text">Never be discouraged. If I were sunk in the lowest pits of Nova Scotia, with the
-                    Rocky Mountains piled on me, I would hang on, exercise faith, and keep up good courage; and I would
-                    come out on top.</p>
-                <p class="attribution" id="quote-attribution">— Joseph Smith Jr.</p>
-            </blockquote>
+<section id="hero">
+  <nav id="site-nav" aria-label="Site navigation">
+    <a href="./">Home</a>
+    <a href="projects/">Projects</a>
+    <a href="research/">Research</a>
+    <a href="motivation/">Motivation</a>
+    <a href="profile/">Profile</a>
+    <a href="games/">Games</a>
+    <a href="reading/">Reading</a>
+  </nav>
 
-            <h2 id="introduction">Introduction</h2>
-            <div class="intro-container">
-                <img src="public/angularized_300.png" alt="A stylized, low-poly portrait of Tiernan Lindauer"
-                    class="profile-pic">
-                <div id="intro-text">
-                    <p>> Well hi there!</p>
-                    <p>This site has all sorts of stuff about me — my profile, patent-pending inventions, research
-                        papers, and more. If you're unsure where to start, <a href="motivation">My Motivation</a> sums
-                        me up well; <a href="projects">Projects</a> and <a href="research">Research</a> are great too.
-                    </p>
-                    <p>In&nbsp;2024&nbsp;I founded <a href="lindauerai">LindauerAI</a>, an ed-tech startup that built a
-                        dual-AI learning platform (<em>Gyro</em> for students, <em>CA</em> for teachers). You can
-                        explore the full story on its dedicated page.
-                    </p>
-                    <p>Have fun exploring!</p>
-                </div>
-            </div>
-
-            <h2 id="live-data">Live Data</h2>
-            <div class="widgets-grid">
-                <div class="widget-card" id="apod-widget">
-                    <h3 class="widget-title">NASA Astronomy Picture of the Day</h3>
-                    <div id="apod-content">
-                        <p class="widget-loading">Loading...</p>
-                    </div>
-                </div>
-                <div class="widget-card" id="launch-widget">
-                    <h3 class="widget-title">Next Rocket Launch</h3>
-                    <div id="launch-content">
-                        <p class="widget-loading">Loading...</p>
-                    </div>
-                </div>
-                <div class="widget-card" id="github-widget">
-                    <h3 class="widget-title">Latest Commits</h3>
-                    <div id="github-content">
-                        <p class="widget-loading">Loading...</p>
-                    </div>
-                </div>
-                <div class="widget-card" id="iss-widget">
-                    <h3 class="widget-title">ISS Position</h3>
-                    <div id="iss-content">
-                        <p class="widget-loading">Loading...</p>
-                    </div>
-                </div>
-            </div>
-
-        </main>
+  <div id="welcome">
+    <div class="inner">
+      <h1>The Home of T&#8209;Lind</h1>
     </div>
-    <script src="index.js"></script>
-</body>
+  </div>
 
+  <div id="ui"><button id="admire" type="button">&#9673; ADMIRE</button></div>
+
+  <div id="hint">CLICK &#9673; ADMIRE TO EXPLORE</div>
+
+  <a id="scroll-cue" href="#content" aria-label="Scroll to content">&#8595;</a>
+</section>
+
+<main id="content">
+  <div class="wrap">
+    <h2>About</h2>
+    <div class="about">
+      <img src="public/angularized_300.png" alt="A stylized, low-poly portrait of Tiernan Lindauer" />
+      <div class="txt">
+        <p>&gt; Well hi there!</p>
+        <p>This page is an experiment: an up-close, real-time view of a black hole up top, and the rest of the site below. Everything past this point is example content modeled on the main site.</p>
+        <p>I'm <strong>Tiernan Lindauer</strong> &mdash; I build things and write about them. In 2024 I founded <a href="lindauerai/">LindauerAI</a>, an ed-tech startup that built a dual-AI learning platform (<em>Gyro</em> for students, <em>CA</em> for teachers).</p>
+        <p>Start with <a href="motivation/">My Motivation</a>, then <a href="projects/">Projects</a> and <a href="research/">Research</a>.</p>
+      </div>
+    </div>
+
+    <h2>Selected Work</h2>
+    <ul>
+      <li><span class="k">LindauerAI</span> &mdash; dual-AI learning platform; founder &amp; engineer.</li>
+      <li><span class="k">Research</span> &mdash; cost-based policies for narrative observation of unpredictable events.</li>
+      <li><span class="k">Projects</span> &mdash; interactive experiments in physics, graphics, and systems.</li>
+      <li><span class="k">Writing</span> &mdash; essays on motivation, learning, and building.</li>
+    </ul>
+
+    <h2>Words I Live By</h2>
+    <blockquote class="quote" id="quote-display">
+      <p id="quote-text">&hellip;</p>
+      <span class="attribution" id="quote-attribution"></span>
+    </blockquote>
+
+    <h2>Live Data</h2>
+    <div class="widgets">
+      <article class="widget"><h3>NASA Astronomy Picture of the Day</h3><div class="widget-body" id="apod-content"><p class="loading">Loading&hellip;</p></div></article>
+      <article class="widget"><h3>Next Rocket Launch</h3><div class="widget-body" id="launch-content"><p class="loading">Loading&hellip;</p></div></article>
+      <article class="widget"><h3>Latest Commits</h3><div class="widget-body" id="github-content"><p class="loading">Loading&hellip;</p></div></article>
+      <article class="widget"><h3>ISS Position</h3><div class="widget-body" id="iss-content"><p class="loading">Loading&hellip;</p></div></article>
+    </div>
+
+    <h2>Elsewhere</h2>
+    <ul>
+      <li><a href="lindauerai/">LindauerAI</a> &mdash; the ed-tech startup and its story.</li>
+      <li><a href="essays/">Essays</a> &mdash; longer-form writing.</li>
+      <li><a href="reading/">Reading</a> &mdash; what I'm reading and recommending.</li>
+    </ul>
+
+    <p class="note">&uarr; <a href="#hero">Back to the black hole</a></p>
+  </div>
+</main>
+
+<div id="fallback">
+  <div>
+    <b>This black hole needs WebGL&nbsp;2.</b><br />
+    Your browser or GPU did not provide a WebGL&nbsp;2 context.<br />
+    Try a recent desktop Chrome / Firefox / Safari.
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("gl");
+  const gl = canvas.getContext("webgl2", {
+    antialias: false, alpha: false, depth: false, stencil: false,
+    powerPreference: "high-performance", preserveDrawingBuffer: false
+  });
+
+  if (!gl) {
+    document.getElementById("fallback").style.display = "grid";
+    return;
+  }
+
+
+
+  const VS = `#version 300 es
+void main(){
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+  const FS_SCENE = `#version 300 es
+precision highp float;
+precision highp int;
+out vec4 fragColor;
+
+uniform vec2  uRes;
+uniform float uTime;
+uniform vec2  uCamAng;     // x: azimuth, y: elevation (radians)
+uniform vec2  uOffset;     // screen-space shift of the hole (uv units)
+uniform float uCamDist;    // in Schwarzschild radii
+uniform float uFov;        // vertical field of view (degrees)
+uniform float uBeam;       // relativistic beaming strength 0..1
+uniform float uDiskBright; // HDR disk brightness
+uniform float uSpeed;      // disk animation speed
+
+#define RS 1.0
+#define R_IN 2.8
+#define R_OUT 10.0
+#define MAXSTEP 480
+
+/* ---------- hash / noise ---------- */
+float hash12(vec2 p){
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+float hash13(vec3 p3){
+  p3 = fract(p3 * 0.1031);
+  p3 += dot(p3, p3.zyx + 31.32);
+  return fract((p3.x + p3.y) * p3.z);
+}
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash12(i);
+  float b = hash12(i + vec2(1.0, 0.0));
+  float c = hash12(i + vec2(0.0, 1.0));
+  float d = hash12(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+float fbm(vec2 p){
+  float s = 0.0, a = 0.5;
+  mat2 m = mat2(1.62, 1.20, -1.20, 1.62);
+  for (int i = 0; i < 5; i++){ s += a * vnoise(p); p = m * p; a *= 0.5; }
+  return s;
+}
+float vnoise3(vec3 p){
+  vec3 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float n000 = hash13(i + vec3(0,0,0));
+  float n100 = hash13(i + vec3(1,0,0));
+  float n010 = hash13(i + vec3(0,1,0));
+  float n110 = hash13(i + vec3(1,1,0));
+  float n001 = hash13(i + vec3(0,0,1));
+  float n101 = hash13(i + vec3(1,0,1));
+  float n011 = hash13(i + vec3(0,1,1));
+  float n111 = hash13(i + vec3(1,1,1));
+  return mix(mix(mix(n000,n100,f.x), mix(n010,n110,f.x), f.y),
+             mix(mix(n001,n101,f.x), mix(n011,n111,f.x), f.y), f.z);
+}
+
+/* ---------- lensed starfield + faint nebula ---------- */
+vec3 background(vec3 dir){
+  float neb = vnoise3(dir * 2.3 + 11.0);
+  float cloud = vnoise3(dir * 5.7 - 3.0);
+  vec3 col = mix(vec3(0.010, 0.014, 0.028), vec3(0.028, 0.012, 0.026), neb);
+  col *= (0.45 + 0.55 * cloud);
+
+  float s1 = vnoise3(dir * 210.0);
+  float s2 = vnoise3(dir * 520.0 + 7.0);
+  float star = smoothstep(0.93, 0.999, s1) + 0.5 * smoothstep(0.95, 1.0, s2);
+  float tint = hash13(floor(dir * 210.0));
+  vec3 sc = mix(vec3(0.80, 0.87, 1.0), vec3(1.0, 0.92, 0.80), tint);
+  col += sc * star * 1.25;
+
+  float band = 1.0 - smoothstep(0.0, 0.35, abs(dir.y));
+  col += vec3(0.06, 0.05, 0.10) * band * 0.6;
+  return col;
+}
+
+void mainImage(out vec4 outColor, in vec2 fragCoord){
+  vec2 uv = (2.0 * fragCoord - uRes) / uRes.y - uOffset;
+
+  /* camera */
+  float az = uCamAng.x, el = uCamAng.y;
+  float ce = cos(el), se = sin(el);
+  vec3 cam = uCamDist * vec3(ce * sin(az), se, ce * cos(az));
+  vec3 fwd = normalize(-cam);
+  vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+  vec3 camUp = cross(right, fwd);
+  float th = tan(radians(uFov) * 0.5);
+  vec3 rd = normalize(fwd + uv.x * th * right + uv.y * th * camUp);
+
+  /* geodesic plane: spanned by e1 (radial) and e2 (transverse ray dir) */
+  vec3 e1 = normalize(cam);
+  vec3 perp = rd - e1 * dot(rd, e1);
+  float pl = length(perp);
+  vec3 e2 = pl > 1e-6 ? perp / pl : normalize(cross(e1, vec3(0.0, 1.0, 0.0)));
+  float e1n = e1.y, e2n = e2.y;
+
+  float r0 = uCamDist;
+  float u = 1.0 / r0;
+  float du = -dot(rd, e1) / (max(pl, 1e-6) * r0);   // du/dphi
+  float phi = 0.0;
+  float prevH = r0 * e1n;
+  float prevR = r0;
+  float escapeR = max(r0 * 1.3, R_OUT + 3.0);
+
+  /* analytic photon sphere: b < bc is captured -> perfectly round shadow */
+  float bc = 1.5 * sqrt(3.0);
+  float bImpact = r0 * pl;                          // conserved impact parameter
+  float shadow = smoothstep(bc - 0.03, bc + 0.03, bImpact);
+
+  vec3 col = vec3(0.0);
+  float trans = 1.0;
+  bool escaped = false;
+
+  vec3 n = vec3(0.0, 1.0, 0.0);
+
+  for (int i = 0; i < MAXSTEP; i++){
+    float r = 1.0 / u;
+    if (r <= RS || u <= 0.0){ break; }
+    if (r > escapeR && du < 0.0){ escaped = true; break; }
+
+    float dphi = clamp(0.008 * r, 0.002, 0.05);
+
+    /* RK2 on u'' = -u + 1.5 * RS * u^2 */
+    float k1u = du;
+    float k1v = -u + 1.5 * RS * u * u;
+    float um = u + 0.5 * dphi * k1u;
+    float vm = du + 0.5 * dphi * k1v;
+    float k2u = vm;
+    float k2v = -um + 1.5 * RS * um * um;
+    float uN = u + dphi * k2u;
+    float duN = du + dphi * k2v;
+    float phiN = phi + dphi;
+    float rN = 1.0 / uN;
+
+    float cp = cos(phiN), sp = sin(phiN);
+    float hN = rN * (cp * e1n + sp * e2n);
+
+    /* equatorial plane crossing -> accretion disk */
+    if (prevH * hN < 0.0){
+      float tt = prevH / (prevH - hN);
+      float phiC = phi + tt * dphi;
+      float rC = mix(prevR, rN, tt);
+      if (rC > R_IN && rC < R_OUT){
+        float cc = cos(phiC), ss = sin(phiC);
+        vec3 pC = rC * (cc * e1 + ss * e2);
+
+        /* Keplerian differential rotation advecting a turbulent sheet */
+        float azim = atan(pC.z, pC.x);
+        float omega = 1.0 / pow(max(rC, 0.8), 1.25);
+        float a = azim - omega * uTime * uSpeed + 0.7 * log(max(rC, 0.8));
+        vec2 q = vec2(cos(a), sin(a)) * rC;
+
+        float fil  = vnoise3(vec3(q * 0.75, uTime * 0.03 * uSpeed));
+        float fine = vnoise3(vec3(q * 2.20, uTime * 0.08 * uSpeed + 5.0));
+        float turb = (0.35 + 0.95 * fil) * (0.75 + 0.45 * fine);
+
+        /* rotating spiral arms -> unmistakable orbital motion around the hole */
+        float sw = azim - omega * uTime * uSpeed + 1.25 * log(max(rC, 0.8));
+        float arms = 0.55 * sin(3.0 * sw) + 0.30 * sin(6.0 * sw + 1.1) + 0.16 * sin(11.0 * sw + 2.4);
+        float spiral = 0.5 + 0.42 * arms;
+        float texture = turb * (0.40 + 1.45 * spiral);
+
+        /* distinct orbiting knots so you can watch material circle the hole */
+        float knots = 0.0;
+        for (int k = 0; k < 4; k++){
+          float fk = float(k);
+          float rk = 3.0 + fk * 2.0;
+          float sz = 0.55 + 0.30 * fract(fk * 0.37 + 0.21);
+          float ang = fk * 1.9 + uTime * uSpeed / pow(rk, 1.25);
+          float da = azim - ang;
+          da = atan(sin(da), cos(da));
+          float dr = (rC - rk) / (1.0 + fk * 0.35);
+          float dA = da / sz;
+          knots += exp(-(dr * dr + dA * dA));
+        }
+        float knotGlow = min(knots, 1.0);
+        texture += knotGlow * 1.3;
+
+        float edgeIn  = smoothstep(R_IN, R_IN + 3.5, rC);
+        float edgeOut = 1.0 - smoothstep(R_OUT - 3.5, R_OUT, rC);
+        float rim = exp(-pow((rC - R_IN) / 1.4, 2.0));
+        float prof = edgeIn * edgeOut * (0.55 + 0.80 * pow(R_IN / rC, 1.3) + 0.55 * rim);
+        /* smooth bright inner band -> circular shadow edge; streaky flow outward */
+        float detail = smoothstep(R_IN + 1.5, R_IN + 5.0, rC);
+        float dens = prof * mix(0.85 + 0.30 * fil, 0.08 + 1.55 * texture, detail);
+
+        /* relativistic beaming + gravitational redshift */
+        vec3 obs = normalize(cam - pC);
+        vec3 tanv = normalize(cross(n, pC));
+        float beta = min(sqrt(0.5 * RS / max(rC, 1.0)), 0.86);
+        float gam = 1.0 / sqrt(1.0 - beta * beta);
+        float dop = 1.0 / (gam * (1.0 - dot(tanv * beta, obs)));
+        dop = clamp(dop, 0.18, 4.0);
+        float beam = mix(1.0, dop * dop * dop, uBeam);
+        beam *= sqrt(max(1.0 - RS / rC, 0.0));
+
+        float tn = clamp((rC - R_IN) / (R_OUT - R_IN), 0.0, 1.0);
+        vec3 dcol = mix(vec3(1.0, 0.88, 0.66), vec3(1.0, 0.30, 0.05), smoothstep(0.0, 0.6, tn));
+        dcol *= mix(vec3(1.0, 0.74, 0.48), vec3(0.80, 0.94, 1.30),
+                    clamp(0.5 + (dop - 1.0) * 0.8, 0.0, 1.0));
+        dcol = mix(dcol, vec3(1.0, 0.95, 0.85), knotGlow * 0.5);
+
+        float emis = dens * uDiskBright;
+        float alpha = clamp(dens * 0.26, 0.0, 0.85);
+        col += trans * dcol * beam * emis;
+        trans *= (1.0 - alpha);
+        if (trans < 0.02) break;
+      }
+    }
+
+    prevH = hN; prevR = rN; u = uN; du = duN; phi = phiN;
+  }
+
+  /* antialias the near-critical disk crossing so the shadow edge is round */
+  /* thin, perfectly round photon ring defines the shadow edge */
+  float ring = exp(-pow((bImpact - bc) / 0.070, 2.0));
+  col += vec3(1.0, 0.84, 0.58) * ring * 1.2 * uDiskBright;
+
+  /* escape -> lensed starfield, masked by the analytic shadow edge */
+  if (escaped){
+    float rE = 1.0 / u;
+    float drdphi = -du / (u * u);
+    float cp = cos(phi), sp = sin(phi);
+    vec3 tang = drdphi * (cp * e1 + sp * e2) + rE * (-sp * e1 + cp * e2);
+    vec3 outDir = normalize(tang);
+    col += trans * background(outDir) * shadow;
+  }
+
+  outColor = vec4(col, 1.0);
+}
+
+void main(){
+  vec4 c;
+  mainImage(c, gl_FragCoord.xy);
+  fragColor = c;
+}`;
+
+  const FS_COMPOSITE = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform sampler2D uScene;
+uniform vec2  uRes;
+uniform float uTime;
+uniform float uExposure;
+uniform float uBloom;
+uniform float uGrain;
+uniform float uVignette;
+
+float hash12(vec2 p){
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+vec3 aces(vec3 x){
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 c = uv - 0.5;
+  float r2 = dot(c, c);
+
+  /* subtle chromatic aberration toward the edges */
+  vec2 ca = c * r2 * 0.006;
+  vec3 col;
+  col.r = texture(uScene, uv + ca).r;
+  col.g = texture(uScene, uv).g;
+  col.b = texture(uScene, uv - ca).b;
+
+  /* soft bloom: multi-tap at a low mip so the bright ring cannot alias */
+  vec3 bb = vec3(0.0);
+  bb += textureLod(uScene, uv + vec2( 0.010,  0.000), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2(-0.010,  0.000), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.000,  0.010), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.000, -0.010), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.007,  0.007), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2(-0.007,  0.007), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.007, -0.007), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2(-0.007, -0.007), 3.0).rgb;
+  bb += textureLod(uScene, uv, 4.0).rgb;
+  bb /= 9.0;
+  col += max(bb - 0.10, 0.0) * uBloom;
+
+  col *= uExposure;
+  col = aces(col);
+  col *= mix(1.0, 1.0 - smoothstep(0.30, 1.15, length(c) * 1.5), uVignette);
+  col = pow(col, vec3(1.0 / 2.2));
+
+  float g = hash12(gl_FragCoord.xy + fract(uTime) * 97.0) - 0.5;
+  col += g * uGrain;
+
+  fragColor = vec4(col, 1.0);
+}`;
+
+  function compile(type, src){
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+      console.error(gl.getShaderInfoLog(s), src);
+      throw new Error("shader compile failed");
+    }
+    return s;
+  }
+  function program(vsSrc, fsSrc){
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vsSrc));
+    gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fsSrc));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)){
+      console.error(gl.getProgramInfoLog(p));
+      throw new Error("program link failed");
+    }
+    return p;
+  }
+
+  let sceneProg, compProg;
+  try {
+    sceneProg = program(VS, FS_SCENE);
+    compProg  = program(VS, FS_COMPOSITE);
+  } catch (e) {
+    document.getElementById("fallback").style.display = "grid";
+    return;
+  }
+
+  const U = (p, names) => { const o = {}; for (const n of names) o[n] = gl.getUniformLocation(p, n); return o; };
+  const su = U(sceneProg, ["uRes","uTime","uCamAng","uOffset","uCamDist","uFov","uBeam","uDiskBright","uSpeed"]);
+  const cu = U(compProg,  ["uScene","uRes","uTime","uExposure","uBloom","uGrain","uVignette"]);
+
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+
+  const hasFloat = !!(gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float"));
+  const sceneTex = gl.createTexture();
+  let sceneFbo = gl.createFramebuffer();
+
+  function allocTarget(w, h){
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, hasFloat ? gl.RGBA16F : gl.RGBA8,
+                  w, h, 0, gl.RGBA, hasFloat ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneTex, 0);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return ok;
+  }
+
+  /* ---- camera state + interaction ---- */
+  const PRESET = { az: 0.55, el: 0.12, dist: 12.5, offX: 0.64, offY: 0.22 };
+  const state = {
+    az: PRESET.az, el: PRESET.el, dist: PRESET.dist,
+    tAz: PRESET.az, tEl: PRESET.el, tDist: PRESET.dist,
+    offX: PRESET.offX, offY: PRESET.offY, tOffX: PRESET.offX, tOffY: PRESET.offY,
+    dragging: false, panning: false, px: 0, py: 0, lastInput: performance.now()
+  };
+  let immersive = false;
+  const onUI = (e) => e.target && e.target.closest && e.target.closest("#ui, #site-nav");
+
+  window.addEventListener("pointerdown", (e) => {
+    if (!immersive || onUI(e)) return;
+    state.dragging = true;
+    state.panning = (e.button === 2) || e.shiftKey;
+    state.px = e.clientX; state.py = e.clientY;
+    state.lastInput = performance.now();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (!immersive || !state.dragging) return;
+    const dx = e.clientX - state.px, dy = e.clientY - state.py;
+    state.px = e.clientX; state.py = e.clientY;
+    if (state.panning){
+      state.tOffX = Math.max(-2.4, Math.min(2.4, state.tOffX + dx * 0.0016));
+      state.tOffY = Math.max(-1.4, Math.min(1.4, state.tOffY - dy * 0.0016));
+    } else {
+      state.tAz -= dx * 0.005;
+      state.tEl = Math.max(-0.55, Math.min(0.85, state.tEl + dy * 0.004));
+    }
+    state.lastInput = performance.now();
+  });
+  const endDrag = () => { state.dragging = false; state.panning = false; };
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
+  window.addEventListener("wheel", (e) => {
+    if (!immersive || onUI(e)) return;
+    e.preventDefault();
+    state.tDist = Math.max(9.0, Math.min(26.0, state.tDist * Math.exp(e.deltaY * 0.0011)));
+    state.lastInput = performance.now();
+  }, { passive: false });
+  window.addEventListener("contextmenu", (e) => { if (immersive) e.preventDefault(); });
+
+  /* ---- adaptive resolution ---- */
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.0);
+  let scale = 0.72;
+  let cssW = 1, cssH = 1;
+
+  function resize(){
+    const w = Math.max(2, Math.floor(cssW * dpr * scale));
+    const h = Math.max(2, Math.floor(cssH * dpr * scale));
+    if (canvas.width !== w || canvas.height !== h){
+      canvas.width = w; canvas.height = h;
+      allocTarget(w, h);
+      gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+  }
+  function measure(){
+    const r = canvas.getBoundingClientRect();
+    cssW = r.width || window.innerWidth;
+    cssH = r.height || window.innerHeight;
+    resize();
+  }
+  window.addEventListener("resize", measure);
+  measure();
+
+  /* ---- render loop ---- */
+  let last = performance.now();
+  let acc = 0, frames = 0, adapt = 0;
+  const hint = document.getElementById("hint");
+  const admireBtn = document.getElementById("admire");
+  setTimeout(() => { if (!immersive) hint.classList.add("dim"); }, 8000);
+
+  const onScroll = () => document.body.classList.toggle("scrolled", window.scrollY > 40);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+  window.addEventListener("load", () => {
+    if (!location.hash) return;
+    const el = document.querySelector(location.hash);
+    if (el) setTimeout(() => el.scrollIntoView(), 60);
+  });
+
+  function setImmersive(on){
+    immersive = on;
+    document.body.classList.toggle("immersive", on);
+    if (on) window.scrollTo(0, 0);
+    admireBtn.innerHTML = on ? "&#10005; EXIT" : "&#9673; ADMIRE";
+    state.tAz = PRESET.az; state.tEl = PRESET.el; state.tDist = PRESET.dist;
+    state.tOffX = PRESET.offX; state.tOffY = PRESET.offY;
+    state.lastInput = on ? performance.now() : 0;
+    hint.textContent = on ? "[ DRAG ORBIT \u00b7 SHIFT/RIGHT-DRAG PAN \u00b7 SCROLL ZOOM \u00b7 EXIT ]" : "CLICK \u25c9 ADMIRE TO EXPLORE";
+    hint.classList.remove("dim");
+    setTimeout(() => { if (!immersive) hint.classList.add("dim"); }, 5000);
+  }
+  admireBtn.addEventListener("click", () => setImmersive(!immersive));
+
+
+  function frame(now){
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+
+    /* idle auto-orbit keeps the rim alive */
+    if (immersive && !state.dragging && now - state.lastInput > 2500){
+      state.tAz += dt * 0.03;
+    }
+    state.az += (state.tAz - state.az) * Math.min(1, dt * 6);
+    state.el += (state.tEl - state.el) * Math.min(1, dt * 6);
+    state.dist += (state.tDist - state.dist) * Math.min(1, dt * 6);
+    state.offX += (state.tOffX - state.offX) * Math.min(1, dt * 6);
+    state.offY += (state.tOffY - state.offY) * Math.min(1, dt * 6);
+
+    /* scene pass */
+    resize();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.useProgram(sceneProg);
+    gl.uniform2f(su.uRes, canvas.width, canvas.height);
+    gl.uniform1f(su.uTime, now / 1000);
+    gl.uniform2f(su.uCamAng, state.az, state.el);
+    gl.uniform2f(su.uOffset, state.offX * (canvas.width / canvas.height), state.offY);
+    gl.uniform1f(su.uCamDist, state.dist);
+    gl.uniform1f(su.uFov, 23.5);
+    gl.uniform1f(su.uBeam, 0.62);
+    gl.uniform1f(su.uDiskBright, 1.2);
+    gl.uniform1f(su.uSpeed, 1.8);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    /* bloom mip chain */
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+
+    /* composite pass */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.useProgram(compProg);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.uniform1i(cu.uScene, 0);
+    gl.uniform2f(cu.uRes, canvas.width, canvas.height);
+    gl.uniform1f(cu.uTime, now / 1000);
+    gl.uniform1f(cu.uExposure, 0.8);
+    gl.uniform1f(cu.uBloom, 0.45);
+    gl.uniform1f(cu.uGrain, 0.018);
+    gl.uniform1f(cu.uVignette, 0.85);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    /* settle the resolution during warmup, then lock it (avoids flicker) */
+    acc += dt; frames++;
+    if (adapt < 3 && frames >= 60){
+      const fps = frames / acc;
+      if (fps < 45 && scale > 0.5) scale = Math.max(0.5, scale - 0.1);
+      else if (fps > 58 && scale < 1.0) scale = Math.min(1.0, scale + 0.1);
+      adapt++; acc = 0; frames = 0; resize();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<script src="bh-home.js"></script>
+</body>
 </html>
