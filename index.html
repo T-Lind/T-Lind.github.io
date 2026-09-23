@@ -35,7 +35,7 @@
   }
   #welcome .inner {
     position: relative;
-    left: clamp(0px, 29vw, 720px);
+    left: clamp(0px, 24vw, 600px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -209,6 +209,38 @@
   #content .apod-desc.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   #content .apod-toggle { margin-top: .4rem; background: none; border: 1px solid rgba(255,201,141,.4); color: #ffc98d; font: inherit; font-size: .72rem; letter-spacing: .1em; padding: .35em .7em; border-radius: 6px; cursor: pointer; }
   #content .apod-toggle:hover { color: #fff; border-color: #fff; }
+
+  /* ---- mobile / narrow screens ---- */
+  @media (max-width: 680px), (max-height: 560px) {
+    #welcome { padding-bottom: 26vh; }
+    #welcome .inner { left: 0; width: 100%; max-width: 100%; padding: 0 1rem; }
+    #welcome h1 { white-space: normal; text-wrap: balance; font-size: clamp(1.7rem, 9vw, 2.6rem); }
+    #welcome .sub { max-width: 20rem; }
+
+    #site-nav {
+      left: max(.7rem, env(safe-area-inset-left));
+      right: max(.7rem, env(safe-area-inset-right));
+      top: max(.7rem, env(safe-area-inset-top));
+      justify-content: center;
+      gap: .05rem;
+      padding: .28rem;
+    }
+    #site-nav a { font-size: .58rem; letter-spacing: .08em; padding: .42em .5em; }
+
+    #hint { bottom: auto; top: max(4.6rem, calc(env(safe-area-inset-top) + 4.6rem)); font-size: .56rem; letter-spacing: .2em; text-indent: .2em; }
+
+    #content .wrap { padding: clamp(2rem, 6vh, 3rem) 1.1rem 4rem; }
+    #content .about { gap: 1.2rem; }
+    #content .about img { width: 132px; }
+    #content .about .txt { min-width: 100%; }
+    #content .iss-coords { gap: 1.2rem; }
+    #content .widget { padding: 1rem; }
+  }
+
+  @media (max-height: 560px) and (orientation: landscape) {
+    #welcome { padding-bottom: 12vh; }
+    #welcome h1 { font-size: clamp(1.5rem, 5vw, 2.4rem); }
+  }
 </style>
 </head>
 <body>
