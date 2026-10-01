@@ -4,36 +4,96 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
     <meta name="author" content="Tiernan Lindauer"/>
-    <meta name="dcterms.date" content="2025-10-30"/>
-    <title>Games</title>
+    <meta name="dcterms.date" content="2026-10-01"/>
+    <meta name="description" content="Play Tiernan Lindauer's browser games and simulations: SatelliteSim.jl, Lofall, 3D chess, Redsim, and Orbits."/>
+    <title>Games &amp; Simulations | T-Lind</title>
     <link rel="stylesheet" href="../reset.css"/>
     <link rel="stylesheet" href="../index.css"/>
     <link rel="stylesheet" href="../bh.css" />
+    <link rel="stylesheet" href="games.css" />
 </head>
 <body>
 <div class="site-layout">
     <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
     <main class="main-content">
 <header class="page-head">
-    <h1 class="page-head-title">Games</h1>
-    <p class="page-head-subtitle">A few games I've made.</p>
+    <h1 class="page-head-title">Games &amp; Simulations</h1>
+    <p class="page-head-subtitle">Bend dimensions. Build a Mars outpost. Take the long way around the Moon. Experiments you can play in your browser.</p>
     <div class="page-head-meta">
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">v0.1.1</span></span>
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value"><time datetime="2026-09-22">Sep 22, 2026</time></span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">v0.2.0</span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value"><time datetime="2026-10-01">Oct 1, 2026</time></span></span>
         <span class="page-head-meta-item"><span class="page-head-meta-label">Author</span><span class="page-head-meta-value">Tiernan Lindauer</span></span>
         <span class="page-head-meta-item"><span class="page-head-meta-label">License</span><span class="page-head-meta-value">MIT</span></span>
     </div>
 </header>
 
-<div class="games-list">
-    <ul>
-        <li><a href="https://lofall-z9sq.onrender.com/" target="_blank" rel="noopener">Lofall</a> - A four-dimensional platformer. Navigate 3D cross-sections of 4D space.</li>
-        <li><a href="https://chess-3d-k7pp.onrender.com/" target="_blank" rel="noopener">Chess 3D</a> - A true 3D chess game, allowing pieces to move in 3D.</li>
-        <li><a href="https://mars-sim.onrender.com/" target="_blank" rel="noopener">Redsim</a> - Discrete-time simulation of an early Mars outpost, with life-support, power, and base operations.</li>
-        <li><a href="https://3d-orbits.vercel.app/" target="_blank" rel="noopener">Orbits Game (3D)</a> - A 3D version of the orbits game.</li>
-        <li><a href="../orbits">Orbits Game (2D)</a> - A 2D gravity simulation game.</li>
-    </ul>
-</div>
+<section class="game-gallery" aria-label="Browser games and simulations">
+    <article class="game-card game-featured">
+        <a class="game-art mission-art" href="https://t-lind.github.io/ss.jl/" aria-label="Launch SatelliteSim.jl">
+            <svg viewBox="0 0 600 300" aria-hidden="true">
+                <defs><radialGradient id="earth-light"><stop stop-color="#b8d9ee"/><stop offset="1" stop-color="#264455"/></radialGradient></defs>
+                <path d="M115 172 C165 30 497 13 505 115 S234 276 115 172" fill="none" stroke="#b8c5d2" stroke-width="1.5" stroke-dasharray="5 7"/>
+                <circle cx="126" cy="175" r="48" fill="url(#earth-light)"/>
+                <circle cx="483" cy="101" r="18" fill="#c2c2c9"/>
+                <circle cx="359" cy="45" r="4" fill="#fff"/>
+                <path d="M359 45 l-8 11 M359 45 l-12 -1" stroke="#fff" stroke-width="1.5"/>
+                <text x="245" y="237" fill="#c2c8d0" font-family="monospace" font-size="11" letter-spacing="3">EARTH → MOON → HOME</text>
+            </svg>
+        </a>
+        <div class="game-body">
+            <span class="game-kind">Featured / Mission simulation</span>
+            <h2><a href="https://t-lind.github.io/ss.jl/">SatelliteSim.jl <span class="game-alias">/ ss.jl</span></a></h2>
+            <p>From the launchpad to lunar flight and reentry. Explore satellite missions and the physics behind them in an interactive browser demo, backed by a Julia simulation.</p>
+            <div class="game-actions"><a class="game-play" href="https://t-lind.github.io/ss.jl/">Launch mission &rarr;</a><a href="https://github.com/T-Lind/ss.jl">View source</a></div>
+        </div>
+    </article>
+    <article class="game-card">
+        <a class="game-art" href="https://lofall-z9sq.onrender.com/" aria-label="Play Lofall"><img src="../public/projects/tesseract_run.png" alt="Lofall's dimensional platforming world" loading="lazy" width="640" height="360"/></a>
+        <div class="game-body">
+            <span class="game-kind">4D / Platformer</span>
+            <h2><a href="https://lofall-z9sq.onrender.com/">Lofall</a></h2>
+            <p>Navigate 3D slices of a four-dimensional world. Rotate the fourth axis to reveal a different path.</p>
+            <div class="game-actions"><a class="game-play" href="https://lofall-z9sq.onrender.com/">Play Lofall &rarr;</a></div>
+        </div>
+    </article>
+    <article class="game-card">
+        <a class="game-art" href="https://chess-3d-k7pp.onrender.com/" aria-label="Play Chess 3D"><img src="../public/projects/chess-3d-board.png" alt="Chess pieces on a three-dimensional board" loading="lazy" width="640" height="360"/></a>
+        <div class="game-body">
+            <span class="game-kind">3D / Strategy</span>
+            <h2><a href="https://chess-3d-k7pp.onrender.com/">Chess 3D</a></h2>
+            <p>A familiar game with another dimension. Think beyond the board: pieces move through 3D space.</p>
+            <div class="game-actions"><a class="game-play" href="https://chess-3d-k7pp.onrender.com/">Play Chess 3D &rarr;</a></div>
+        </div>
+    </article>
+    <article class="game-card">
+        <a class="game-art" href="https://mars-sim.onrender.com/" aria-label="Explore Redsim"><img src="../public/projects/redsim.png" alt="Redsim Mars outpost simulation interface" loading="lazy" width="640" height="360"/></a>
+        <div class="game-body">
+            <span class="game-kind">Mars / Systems simulation</span>
+            <h2><a href="https://mars-sim.onrender.com/">Redsim</a></h2>
+            <p>Run an early Mars outpost. Balance life support, power, resources, and the operations that keep a base alive.</p>
+            <div class="game-actions"><a class="game-play" href="https://mars-sim.onrender.com/">Explore Redsim &rarr;</a></div>
+        </div>
+    </article>
+    <article class="game-card">
+        <a class="game-art orbit-art" href="https://3d-orbits.vercel.app/" aria-label="Play Orbits 3D"><span class="orbit-ring"></span><span class="orbit-ring tilted"></span><span class="orbit-core"></span><span class="orbit-caption">ORBITS / 3D</span></a>
+        <div class="game-body">
+            <span class="game-kind">3D / Gravity sandbox</span>
+            <h2><a href="https://3d-orbits.vercel.app/">Orbits 3D</a></h2>
+            <p>Explore gravity in three dimensions. See how an extra axis changes the shape of an orbit.</p>
+            <div class="game-actions"><a class="game-play" href="https://3d-orbits.vercel.app/">Play Orbits 3D &rarr;</a></div>
+        </div>
+    </article>
+    <article class="game-card">
+        <a class="game-art orbit-art flat" href="../orbits/" aria-label="Play Orbits 2D"><span class="orbit-ring"></span><span class="orbit-core"></span><span class="orbit-caption">ORBITS / 2D</span></a>
+        <div class="game-body">
+            <span class="game-kind">2D / Gravity game</span>
+            <h2><a href="../orbits/">Orbits 2D</a></h2>
+            <p>A gravity playground on a single plane. Experiment with motion and find your way through the stars.</p>
+            <div class="game-actions"><a class="game-play" href="../orbits/">Play Orbits 2D &rarr;</a></div>
+        </div>
+    </article>
+</section>
+<p class="games-footer">Curious how these work? Explore <a href="../projects/">more projects</a> or <a href="https://github.com/T-Lind">my GitHub</a>.</p>
     </main>
 </div>
     <script src="../bh-nav.js"></script>

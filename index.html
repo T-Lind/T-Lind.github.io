@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>The Home of T-Lind</title>
+<meta name="description" content="Tiernan Lindauer's software, research, browser games, and experiments in physics. Explore a real-time black hole and the projects below." />
 <style>
   :root { color-scheme: dark; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -80,8 +81,9 @@
     left: max(1rem, env(safe-area-inset-left));
     bottom: max(1rem, env(safe-area-inset-bottom));
     z-index: 4;
+    display: flex; gap: .6rem; align-items: center;
   }
-  #admire {
+  #admire, #admire-sound {
     font-family: inherit;
     font-size: clamp(.58rem, 1.3vw, .72rem);
     letter-spacing: .26em;
@@ -96,12 +98,14 @@
     backdrop-filter: blur(4px);
     transition: color .2s ease, border-color .2s ease, background .2s ease;
   }
-  #admire:hover, #admire:focus-visible {
+  #admire:hover, #admire:focus-visible, #admire-sound:hover, #admire-sound:focus-visible {
     color: #fff;
     border-color: rgba(255,255,255,.8);
     background: rgba(40,40,44,.55);
     outline: none;
   }
+  #admire-sound[hidden] { display: none; }
+  body.immersive { overflow: hidden; }
 
   #hint {
     position: absolute;
@@ -176,7 +180,7 @@
   #content blockquote p { font-style: italic; }
   #content .attribution { display: block; margin-top: .5rem; font-style: normal; font-size: .74rem; color: #8a8a8f; }
   #content .about { display: flex; gap: 1.7rem; align-items: flex-start; flex-wrap: wrap; }
-  #content .about img { width: 176px; height: auto; border-radius: 4px; flex: 0 0 auto; }
+  #content .about img { width: 224px; max-width: 100%; height: auto; border-radius: 8px; flex: 0 0 auto; }
   #content .about .txt { flex: 1 1 16rem; min-width: 230px; }
   #content ul { list-style: none; margin: 1rem 0; }
   #content li { padding: .55rem 0; border-bottom: 1px dashed rgba(255,255,255,.08); font-size: .84rem; }
@@ -207,7 +211,7 @@
   #content .launch-countdown-label { font-size: .64rem; letter-spacing: .2em; text-transform: uppercase; color: #8a8a8f; }
 
   #fallback {
-    position: fixed; inset: 0; display: none; place-items: center; z-index: 9;
+    position: absolute; inset: 5rem 0 auto; min-height: 70vh; display: none; place-items: center; z-index: 3;
     background: #000; color: #e9e9ec; text-align: center; padding: 2rem;
     font-size: .9rem; line-height: 1.7; letter-spacing: .08em;
   }
@@ -231,11 +235,12 @@
 
     #content .wrap { padding: clamp(2rem, 6vh, 3rem) 1.1rem 4rem; }
     #content .about { gap: 1.2rem; }
-    #content .about img { width: 132px; }
+    #content .about img { width: 180px; }
     #content .about .txt { min-width: 100%; }
     #content .iss-coords { gap: 1.2rem; }
     #content .widget { padding: 1rem; }
   }
+  @media (prefers-reduced-motion: reduce) { #scroll-cue { animation: none; } }
 
   @media (max-height: 560px) and (orientation: landscape) {
     #welcome { padding-bottom: 12vh; }
@@ -263,7 +268,10 @@
     </div>
   </div>
 
-  <div id="ui"><button id="admire" type="button">&#9673; ADMIRE</button></div>
+  <div id="ui">
+    <button id="admire" type="button" aria-pressed="false">&#9673; ADMIRE</button>
+    <button id="admire-sound" type="button" aria-pressed="false" aria-label="Mute admire music" hidden>SOUND ON</button>
+  </div>
 
   <div id="hint">CLICK &#9673; ADMIRE TO EXPLORE</div>
 
@@ -274,10 +282,10 @@
   <div class="wrap">
     <h2>About</h2>
     <div class="about">
-      <img src="public/angularized_300.png" alt="A stylized, low-poly portrait of Tiernan Lindauer" />
+      <img src="public/pfp_21.png" alt="Tiernan Lindauer" width="836" height="836" loading="lazy" decoding="async" />
       <div class="txt">
         <p>&gt; Well hi there!</p>
-        <p>This page is an experiment: an up-close, real-time view of a black hole up top, and the rest of the site below. Everything past this point is example content modeled on the main site.</p>
+        <p>Welcome to my corner of the internet: software, research, and a few experiments in physics. The black hole above is rendered in real time &mdash; click Admire to orbit it, with a little music for the journey.</p>
         <p>I'm <strong>Tiernan Lindauer</strong> &mdash; I build things and write about them. In 2024 I founded <a href="lindauerai/">LindauerAI</a>, an ed-tech startup that built a dual-AI learning platform (<em>Gyro</em> for students, <em>CA</em> for teachers).</p>
         <p>Start with <a href="motivation/">My Motivation</a>, then <a href="projects/">Projects</a> and <a href="research/">Research</a>.</p>
       </div>
@@ -285,10 +293,12 @@
 
     <h2>Selected Work</h2>
     <ul>
-      <li><span class="k">LindauerAI</span> &mdash; dual-AI learning platform; founder &amp; engineer.</li>
-      <li><span class="k">Research</span> &mdash; cost-based policies for narrative observation of unpredictable events.</li>
-      <li><span class="k">Projects</span> &mdash; interactive experiments in physics, graphics, and systems.</li>
-      <li><span class="k">Writing</span> &mdash; essays on motivation, learning, and building.</li>
+      <li><a href="https://github.com/T-Lind/accessor">Accessor</a> &mdash; a local voice gateway for coding agents.</li>
+      <li><a href="https://t-lind.github.io/ss.jl/">SatelliteSim.jl</a> &mdash; launch, orbit, and lunar missions, built in Julia. <a href="https://github.com/T-Lind/ss.jl">Source</a></li>
+      <li><a href="lindauerai/">LindauerAI</a> &mdash; dual-AI learning platform; founder &amp; engineer.</li>
+      <li><a href="research/">Research</a> &mdash; cost-based policies for narrative observation of unpredictable events.</li>
+      <li><a href="games/">Games</a> &mdash; interactive experiments in physics, graphics, and systems.</li>
+      <li><a href="essays/">Writing</a> &mdash; essays on motivation, learning, and building.</li>
     </ul>
 
     <h2>Words I Live By</h2>
@@ -321,6 +331,7 @@
     <b>This black hole needs WebGL&nbsp;2.</b><br />
     Your browser or GPU did not provide a WebGL&nbsp;2 context.<br />
     Try a recent desktop Chrome / Firefox / Safari.
+    <br /><a href="#content" style="color: inherit">Continue to the site &darr;</a>
   </div>
 </div>
 
@@ -336,6 +347,8 @@
 
   if (!gl) {
     document.getElementById("fallback").style.display = "grid";
+    document.getElementById("admire").disabled = true;
+    document.getElementById("hint").hidden = true;
     return;
   }
 
@@ -792,14 +805,19 @@ void main(){
     document.body.classList.toggle("immersive", on);
     if (on) window.scrollTo(0, 0);
     admireBtn.innerHTML = on ? "&#10005; EXIT" : "&#9673; ADMIRE";
+    admireBtn.setAttribute("aria-pressed", String(on));
+    document.dispatchEvent(new CustomEvent("admirechange", { detail: { active: on } }));
     state.tAz = PRESET.az; state.tEl = PRESET.el; state.tDist = PRESET.dist;
     state.tOffX = PRESET.offX; state.tOffY = PRESET.offY;
     state.lastInput = on ? performance.now() : 0;
-    hint.textContent = on ? "[ DRAG ORBIT \u00b7 SHIFT/RIGHT-DRAG PAN \u00b7 SCROLL ZOOM \u00b7 EXIT ]" : "CLICK \u25c9 ADMIRE TO EXPLORE";
+    hint.textContent = on ? "[ DRAG ORBIT \u00b7 SHIFT/RIGHT-DRAG PAN \u00b7 SCROLL ZOOM \u00b7 ESC EXIT ]" : "CLICK \u25c9 ADMIRE TO EXPLORE";
     hint.classList.remove("dim");
     setTimeout(() => { if (!immersive) hint.classList.add("dim"); }, 5000);
   }
   admireBtn.addEventListener("click", () => setImmersive(!immersive));
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && immersive) { setImmersive(false); admireBtn.focus(); }
+  });
 
 
   function frame(now){
@@ -856,6 +874,7 @@ void main(){
   requestAnimationFrame(frame);
 })();
 </script>
+<script src="admire-audio.js"></script>
 <script src="bh-home.js"></script>
 </body>
 </html>

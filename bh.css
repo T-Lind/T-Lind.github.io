@@ -324,6 +324,18 @@ figcaption { font-size: .78rem; color: var(--text-color-alt); margin-top: .6rem;
 .project-tags { align-items: center; gap: .4rem; }
 .project-tag { color: #e7e7ea; }
 
+/* Cards grow with their content; screenshots keep a useful, consistent crop. */
+.projects-container { padding: 0; grid-auto-rows: auto; }
+.project-card, .project-card-noimg, .project-card-noimg-tall { height: auto; gap: .85rem; min-width: 0; }
+.project-card img { height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.project-links { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0; }
+.projects-container .project-links a, .projects-container .project-title a { color: #e6e6ea; border-bottom: 1px solid rgba(255,255,255,.28); }
+.projects-container a:focus-visible { outline: 2px solid #fff; outline-offset: 5px; }
+@media (prefers-reduced-motion: reduce) {
+    .project-card, .project-card-noimg, .project-card-noimg-tall { transition: none; }
+    .project-card:hover, .project-card-noimg:hover, .project-card-noimg-tall:hover { transform: none; }
+}
+
 /* ---------- interactive cosmic objects (bh-cosmos.js) ---------- */
 canvas[data-cosmos] {
     position: absolute;
