@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
     <meta name="author" content="Tiernan Lindauer"/>
-    <meta name="dcterms.date" content="2026-10-01"/>
+    <meta name="dcterms.date" content="2026-10-02"/>
     <title>Projects</title>
     <link rel="stylesheet" href="../reset.css"/>
     <link rel="stylesheet" href="../index.css"/>
@@ -18,8 +18,8 @@
     <h1 class="page-head-title">My Projects</h1>
     <p class="page-head-subtitle">Personal projects that are not confidential (patents) or research.</p>
     <div class="page-head-meta">
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">v0.0.6</span></span>
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value"><time datetime="2026-10-01">Oct 1, 2026</time></span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">v0.0.7</span></span>
+        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value"><time datetime="2026-10-02">Oct 2, 2026</time></span></span>
         <span class="page-head-meta-item"><span class="page-head-meta-label">Author</span><span class="page-head-meta-value">Tiernan Lindauer</span></span>
         <span class="page-head-meta-item"><span class="page-head-meta-label">License</span><span class="page-head-meta-value">MIT</span></span>
     </div>
@@ -31,46 +31,48 @@
 <!--</div>-->
 
 <div class="projects-container">
-    <a href="https://github.com/T-Lind/accessor" class="project-card-noimg">
+    <a href="../photolib/" class="project-card">
+        <img src="../public/projects/photolib-library.png" alt="Photolib library view with photo thumbnails, search, and browsing controls" loading="lazy">
+        <div class="project-title">Photolib</div>
+        <div class="project-description">A private, local photo library for Windows. Find photos by description or person, browse dates and places, organize albums, and spot duplicates. Search runs on your computer with a bundled offline model.</div>
+        <div class="project-tags">
+            <span class="project-tag" data-color="blue">Python</span>
+            <span class="project-tag" data-color="orange">Rust</span>
+            <span class="project-tag" data-color="yellow">JavaScript</span>
+        </div>
+    </a>
+    <a href="../accessor/" class="project-card">
+        <img src="../public/projects/accessor-29.png" alt="Accessor voice pipeline from wake word and local speech recognition to agent tools and spoken replies" loading="lazy">
         <div class="project-title">Accessor</div>
         <div class="project-description">A local voice gateway for coding agents. Talk to Codex, Claude Code, and other agent harnesses, with local speech recognition, spoken replies, and shared memory.</div>
         <div class="project-tags">
             <span class="project-tag" data-color="orange">Rust</span>
-            <span class="project-tag" data-color="purple">Voice / AI</span>
-            <span class="project-tag">View source &rarr;</span>
         </div>
     </a>
-    <article class="project-card-noimg">
-        <div class="project-title"><a href="https://t-lind.github.io/ss.jl/">SatelliteSim.jl (ss.jl)</a></div>
-        <div class="project-description">Satellite mission simulation in Julia: launch vehicles, orbital flight, lunar missions, and atmospheric reentry. Explore the interactive browser demo or dive into the simulation code.</div>
+    <a href="../satellite-sim/" class="project-card">
+        <img src="../public/projects/satellite-sim.png" alt="SatelliteSim model inspector showing a two-person lunar lander" loading="lazy" class="project-image-contain">
+        <div class="project-title">SatelliteSim.jl (ss.jl)</div>
+        <div class="project-description">Satellite mission simulation in Julia: launch vehicles, orbital flight, lunar missions, and atmospheric reentry, with an interactive browser interface.</div>
         <div class="project-tags">
             <span class="project-tag" data-color="purple">Julia</span>
-            <span class="project-tag" data-color="blue">Aerospace</span>
-        </div>
-        <div class="project-links"><a href="https://t-lind.github.io/ss.jl/">Launch demo &rarr;</a><a href="https://github.com/T-Lind/ss.jl">View source &rarr;</a></div>
-    </article>
-    <a href="https://chess-3d-k7pp.onrender.com/" class="project-card">
-        <img src="../public/projects/chess-3d-board.png" alt="3D chess board">
-        <div class="project-title">chess-3d</div>
-        <div class="project-description">A true 3D chess game, allowing pieces to move in 3D, w/ toptobes.
-        </div>
-        <div class="project-tags">
-            <span class="project-tag" data-color="blue">Python</span>
-            <span class="project-tag" data-color="light-blue">Typescript</span>
+            <span class="project-tag" data-color="yellow">JavaScript</span>
         </div>
     </a>
-    <a href="https://lofall-z9sq.onrender.com/" class="project-card">
-        <img src="../public/projects/tesseract_run.png" alt="Lofall screenshot">
-        <div class="project-title">Lofall</div>
-        <div class="project-description">
-            A four-dimensional platformer that runs in any browser — no install. You navigate 3D cross-sections of 4D
-            space: rotating the w-axis reshapes the world, revealing hidden platforms and vanishing others. Procedurally
-            infinite seeded universe with named biomes, 4D geometry, and a von Neumann drone swarm to sever at its root.
-            Email me if you're curious.
+    <a href="../chess-3d/" class="project-card">
+        <img src="../public/projects/chess-3d-board.png" alt="Chess pieces on a three-dimensional board" loading="lazy">
+        <div class="project-title">chess-3d</div>
+        <div class="project-description">A true 3D chess game, allowing pieces to move in three dimensions, with toptobes.</div>
+        <div class="project-tags">
+            <span class="project-tag" data-color="blue">Python</span>
+            <span class="project-tag" data-color="light-blue">TypeScript</span>
         </div>
+    </a>
+    <a href="../lofall/" class="project-card">
+        <img src="../public/projects/tesseract_run.png" alt="Lofall’s dimensional platforming world" loading="lazy">
+        <div class="project-title">Lofall</div>
+        <div class="project-description">A four-dimensional browser platformer. Navigate 3D cross-sections of 4D space, rotate the w-axis to reveal hidden paths, and explore an infinite seeded universe.</div>
         <div class="project-tags">
             <span class="project-tag" data-color="yellow">JavaScript</span>
-            <span class="project-tag" data-color="orange">HTML</span>
         </div>
     </a>
     <a href="https://mars-sim.onrender.com/" target="_blank" rel="noopener" class="project-card">
@@ -83,7 +85,7 @@
         </div>
         <div class="project-tags">
             <span class="project-tag" data-color="orange">Java</span>
-            <span class="project-tag" data-color="light-blue">Typescript</span>
+            <span class="project-tag" data-color="light-blue">TypeScript</span>
             <span class="project-tag" data-color="blue">Python</span>
         </div>
     </a>
@@ -95,8 +97,7 @@
         </div>
         <div class="project-tags">
             <span class="project-tag" data-color="orange">Java</span>
-            <span class="project-tag" data-color="light-blue">Typescript</span>
-            <span class="project-tag" data-color="purple">AI</span>
+            <span class="project-tag" data-color="light-blue">TypeScript</span>
         </div>
     </a>
     <a href="../syngrafi/index.html" class="project-card">
@@ -106,8 +107,7 @@
             Universal scripture study with highlights, notes, and tags, powered by semantic search. Supports the Bible, Koran, Bhagavad Gita, The Book of Mormon, and more.
         </div>
         <div class="project-tags">
-            <span class="project-tag" data-color="light-blue">Typescript</span>
-            <span class="project-tag" data-color="purple">AI</span>
+            <span class="project-tag" data-color="light-blue">TypeScript</span>
         </div>
     </a>
     <a href="../wormhole/index.html" class="project-card">
@@ -117,24 +117,6 @@
         </div>
         <div class="project-tags">
             <span class="project-tag" data-color="pink">C++</span>
-            <span class="project-tag" data-color="blue">OpenGL</span>
-        </div>
-    </a>
-    <a href="https://github.com/T-Lind/photo-library" class="project-card-noimg-tall">
-        <div class="project-title">photo-library</div>
-        <div class="project-description">
-            A sophisticated photo management system that enables semantic search, facial recognition, and temporal
-            organization of your photo collection. The system processes images to extract embeddings using CLIP, detects
-            and clusters faces using face_recognition, and stores everything in a LanceDB database for efficient
-            retrieval.
-            <br>
-            <br>
-            With this system, you can store and search through your family photos locally! There are NO API calls and NO
-            internet connectivity is required. Your personal photos stay private.
-        </div>
-        <div class="project-tags">
-            <span class="project-tag" data-color="blue">Python</span>
-            <span class="project-tag" data-color="light-blue">Typescript</span>
         </div>
     </a>
 
@@ -149,7 +131,7 @@
         </div>
         <div class="project-tags">
             <span class="project-tag" data-color="blue">Python</span>
-            <span class="project-tag" data-color="light-blue">Typescript</span>
+            <span class="project-tag" data-color="light-blue">TypeScript</span>
         </div>
     </a>
     -->
@@ -220,7 +202,6 @@
         </div>
         <div class="project-tags">
             <span class="project-tag" data-color="yellow">JavaScript</span>
-            <span class="project-tag" data-color="purple">Estimation</span>
         </div>
     </a>
 </div>

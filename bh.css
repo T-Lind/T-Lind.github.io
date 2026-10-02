@@ -525,3 +525,10 @@ canvas[data-cosmos] {
 .book-list label { color: #c6c6c9; font-size: .92rem; }
 .book-list li:has(input:checked) label { color: #8a8a8f; }
 @media (max-width: 680px) { .book-list { grid-template-columns: 1fr; } }
+
+/* Project detail pages use the same imagery and navigation as existing projects. */
+.back-link { display: inline-block; margin-bottom: 20px; font-weight: 600; }
+.project-screenshot { display: block; width: 100%; max-width: 1000px; height: auto; margin: 18px auto 24px; }
+.project-card img.project-image-contain { object-fit: contain; background: #0b1014; }
+.project-links { align-items: center; }
+.project-links > a { margin: 0; }
