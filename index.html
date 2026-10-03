@@ -17,7 +17,7 @@
     -webkit-font-smoothing: antialiased;
   }
   #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  body.immersive #gl { cursor: grab; }
+  body.immersive #gl { cursor: grab; touch-action: none; }
   body.immersive #gl:active { cursor: grabbing; }
 
   /* ---- Welcome / header, sitting inside the black hole's shadow ---- */
@@ -83,7 +83,7 @@
     z-index: 4;
     display: flex; gap: .6rem; align-items: center;
   }
-  #admire, #admire-sound {
+  #admire, #motion, #admire-sound {
     font-family: inherit;
     font-size: clamp(.58rem, 1.3vw, .72rem);
     letter-spacing: .26em;
@@ -98,14 +98,14 @@
     backdrop-filter: blur(4px);
     transition: color .2s ease, border-color .2s ease, background .2s ease;
   }
-  #admire:hover, #admire:focus-visible, #admire-sound:hover, #admire-sound:focus-visible {
+  #admire:hover, #admire:focus-visible, #motion:hover, #motion:focus-visible, #admire-sound:hover, #admire-sound:focus-visible {
     color: #fff;
     border-color: rgba(255,255,255,.8);
     background: rgba(40,40,44,.55);
     outline: none;
   }
   #admire-sound[hidden] { display: none; }
-  body.immersive { overflow: hidden; }
+  body.immersive { overflow: hidden; user-select: none; -webkit-user-select: none; }
 
   #hint {
     position: absolute;
@@ -120,6 +120,19 @@
     transition: opacity 1.2s ease;
   }
   #hint.dim { opacity: 0; }
+  body.immersive #hint {
+    width: fit-content;
+    max-width: calc(100% - 2rem);
+    margin: 0 auto;
+    padding: .75em 1.1em;
+    color: rgba(255,255,255,.85);
+    background: rgba(5,5,8,.72);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 4px;
+    text-shadow: 0 1px 4px #000;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
 
   #scroll-cue {
     position: absolute; left: 50%; bottom: 2.2rem; transform: translateX(-50%);
@@ -249,7 +262,7 @@
 </style>
 </head>
 <body>
-<canvas id="gl"></canvas>
+<canvas id="gl" aria-hidden="true"></canvas>
 
 <section id="hero">
   <nav id="site-nav" aria-label="Site navigation">
@@ -270,6 +283,7 @@
 
   <div id="ui">
     <button id="admire" type="button" aria-pressed="false">&#9673; ADMIRE</button>
+    <button id="motion" type="button" aria-label="Pause black hole animation">&#10074;&#10074; PAUSE</button>
     <button id="admire-sound" type="button" aria-pressed="false" aria-label="Mute admire music" hidden>SOUND ON</button>
   </div>
 
@@ -349,6 +363,7 @@
   if (!gl) {
     document.getElementById("fallback").style.display = "grid";
     document.getElementById("admire").disabled = true;
+    document.getElementById("motion").disabled = true;
     document.getElementById("hint").hidden = true;
     return;
   }
@@ -377,9 +392,9 @@ uniform float uDiskBright; // HDR disk brightness
 uniform float uSpeed;      // disk animation speed
 
 #define RS 1.0
-#define R_IN 2.8
+#define R_IN 3.0 // Schwarzschild ISCO: 3 event-horizon radii
 #define R_OUT 10.0
-#define MAXSTEP 480
+#define MAXSTEP 640
 
 /* ---------- hash / noise ---------- */
 float hash12(vec2 p){
@@ -420,6 +435,45 @@ float vnoise3(vec3 p){
   float n111 = hash13(i + vec3(1,1,1));
   return mix(mix(mix(n000,n100,f.x), mix(n010,n110,f.x), f.y),
              mix(mix(n001,n101,f.x), mix(n011,n111,f.x), f.y), f.z);
+}
+
+/* Circular Schwarzschild orbits; uSpeed only scales the presentation clock. */
+float orbitalRate(float r){
+  return sqrt(0.5 * RS / (r * r * r));
+}
+
+/* Overlapping annuli keep bright streaks at fixed radii. A winding spiral's
+   phase can look like radial outflow even when it is advected azimuthally. */
+float diskTexture(float r, float azim, out float knotGlow){
+  float streaks = 0.0;
+  float weights = 0.0;
+  for (int j = 0; j < 8; j++){
+    float band = float(j);
+    float rb = R_IN + 0.35 + band * 0.90;
+    float w = exp(-pow((r - rb) / 0.65, 2.0));
+    if (w < 0.01) continue;
+    // cross(+Y, p) is the velocity: azimuth DECREASES as material orbits.
+    float a = azim + orbitalRate(rb) * uTime * uSpeed + band * 2.4;
+    vec2 orbit = vec2(cos(a), sin(a));
+    float coarse = vnoise3(vec3(orbit * 4.0, band * 3.7));
+    float fine = vnoise3(vec3(orbit * 11.0, r * 5.0 + band * 2.1));
+    streaks += w * (0.24 + 1.30 * smoothstep(0.25, 0.78, coarse))
+                 * (0.70 + 0.50 * fine);
+    weights += w;
+  }
+
+  knotGlow = 0.0;
+  for (int k = 0; k < 4; k++){
+    float fk = float(k);
+    float rk = 3.65 + fk * 1.65;
+    float a = azim + orbitalRate(rk) * uTime * uSpeed - fk * 1.9;
+    float da = atan(sin(a), cos(a));
+    float dr = (r - rk) / 0.38;
+    // Long, narrow arcs rather than radial spokes or large glowing blobs.
+    knotGlow += exp(-dr * dr - pow(da / 0.38, 2.0));
+  }
+  knotGlow = min(knotGlow, 1.0);
+  return streaks / max(weights, 0.001) + knotGlow * 0.85;
 }
 
 /* ---------- lensed starfield + faint nebula ---------- */
@@ -463,7 +517,8 @@ void mainImage(out vec4 outColor, in vec2 fragCoord){
 
   float r0 = uCamDist;
   float u = 1.0 / r0;
-  float du = -dot(rd, e1) / (max(pl, 1e-6) * r0);   // du/dphi
+  float cameraLapse = sqrt(1.0 - RS / r0);
+  float du = -dot(rd, e1) * cameraLapse / (max(pl, 1e-6) * r0);
   float phi = 0.0;
   float prevH = r0 * e1n;
   float prevR = r0;
@@ -471,7 +526,7 @@ void mainImage(out vec4 outColor, in vec2 fragCoord){
 
   /* analytic photon sphere: b < bc is captured -> perfectly round shadow */
   float bc = 1.5 * sqrt(3.0);
-  float bImpact = r0 * pl;                          // conserved impact parameter
+  float bImpact = r0 * pl / cameraLapse;            // local camera -> conserved impact parameter
   float shadow = smoothstep(bc - 0.03, bc + 0.03, bImpact);
 
   vec3 col = vec3(0.0);
@@ -485,17 +540,25 @@ void mainImage(out vec4 outColor, in vec2 fragCoord){
     if (r <= RS || u <= 0.0){ break; }
     if (r > escapeR && du < 0.0){ escaped = true; break; }
 
-    float dphi = clamp(0.008 * r, 0.002, 0.05);
+    float dphi = clamp(0.016 * r, 0.003, 0.06);
 
-    /* RK2 on u'' = -u + 1.5 * RS * u^2 */
+    /* RK4 resolves rays lingering near the photon sphere with fewer steps. */
     float k1u = du;
     float k1v = -u + 1.5 * RS * u * u;
     float um = u + 0.5 * dphi * k1u;
     float vm = du + 0.5 * dphi * k1v;
     float k2u = vm;
     float k2v = -um + 1.5 * RS * um * um;
-    float uN = u + dphi * k2u;
-    float duN = du + dphi * k2v;
+    um = u + 0.5 * dphi * k2u;
+    vm = du + 0.5 * dphi * k2v;
+    float k3u = vm;
+    float k3v = -um + 1.5 * RS * um * um;
+    um = u + dphi * k3u;
+    vm = du + dphi * k3v;
+    float k4u = vm;
+    float k4v = -um + 1.5 * RS * um * um;
+    float uN = u + (dphi / 6.0) * (k1u + 2.0 * k2u + 2.0 * k3u + k4u);
+    float duN = du + (dphi / 6.0) * (k1v + 2.0 * k2v + 2.0 * k3v + k4v);
     float phiN = phi + dphi;
     float rN = 1.0 / uN;
 
@@ -511,60 +574,37 @@ void mainImage(out vec4 outColor, in vec2 fragCoord){
         float cc = cos(phiC), ss = sin(phiC);
         vec3 pC = rC * (cc * e1 + ss * e2);
 
-        /* Keplerian differential rotation advecting a turbulent sheet */
+        /* Persistent orbital lanes: inner material overtakes outer material. */
         float azim = atan(pC.z, pC.x);
-        float omega = 1.0 / pow(max(rC, 0.8), 1.25);
-        float a = azim - omega * uTime * uSpeed + 0.7 * log(max(rC, 0.8));
-        vec2 q = vec2(cos(a), sin(a)) * rC;
+        float knotGlow;
+        float texture = diskTexture(rC, azim, knotGlow);
 
-        float fil  = vnoise3(vec3(q * 0.75, uTime * 0.03 * uSpeed));
-        float fine = vnoise3(vec3(q * 2.20, uTime * 0.08 * uSpeed + 5.0));
-        float turb = (0.35 + 0.95 * fil) * (0.75 + 0.45 * fine);
-
-        /* rotating spiral arms -> unmistakable orbital motion around the hole */
-        float sw = azim - omega * uTime * uSpeed + 1.25 * log(max(rC, 0.8));
-        float arms = 0.55 * sin(3.0 * sw) + 0.30 * sin(6.0 * sw + 1.1) + 0.16 * sin(11.0 * sw + 2.4);
-        float spiral = 0.5 + 0.42 * arms;
-        float texture = turb * (0.40 + 1.45 * spiral);
-
-        /* distinct orbiting knots so you can watch material circle the hole */
-        float knots = 0.0;
-        for (int k = 0; k < 4; k++){
-          float fk = float(k);
-          float rk = 3.0 + fk * 2.0;
-          float sz = 0.55 + 0.30 * fract(fk * 0.37 + 0.21);
-          float ang = fk * 1.9 + uTime * uSpeed / pow(rk, 1.25);
-          float da = azim - ang;
-          da = atan(sin(da), cos(da));
-          float dr = (rC - rk) / (1.0 + fk * 0.35);
-          float dA = da / sz;
-          knots += exp(-(dr * dr + dA * dA));
-        }
-        float knotGlow = min(knots, 1.0);
-        texture += knotGlow * 1.3;
-
-        float edgeIn  = smoothstep(R_IN, R_IN + 3.5, rC);
+        float edgeIn  = smoothstep(R_IN, R_IN + 1.4, rC);
         float edgeOut = 1.0 - smoothstep(R_OUT - 3.5, R_OUT, rC);
         float rim = exp(-pow((rC - R_IN) / 1.4, 2.0));
         float prof = edgeIn * edgeOut * (0.55 + 0.80 * pow(R_IN / rC, 1.3) + 0.55 * rim);
-        /* smooth bright inner band -> circular shadow edge; streaky flow outward */
-        float detail = smoothstep(R_IN + 1.5, R_IN + 5.0, rC);
-        float dens = prof * mix(0.85 + 0.30 * fil, 0.08 + 1.55 * texture, detail);
+        float dens = prof * (0.22 + 1.15 * texture);
 
-        /* relativistic beaming + gravitational redshift */
-        vec3 obs = normalize(cam - pC);
+        /* Beaming uses the photon's local emission direction, including bent
+           secondary images, rather than a straight line back to the camera. */
+        vec3 radial = normalize(pC);
+        vec3 angular = -ss * e1 + cc * e2;
+        float uC = 1.0 / rC;
+        float duC = mix(du, duN, tt);
+        vec3 obs = -normalize((-duC / uC) * radial
+                            + sqrt(1.0 - RS / rC) * angular);
         vec3 tanv = normalize(cross(n, pC));
-        float beta = min(sqrt(0.5 * RS / max(rC, 1.0)), 0.86);
+        float beta = sqrt(0.5 * RS / (rC - RS));
         float gam = 1.0 / sqrt(1.0 - beta * beta);
         float dop = 1.0 / (gam * (1.0 - dot(tanv * beta, obs)));
         dop = clamp(dop, 0.18, 4.0);
-        float beam = mix(1.0, dop * dop * dop, uBeam);
-        beam *= sqrt(max(1.0 - RS / rC, 0.0));
+        float shift = dop * sqrt(1.0 - RS / rC) / cameraLapse;
+        float beam = mix(1.0, shift * shift * shift, uBeam);
 
         float tn = clamp((rC - R_IN) / (R_OUT - R_IN), 0.0, 1.0);
         vec3 dcol = mix(vec3(1.0, 0.88, 0.66), vec3(1.0, 0.30, 0.05), smoothstep(0.0, 0.6, tn));
         dcol *= mix(vec3(1.0, 0.74, 0.48), vec3(0.80, 0.94, 1.30),
-                    clamp(0.5 + (dop - 1.0) * 0.8, 0.0, 1.0));
+                    clamp(0.5 + (shift - 1.0) * 0.8, 0.0, 1.0));
         dcol = mix(dcol, vec3(1.0, 0.95, 0.85), knotGlow * 0.5);
 
         float emis = dens * uDiskBright;
@@ -578,10 +618,11 @@ void mainImage(out vec4 outColor, in vec2 fragCoord){
     prevH = hN; prevR = rN; u = uN; du = duN; phi = phiN;
   }
 
-  /* antialias the near-critical disk crossing so the shadow edge is round */
-  /* thin, perfectly round photon ring defines the shadow edge */
-  float ring = exp(-pow((bImpact - bc) / 0.070, 2.0));
-  col += vec3(1.0, 0.84, 0.58) * ring * 1.2 * uDiskBright;
+  /* Subpixel ring accent. Lensed disk crossings supply most of the light;
+     keep the accent faint enough to preserve the actual brightness asymmetry. */
+  float ringWidth = max(0.025, fwidth(bImpact) * 0.85);
+  float ring = exp(-pow((bImpact - bc) / ringWidth, 2.0));
+  col += vec3(1.0, 0.84, 0.58) * ring * 0.30 * uDiskBright;
 
   /* escape -> lensed starfield, masked by the analytic shadow edge */
   if (escaped){
@@ -636,15 +677,16 @@ void main(){
   col.b = texture(uScene, uv - ca).b;
 
   /* soft bloom: multi-tap at a low mip so the bright ring cannot alias */
+  vec2 bloomScale = vec2(uRes.y / uRes.x, 1.0);
   vec3 bb = vec3(0.0);
-  bb += textureLod(uScene, uv + vec2( 0.010,  0.000), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2(-0.010,  0.000), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2( 0.000,  0.010), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2( 0.000, -0.010), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2( 0.007,  0.007), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2(-0.007,  0.007), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2( 0.007, -0.007), 3.0).rgb;
-  bb += textureLod(uScene, uv + vec2(-0.007, -0.007), 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.010,  0.000) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2(-0.010,  0.000) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.000,  0.010) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.000, -0.010) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.007,  0.007) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2(-0.007,  0.007) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2( 0.007, -0.007) * bloomScale, 3.0).rgb;
+  bb += textureLod(uScene, uv + vec2(-0.007, -0.007) * bloomScale, 3.0).rgb;
   bb += textureLod(uScene, uv, 4.0).rgb;
   bb /= 9.0;
   col += max(bb - 0.10, 0.0) * uBloom;
@@ -689,6 +731,9 @@ void main(){
     compProg  = program(VS, FS_COMPOSITE);
   } catch (e) {
     document.getElementById("fallback").style.display = "grid";
+    document.getElementById("admire").disabled = true;
+    document.getElementById("motion").disabled = true;
+    document.getElementById("hint").hidden = true;
     return;
   }
 
@@ -720,7 +765,7 @@ void main(){
   }
 
   /* ---- camera state + interaction ---- */
-  const PRESET = { az: 0.55, el: 0.12, dist: 12.5, offX: 0.64, offY: 0.22 };
+  const PRESET = { az: 0.55, el: 0.16, dist: 12.5, offX: 0.64, offY: 0.22 };
   const state = {
     az: PRESET.az, el: PRESET.el, dist: PRESET.dist,
     tAz: PRESET.az, tEl: PRESET.el, tDist: PRESET.dist,
@@ -728,6 +773,31 @@ void main(){
     dragging: false, panning: false, px: 0, py: 0, lastInput: performance.now()
   };
   let immersive = false;
+  const narrowLayout = window.matchMedia("(max-width: 680px), (max-height: 560px)");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let motionPaused = reducedMotion.matches;
+  let simulationTime = 0;
+  let heroVisible = true;
+  let frameId = 0;
+  let last = performance.now();
+
+  function requestFrame(){
+    if (frameId || document.hidden || !heroVisible) return;
+    last = performance.now();
+    frameId = requestAnimationFrame(frame);
+  }
+  function stopFrame(){
+    cancelAnimationFrame(frameId);
+    frameId = 0;
+  }
+  function setFraming(){
+    // Give the portrait hero a complete, centered shadow below its title.
+    state.tOffX = immersive ? 0.0 : narrowLayout.matches ? 0.0 : PRESET.offX;
+    state.tOffY = immersive ? 0.0 : narrowLayout.matches ? -0.22 : PRESET.offY;
+    state.tDist = immersive ? 16.0 : narrowLayout.matches ? 20.0 : PRESET.dist;
+    requestFrame();
+  }
+  narrowLayout.addEventListener("change", setFraming);
   const onUI = (e) => e.target && e.target.closest && e.target.closest("#ui, #site-nav");
 
   window.addEventListener("pointerdown", (e) => {
@@ -736,6 +806,7 @@ void main(){
     state.panning = (e.button === 2) || e.shiftKey;
     state.px = e.clientX; state.py = e.clientY;
     state.lastInput = performance.now();
+    requestFrame();
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   });
   window.addEventListener("pointermove", (e) => {
@@ -747,9 +818,10 @@ void main(){
       state.tOffY = Math.max(-1.4, Math.min(1.4, state.tOffY - dy * 0.0016));
     } else {
       state.tAz -= dx * 0.005;
-      state.tEl = Math.max(-0.55, Math.min(0.85, state.tEl + dy * 0.004));
+      state.tEl = Math.max(-1.35, Math.min(1.35, state.tEl + dy * 0.004));
     }
     state.lastInput = performance.now();
+    requestFrame();
   });
   const endDrag = () => { state.dragging = false; state.panning = false; };
   window.addEventListener("pointerup", endDrag);
@@ -759,12 +831,14 @@ void main(){
     e.preventDefault();
     state.tDist = Math.max(9.0, Math.min(26.0, state.tDist * Math.exp(e.deltaY * 0.0011)));
     state.lastInput = performance.now();
+    requestFrame();
   }, { passive: false });
   window.addEventListener("contextmenu", (e) => { if (immersive) e.preventDefault(); });
 
   /* ---- adaptive resolution ---- */
   const dpr = Math.min(window.devicePixelRatio || 1, 1.0);
   let scale = 0.8;
+  let frameSamples = 0, sampleTime = 0;
   let cssW = 1, cssH = 1;
 
   function resize(){
@@ -782,14 +856,23 @@ void main(){
     cssW = r.width || window.innerWidth;
     cssH = r.height || window.innerHeight;
     resize();
+    requestFrame();
   }
   window.addEventListener("resize", measure);
   measure();
 
   /* ---- render loop ---- */
-  let last = performance.now();
   const hint = document.getElementById("hint");
   const admireBtn = document.getElementById("admire");
+  const motionBtn = document.getElementById("motion");
+  function updateMotion(){
+    motionBtn.innerHTML = motionPaused ? "&#9654; PLAY" : "&#10074;&#10074; PAUSE";
+    motionBtn.setAttribute("aria-label", motionPaused ? "Play black hole animation" : "Pause black hole animation");
+    requestFrame();
+  }
+  motionBtn.addEventListener("click", () => { motionPaused = !motionPaused; updateMotion(); });
+  reducedMotion.addEventListener("change", () => { motionPaused = reducedMotion.matches; updateMotion(); });
+  updateMotion();
   setTimeout(() => { if (!immersive) hint.classList.add("dim"); }, 8000);
 
   const onScroll = () => document.body.classList.toggle("scrolled", window.scrollY > 40);
@@ -808,8 +891,9 @@ void main(){
     admireBtn.innerHTML = on ? "&#10005; EXIT" : "&#9673; ADMIRE";
     admireBtn.setAttribute("aria-pressed", String(on));
     document.dispatchEvent(new CustomEvent("admirechange", { detail: { active: on } }));
-    state.tAz = PRESET.az; state.tEl = PRESET.el; state.tDist = PRESET.dist;
-    state.tOffX = PRESET.offX; state.tOffY = PRESET.offY;
+    state.tAz = PRESET.az; state.tEl = PRESET.el;
+    endDrag();
+    setFraming();
     state.lastInput = on ? performance.now() : 0;
     hint.textContent = on ? "[ DRAG ORBIT \u00b7 SHIFT/RIGHT-DRAG PAN \u00b7 SCROLL ZOOM \u00b7 ESC EXIT ]" : "CLICK \u25c9 ADMIRE TO EXPLORE";
     hint.classList.remove("dim");
@@ -820,13 +904,27 @@ void main(){
     if (e.key === "Escape" && immersive) { setImmersive(false); admireBtn.focus(); }
   });
 
+  // Stop expensive ray tracing when the hero is covered or the tab is hidden.
+  const heroObserver = new IntersectionObserver(([entry]) => {
+    heroVisible = entry.isIntersecting;
+    if (heroVisible) requestFrame(); else stopFrame();
+  });
+  heroObserver.observe(document.getElementById("hero"));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopFrame(); else requestFrame();
+  });
+  setFraming();
+  state.offX = state.tOffX; state.offY = state.tOffY; state.dist = state.tDist;
 
   function frame(now){
-    const dt = Math.min((now - last) / 1000, 0.05);
+    frameId = 0;
+    const elapsed = (now - last) / 1000;
+    const dt = Math.max(0, Math.min(elapsed, 0.1));
     last = now;
+    if (!motionPaused) simulationTime += dt;
 
     /* idle auto-orbit keeps the rim alive */
-    if (immersive && !state.dragging && now - state.lastInput > 2500){
+    if (immersive && !motionPaused && !state.dragging && now - state.lastInput > 2500){
       state.tAz += dt * 0.03;
     }
     state.az += (state.tAz - state.az) * Math.min(1, dt * 6);
@@ -835,20 +933,32 @@ void main(){
     state.offX += (state.tOffX - state.offX) * Math.min(1, dt * 6);
     state.offY += (state.tOffY - state.offY) * Math.min(1, dt * 6);
 
+    // Adjust infrequently to avoid resolution pumping while orbiting.
+    if (!motionPaused && elapsed > 0){
+      frameSamples++; sampleTime += Math.min(elapsed, 1.0);
+      if (sampleTime > 2.0){
+        const fps = frameSamples / sampleTime;
+        if (fps < 32) scale = Math.max(0.5, scale - 0.08);
+        else if (fps > 55) scale = Math.min(1.0, scale + 0.04);
+        frameSamples = 0; sampleTime = 0;
+      }
+    }
+
     /* scene pass */
     resize();
     gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.useProgram(sceneProg);
     gl.uniform2f(su.uRes, canvas.width, canvas.height);
-    gl.uniform1f(su.uTime, now / 1000);
+    gl.uniform1f(su.uTime, simulationTime);
     gl.uniform2f(su.uCamAng, state.az, state.el);
     gl.uniform2f(su.uOffset, state.offX * (canvas.width / canvas.height), state.offY);
     gl.uniform1f(su.uCamDist, state.dist);
-    gl.uniform1f(su.uFov, 23.5);
+    const portraitScale = Math.max(1.0, cssH / cssW * 0.8);
+    gl.uniform1f(su.uFov, 2 * Math.atan(Math.tan(23.5 * Math.PI / 360) * portraitScale) * 180 / Math.PI);
     gl.uniform1f(su.uBeam, 0.62);
-    gl.uniform1f(su.uDiskBright, 1.2);
-    gl.uniform1f(su.uSpeed, 1.8);
+    gl.uniform1f(su.uDiskBright, 1.15);
+    gl.uniform1f(su.uSpeed, 3.6);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     /* bloom mip chain */
@@ -863,16 +973,21 @@ void main(){
     gl.bindTexture(gl.TEXTURE_2D, sceneTex);
     gl.uniform1i(cu.uScene, 0);
     gl.uniform2f(cu.uRes, canvas.width, canvas.height);
-    gl.uniform1f(cu.uTime, now / 1000);
+    gl.uniform1f(cu.uTime, simulationTime);
     gl.uniform1f(cu.uExposure, 0.8);
     gl.uniform1f(cu.uBloom, 0.45);
     gl.uniform1f(cu.uGrain, 0.018);
     gl.uniform1f(cu.uVignette, 0.85);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-    requestAnimationFrame(frame);
+    const settling = Math.abs(state.tAz - state.az) + Math.abs(state.tEl - state.el)
+                   + Math.abs(state.tDist - state.dist) + Math.abs(state.tOffX - state.offX)
+                   + Math.abs(state.tOffY - state.offY) > 0.001;
+    if ((!motionPaused || settling) && heroVisible && !document.hidden){
+      frameId = requestAnimationFrame(frame);
+    }
   }
-  requestAnimationFrame(frame);
+  requestFrame();
 })();
 </script>
 <script src="admire-audio.js"></script>
