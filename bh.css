@@ -163,6 +163,7 @@ h2::after {
     background: linear-gradient(90deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, .1) 55%, transparent);
 }
 h3 { font-size: 1.12rem; margin: 2rem 0 .6rem; color: #eeeef0; }
+h2[id], h3[id] { scroll-margin-top: 6rem; }
 
 a:link, a:visited {
     color: #e6e6ea;

@@ -61,10 +61,10 @@
   body.immersive #scroll-cue { display: none; }
   .hero-summary {
     position: absolute;
-    left: var(--hero-x);
-    top: calc(var(--hero-y) + var(--hero-title-size) * .5 + 1rem);
+    left: 50%;
+    top: calc(100% + 1rem);
     transform: translateX(-50%);
-    width: min(var(--hero-title-width), 28rem);
+    width: min(100%, 28rem);
     font-size: clamp(.82rem, 1.1vw, .95rem);
     line-height: 1.6;
     text-align: center;
@@ -301,8 +301,8 @@
     <div class="inner">
       <h1>The Home of T&#8209;Lind</h1>
     </div>
+    <p class="hero-summary">Software, AI research, and experiments in physics.</p>
   </div>
-  <p class="hero-summary">Software, AI research, and experiments in physics.</p>
 
   <div id="ui">
     <button id="admire" type="button" aria-pressed="false">&#9673; ADMIRE</button>
