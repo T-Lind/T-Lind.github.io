@@ -21,15 +21,20 @@
   body.immersive #gl:active { cursor: grabbing; }
 
   /* ---- Welcome / header, sitting inside the black hole's shadow ---- */
-  #hero { position: relative; height: 100vh; height: 100svh; overflow: hidden; }
+  #hero {
+    --hero-x: 76%;
+    --hero-y: 39%;
+    --hero-distance: 11.5;
+    --hero-title-size: clamp(2.2rem, min(4.25vw, 9vh), 5rem);
+    --hero-title-width: 44vw;
+    position: relative; height: 100vh; height: 100svh; overflow: hidden;
+  }
   #welcome {
     position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding-bottom: 22vh;
+    left: var(--hero-x);
+    top: var(--hero-y);
+    width: var(--hero-title-width);
+    transform: translate(-50%, -50%);
     text-align: center;
     pointer-events: none;
     user-select: none;
@@ -37,26 +42,14 @@
     opacity: 1;
   }
   #welcome .inner {
-    position: relative;
-    left: clamp(0px, 24vw, 560px);
-    padding-right: clamp(1rem, 3vw, 2.5rem);
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 96vw;
-  }
-  .eyebrow {
-    font-size: clamp(.62rem, 1.5vw, .82rem);
-    letter-spacing: .62em;
-    text-indent: .62em;
-    color: #e9e9ec;
-    text-shadow: 0 0 18px rgba(255,255,255,.55);
-    opacity: .92;
-    margin-bottom: clamp(.7rem, 2.4vh, 1.5rem);
+    width: 100%;
   }
   #welcome h1 {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: clamp(2.2rem, 5.4vw, 5rem);
+    font-size: var(--hero-title-size);
     font-weight: 600;
     letter-spacing: -.015em;
     line-height: .98;
@@ -64,17 +57,31 @@
     color: #fff;
     text-shadow: 0 2px 12px rgba(0,0,0,.85), 0 0 44px rgba(0,0,0,.7), 0 0 70px rgba(255,255,255,.28);
   }
-  body.immersive #welcome { display: none; }
+  body.immersive #welcome, body.immersive .hero-summary { display: none; }
   body.immersive #scroll-cue { display: none; }
-  .sub {
-    margin-top: clamp(.7rem, 2.2vh, 1.4rem);
-    font-size: clamp(.7rem, 1.9vw, .95rem);
-    letter-spacing: .18em;
-    max-width: 24rem;
+  .hero-summary {
+    position: absolute;
+    left: var(--hero-x);
+    top: calc(var(--hero-y) + var(--hero-title-size) * .5 + 1rem);
+    transform: translateX(-50%);
+    width: min(var(--hero-title-width), 28rem);
+    font-size: clamp(.82rem, 1.1vw, .95rem);
+    line-height: 1.6;
+    text-align: center;
+    letter-spacing: .035em;
     text-wrap: balance;
     color: rgba(255,255,255,.92);
     text-shadow: 0 0 4px #000, 0 0 10px rgba(0,0,0,.9);
+    pointer-events: none;
+    z-index: 3;
   }
+  .skip-link {
+    position: fixed; top: .7rem; left: 1rem; z-index: 6;
+    transform: translateY(-200%);
+    background: #fff; color: #08080a; padding: .75rem 1rem;
+    font-size: .85rem; text-decoration: none;
+  }
+  .skip-link:focus { transform: none; outline: 2px solid #fff; outline-offset: 3px; }
 
   #ui {
     position: absolute;
@@ -179,6 +186,7 @@
   #content {
     position: relative; z-index: 2; background: #08080a; color: #b8b8bc;
     border-top: 1px solid rgba(255,255,255,.14);
+    scroll-margin-top: 6rem;
   }
   #content .wrap { max-width: 46rem; margin: 0 auto; padding: clamp(2.6rem,7vh,5rem) 1.4rem 5rem; }
   #content h2 {
@@ -195,6 +203,8 @@
   #content .about { display: flex; gap: 1.7rem; align-items: flex-start; flex-wrap: wrap; }
   #content .about img { width: 224px; max-width: 100%; height: auto; border-radius: 8px; flex: 0 0 auto; }
   #content .about .txt { flex: 1 1 16rem; min-width: 230px; }
+  #content .contact-links { display: flex; flex-wrap: wrap; gap: .6rem 1.1rem; margin-top: 1.2rem; }
+  #content a:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
   #content ul { list-style: none; margin: 1rem 0; }
   #content li { padding: .55rem 0; border-bottom: 1px dashed rgba(255,255,255,.08); font-size: .84rem; }
   #content li .k { color: #e9e9ec; }
@@ -236,15 +246,19 @@
 
   /* ---- mobile / narrow screens ---- */
   @media (max-width: 680px), (max-height: 560px) {
-    #welcome { padding-bottom: 26vh; }
-    #welcome .inner { left: 0; width: 100%; max-width: 100%; padding: 0 1rem; }
-    #welcome h1 { white-space: normal; text-wrap: balance; font-size: clamp(1.7rem, 9vw, 2.6rem); }
-    #welcome .sub { max-width: 20rem; }
+    #hero {
+      --hero-x: 50%;
+      --hero-y: 42%;
+      --hero-distance: 18.5;
+      --hero-title-size: clamp(1.7rem, 7.5vw, 2.6rem);
+      --hero-title-width: calc(100% - 2rem);
+    }
+    #welcome h1 { white-space: normal; text-wrap: balance; }
 
     #site-nav { padding: .5rem .5rem; gap: .3rem; }
     #site-nav a { font-size: .74rem; padding: .4em .6em; }
 
-    #hint { bottom: auto; top: max(4.6rem, calc(env(safe-area-inset-top) + 4.6rem)); font-size: .56rem; letter-spacing: .2em; text-indent: .2em; }
+    #hint { bottom: auto; top: max(6.2rem, calc(env(safe-area-inset-top) + 6.2rem)); font-size: .56rem; letter-spacing: .2em; text-indent: .2em; }
 
     #content .wrap { padding: clamp(2rem, 6vh, 3rem) 1.1rem 4rem; }
     #content .about { gap: 1.2rem; }
@@ -254,14 +268,22 @@
     #content .widget { padding: 1rem; }
   }
   @media (prefers-reduced-motion: reduce) { #scroll-cue { animation: none; } }
+  @media (pointer: coarse) {
+    #admire, #motion, #admire-sound, #site-nav a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    #hint { top: max(7.2rem, calc(env(safe-area-inset-top) + 7.2rem)); bottom: auto; }
+  }
 
   @media (max-height: 560px) and (orientation: landscape) {
-    #welcome { padding-bottom: 12vh; }
-    #welcome h1 { font-size: clamp(1.5rem, 5vw, 2.4rem); }
+    #hero {
+      --hero-y: 45%;
+      --hero-distance: 11.5;
+      --hero-title-size: clamp(1.5rem, min(5vw, 9vh), 2.4rem);
+    }
   }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#content">Skip to content</a>
 <canvas id="gl" aria-hidden="true"></canvas>
 
 <section id="hero">
@@ -280,6 +302,7 @@
       <h1>The Home of T&#8209;Lind</h1>
     </div>
   </div>
+  <p class="hero-summary">Software, AI research, and experiments in physics.</p>
 
   <div id="ui">
     <button id="admire" type="button" aria-pressed="false">&#9673; ADMIRE</button>
@@ -292,7 +315,7 @@
   <a id="scroll-cue" href="#content" aria-label="Scroll to content">&#8595;</a>
 </section>
 
-<main id="content">
+<main id="content" tabindex="-1">
   <div class="wrap">
     <h2>About</h2>
     <div class="about">
@@ -302,6 +325,11 @@
         <p>Welcome to my corner of the internet: software, research, and a few experiments in physics. The black hole above is rendered in real time &mdash; click Admire to orbit it, with a little music for the journey.</p>
         <p>I'm <strong>Tiernan Lindauer</strong> &mdash; I build things and write about them. In 2024 I founded <a href="lindauerai/">LindauerAI</a>, an ed-tech startup that built a dual-AI learning platform (<em>Gyro</em> for students, <em>CA</em> for teachers).</p>
         <p>Start with <a href="motivation/">My Motivation</a>, then <a href="projects/">Projects</a> and <a href="research/">Research</a>.</p>
+        <p class="contact-links">
+          <a href="https://github.com/T-Lind" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.linkedin.com/in/tiernan-lindauer-746922247/" target="_blank" rel="noopener">LinkedIn</a>
+          <a href="profile/#get-in-touch">Get in touch</a>
+        </p>
       </div>
     </div>
 
@@ -765,7 +793,8 @@ void main(){
   }
 
   /* ---- camera state + interaction ---- */
-  const PRESET = { az: 0.55, el: 0.16, dist: 12.5, offX: 0.64, offY: 0.22 };
+  const PRESET = { az: 0.55, el: 0.16, dist: 11.5, offX: 0.52, offY: 0.22 };
+  const hero = document.getElementById("hero");
   const state = {
     az: PRESET.az, el: PRESET.el, dist: PRESET.dist,
     tAz: PRESET.az, tEl: PRESET.el, tDist: PRESET.dist,
@@ -773,7 +802,6 @@ void main(){
     dragging: false, panning: false, px: 0, py: 0, lastInput: performance.now()
   };
   let immersive = false;
-  const narrowLayout = window.matchMedia("(max-width: 680px), (max-height: 560px)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let motionPaused = reducedMotion.matches;
   let simulationTime = 0;
@@ -791,13 +819,17 @@ void main(){
     frameId = 0;
   }
   function setFraming(){
-    // Give the portrait hero a complete, centered shadow below its title.
-    state.tOffX = immersive ? 0.0 : narrowLayout.matches ? 0.0 : PRESET.offX;
-    state.tOffY = immersive ? 0.0 : narrowLayout.matches ? -0.22 : PRESET.offY;
-    state.tDist = immersive ? 16.0 : narrowLayout.matches ? 20.0 : PRESET.dist;
+    // CSS positions the title; the camera uses the same anchor, including
+    // mobile media queries and any difference between svh and canvas height.
+    const layout = window.getComputedStyle(hero);
+    const heroRect = hero.getBoundingClientRect();
+    const x = (parseFloat(layout.getPropertyValue("--hero-x")) || 76) / 100;
+    const y = (parseFloat(layout.getPropertyValue("--hero-y")) || 39) / 100;
+    state.tOffX = immersive ? 0.0 : 2 * x * heroRect.width / cssW - 1;
+    state.tOffY = immersive ? 0.0 : 1 - 2 * y * heroRect.height / cssH;
+    state.tDist = immersive ? 16.0 : parseFloat(layout.getPropertyValue("--hero-distance")) || PRESET.dist;
     requestFrame();
   }
-  narrowLayout.addEventListener("change", setFraming);
   const onUI = (e) => e.target && e.target.closest && e.target.closest("#ui, #site-nav");
 
   window.addEventListener("pointerdown", (e) => {
@@ -856,6 +888,7 @@ void main(){
     cssW = r.width || window.innerWidth;
     cssH = r.height || window.innerHeight;
     resize();
+    if (!immersive) setFraming();
     requestFrame();
   }
   window.addEventListener("resize", measure);
@@ -909,7 +942,7 @@ void main(){
     heroVisible = entry.isIntersecting;
     if (heroVisible) requestFrame(); else stopFrame();
   });
-  heroObserver.observe(document.getElementById("hero"));
+  heroObserver.observe(hero);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stopFrame(); else requestFrame();
   });
