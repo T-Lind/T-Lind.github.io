@@ -1,0 +1,347 @@
+[
+  {
+    "title": "Accessor",
+    "url": "accessor/",
+    "category": "Projects",
+    "description": "A local voice gateway for coding agents. Talk to Codex, Claude Code, and other agent harnesses, with local speech recognition, spoken replies, and shared memory.",
+    "tags": [
+      "Rust"
+    ],
+    "aliases": [
+      "29",
+      "twenty nine",
+      "voice agent"
+    ],
+    "text": "← Back to Projects Accessor A local voice gateway for coding agents. Talk to Codex, Claude Code, and other agent harnesses, with local speech recognition, spoken replies, and shared memory. Rust View source and setup Download a release Say “twenty-nine” to open a conversation with a coding agent. Accessor manages speech recognition, the conversation, and a terminal dashboard while reusing the agent’s tools and account connections. The Rust gateway supports Codex App Server, Claude Code, Antigravity, opencode, and Cursor. Local wake detection and transcription, configurable spoken replies, shared memory, and typed commands connect the voice workflow to the tools you already use. Voice or keyboard, the same conversation Local Canary, Parakeet, or Whisper transcription, with Piper speech by default and optional cloud voices. A terminal activity pane for replies and tool calls, plus settings, approval controls, and spoken harness switching. Shared memory, notes, alarms, and scheduled tasks that persist across agent harnesses. Accessor is a local desktop tool. Windows, Linux, and Apple Silicon builds are available in Releases. Try acc --text --agent mock for a text-only session without an account or microphone. The voice pipeline"
+  },
+  {
+    "title": "chess-3d",
+    "url": "chess-3d/",
+    "category": "Projects",
+    "description": "A true 3D chess game, allowing pieces to move in three dimensions, with toptobes.",
+    "tags": [
+      "Python",
+      "TypeScript"
+    ],
+    "aliases": [
+      "3d chess"
+    ],
+    "text": "← Back to Projects chess-3d A true 3D chess game, allowing pieces to move in three dimensions, with toptobes. Python TypeScript Play chess-3d · View source A chess variant that extends the board and piece movement into three dimensions. Explore the spatial board and play in your browser."
+  },
+  {
+    "title": "On Doing Hard Things",
+    "url": "essays/hard-things.html",
+    "category": "Essays",
+    "description": "A short note on ambition, and why I pick the harder path.",
+    "tags": [],
+    "aliases": [],
+    "text": "On Doing Hard Things A short note on ambition, and why I pick the harder path. Version v1.0.0 Updated Oct 30, 2025 Author Tiernan Lindauer License MIT Most people make grand, vague statements about changing the world during interviews. Very few act like they mean it. I'd rather be the person who does. So I try to take the hardest sensible option in front of me: the extra degree, the harder math, the project that could fail publicly. Difficulty is a filter — it selects for the people who keep going. Why harder is often safer Easy paths are crowded. The hard problems tend to be hard for a reason, which means fewer people are competing on them, and the ones who do are usually worth knowing. Never be discouraged. If I were sunk in the lowest pits of Nova Scotia, with the Rocky Mountains piled on me, I would hang on, exercise faith, and keep up good courage; and I would come out on top. — Joseph Smith Jr. This is a placeholder essay for the new layout — swap in real writing. If you want the format, copy the template . Back to Essays"
+  },
+  {
+    "title": "Essays",
+    "url": "essays/",
+    "category": "Essays",
+    "description": "A collection of my thoughts.",
+    "tags": [],
+    "aliases": [],
+    "text": "Essays A collection of my thoughts. Version v0.1.0 Updated Oct 30, 2025 Author Tiernan Lindauer License MIT On Doing Hard Things — 2025-10-30 View the essay template"
+  },
+  {
+    "title": "Games & Simulations",
+    "url": "games/",
+    "category": "Games",
+    "description": "Play Tiernan Lindauer's browser games and simulations: SatelliteSim.jl, Lofall, 3D chess, Redsim, and Orbits.",
+    "tags": [],
+    "aliases": [],
+    "text": "Games & Simulations Bend dimensions. Build a Mars outpost. Take the long way around the Moon. Experiments you can play in your browser. Version v0.2.0 Updated Oct 1, 2026 Author Tiernan Lindauer License MIT EARTH → MOON → HOME Featured / Mission simulation SatelliteSim.jl / ss.jl From the launchpad to lunar flight and reentry. Explore satellite missions and the physics behind them in an interactive browser demo, backed by a Julia simulation. Launch mission → View source 4D / Platformer Lofall Navigate 3D slices of a four-dimensional world. Rotate the fourth axis to reveal a different path. Play Lofall → 3D / Strategy Chess 3D A familiar game with another dimension. Think beyond the board: pieces move through 3D space. Play Chess 3D → Mars / Systems simulation Redsim Run an early Mars outpost. Balance life support, power, resources, and the operations that keep a base alive. Explore Redsim → ORBITS / 3D 3D / Gravity sandbox Orbits 3D Explore gravity in three dimensions. See how an extra axis changes the shape of an orbit. Play Orbits 3D → ORBITS / 2D 2D / Gravity game Orbits 2D A gravity playground on a single plane. Experiment with motion and find your way through the stars. Play Orbits 2D → Curious how these work? Explore more projects or my GitHub ."
+  },
+  {
+    "title": "The Home of T-Lind",
+    "url": "./",
+    "category": "Pages",
+    "description": "Tiernan Lindauer's software, research, browser games, and experiments in physics. Explore a real-time black hole and the projects below.",
+    "tags": [],
+    "aliases": [],
+    "text": "About > Well hi there! Welcome to my corner of the internet: software, research, and a few experiments in physics. The black hole above is rendered in real time — click Admire to orbit it, with a little music for the journey. I'm Tiernan Lindauer — I build things and write about them. In 2024 I founded LindauerAI , an ed-tech startup that built a dual-AI learning platform ( Gyro for students, CA for teachers). Start with My Motivation , then Projects and Research . GitHub LinkedIn Get in touch Selected Work Photolib — a private, local photo library with natural-language and face search. Accessor — a local voice gateway for coding agents. SatelliteSim.jl — launch, orbit, and lunar missions, built in Julia. LindauerAI — dual-AI learning platform; founder & engineer. Research — cost-based policies for narrative observation of unpredictable events. Games — interactive experiments in physics, graphics, and systems. Writing — essays on motivation, learning, and building. Words I Live By Live Data NASA Astronomy Picture of the Day Loading Next Rocket Launch Loading Latest Commits Loading ISS Position Loading Elsewhere LindauerAI — the ed-tech startup and its story. Essays — longer-form writing. Reading — what I'm reading and recommending. Back to the black hole"
+  },
+  {
+    "title": "Intellistream",
+    "url": "intellistream/",
+    "category": "Projects",
+    "description": "Visit the website",
+    "tags": [],
+    "aliases": [],
+    "text": "← Back to Projects Intellistream Visit the website Intellistream Machine Intuition is a real-time conversation intelligence tool that uses Machine Learning models & AI to analyze live conversations, predict conversational trajectories, and provide strategic insights as you speak. It supports both in-person meetings (microphone) and remote meetings (Google Meet/Zoom via a bot URL). Free tier: Available on the website (see link above). Getting started + quick setup steps Configuration (API key, model, audio input) Practical troubleshooting"
+  },
+  {
+    "title": "Kalman Filter Flight Demo",
+    "url": "kalman/",
+    "category": "Projects",
+    "description": "Interactive INS/GPS Kalman filter demo: a 2D rocket ascent with noisy sensors, live filter tuning, and covariance ellipses.",
+    "tags": [],
+    "aliases": [],
+    "text": "Kalman Filter Flight Demo A noisy IMU predicts, sparse GPS corrects — the violet ellipse is what the filter thinks it doesn't know. ← back to t-lind.github.io t 0.00 s phase boost alt 0 m speed 0 m/s |err| 0.0 m 1 0.0 m GPS lock truth estimate GPS fix 1/2/3 paused Position error vs. 3 envelope last 60 s · coral = |est truth| · lavender = filter's 3"
+  },
+  {
+    "title": "Lightning Detector",
+    "url": "lightning-detector/",
+    "category": "Projects",
+    "description": "A battery-powered ESP32 and AS3935 lightning observation station with signed Wi-Fi uploads, a private Cloudflare dashboard, and reproducible hardware build guides.",
+    "tags": [
+      "C++",
+      "JavaScript",
+      "Python"
+    ],
+    "aliases": [
+      "lightning detector",
+      "AS3935",
+      "ESP32"
+    ],
+    "text": "← Back to Projects Lightning Detector A battery-powered observation station, from sensor firmware to enclosure design and a private cloud dashboard. C++ JavaScript Python View source Build your own Explore the hardware design An Adafruit Feather ESP32 V2 sleeps while the AS3935 sensor listens. A sensor interrupt wakes the controller, which records the observation, sends an HMAC-signed HTTPS batch over Wi-Fi, and goes back to sleep. A flash queue preserves observations during network outages. Hardware, firmware, and a dashboard A Cloudflare Worker stores observations in D1. The private dashboard shows a 24-hour distance plot, searchable event history, battery voltage, and explicit station-health states. Each replica uses its own deployment and access tokens. The public repository includes PlatformIO firmware, a parts list, wiring diagrams, carrier files, build instructions, and software checks. USB bench checks have verified sensor communication, calibration, interrupt wake, and heartbeat uploads; field performance and complete-device battery life still need measurement. A single sensor estimates storm distance; it cannot determine bearing or exact strike locations. This hobby instrument is not a certified lightning warning system."
+  },
+  {
+    "title": "LindauerAI",
+    "url": "lindauerai/",
+    "category": "Projects",
+    "description": "Two AI systems. One learning revolution.",
+    "tags": [],
+    "aliases": [],
+    "text": "LindauerAI Two AI systems. One learning revolution. Version v0.2.0 Updated Jun 25, 2025 Founder Tiernan Lindauer Status Closed Beta Overview LindauerAI was an open-source ed-tech startup I founded in 2024. We built an integrated dual-AI learning platform designed to think with students, not for them , while empowering teachers with real-time classroom intelligence. The platform blended two complementary systems: Gyro – a personalized Socratic AI tutor for K-12 students. CA (Classroom Analyzer) – a teacher dashboard that turns AI conversation data into actionable insights. Core Technology Dual-AI Architecture – separate, cooperative agents for students and teachers to prevent conflicts of interest while sharing anonymized learning signals. LRAG (Latent Retrieval-Augmented Generation) – patent-pending method that answers with textbook-aligned content while factoring in previous chat messages . Google Classroom Integration – OAuth 2.0 & Classroom APIs sync rosters and assignments. Funding & Market Interest By mid 2025, LindauerAI achieved a $4M valuation and $53k raise. The company had previously secured significant market interest, including signed letters of intent from several school districts. Product Tour Gyro – Socratic Tutor Adaptive Socratic questioning. Document upload & analysis (textbooks, PDFs ≤ 20 MB). Transparent citations with adjustable excerpt length. CA – Classroom Analyzer Class & student-level analytics (engagement, misconception clusters, learning-target mastery). AI content classifier for academic-integrity checks. Conversational assignment builder with smart rubrics. Responsible AI We implemented robust safeguards including automatic source citation, content-moderation filters, and an opt-out data policy compliant with FERPA . Our models never train on private student data. Help & Documentation More Information Back"
+  },
+  {
+    "title": "Lofall",
+    "url": "lofall/",
+    "category": "Projects",
+    "description": "A four-dimensional browser platformer. Navigate 3D cross-sections of 4D space, rotate the w-axis to reveal hidden paths, and explore an infinite seeded universe.",
+    "tags": [
+      "JavaScript"
+    ],
+    "aliases": [
+      "4d platformer",
+      "tesseract"
+    ],
+    "text": "← Back to Projects Lofall A four-dimensional browser platformer. Navigate 3D cross-sections of 4D space, rotate the w-axis to reveal hidden paths, and explore an infinite seeded universe. JavaScript Play Lofall Lofall is a four-dimensional platformer that runs in your browser. You navigate three-dimensional cross-sections of four-dimensional space: rotating the w-axis reshapes the world, revealing hidden platforms and hiding others. The procedurally generated universe includes named biomes, four-dimensional geometry, and a von Neumann drone swarm to sever at its root. No installation is required."
+  },
+  {
+    "title": "T-Lind's Motivation",
+    "url": "motivation/",
+    "category": "Pages",
+    "description": "Why even do all of this?",
+    "tags": [],
+    "aliases": [],
+    "text": "T-Lind's Motivation Why even do all of this? Version v0.0.1 Updated Sep 22, 2024 Author Tiernan Lindauer License MIT My Motivation For Working On Hard Problems (And Working In General) I get a lot of questions asking me why I work so much, and what I'm trying to achieve. A lot of people make grand (and vague) statements about \"making the world a better place\" but they just say that during interviews. They don't really mean it. And they certainly don't act like they mean it, because if they were, they would be working a lot harder. This doesn't mean you have to be working 24/7, but it means working as much as possible (like 80-90hrs/wk). For most people, this is not a sacrifice they're willing to make, and I don't blame them. But me? I guess I just don't operate that way. I love working, and I know how to tune out the distractions. I know how to find and work with other highly talented (and often smarter people). Which makes me love my work even more. In particular, I love both AI and spaceflight (but more the latter) because both advance intelligence and exploration, respectively. I’m not just interested in technical things either. My inquisitive nature drives me to explore every area of business and beyond—whether it’s technology, sales, or venture capital investing, I’m fascinated by it all. I have a massive appetite for understanding the world and how it works. This curiosity fuels my ambition to not only solve technical challenges but also to understand how these solutions can be scaled, funded, and brought to the world at large. I want to know it all, master it all, and contribute wherever I can. Because I'm serious about this, I've always tried to take the hardest (while still sensible) option given to me. I took as many AP classes in high school as I could. I competed (and placed in the top 50 projects worldwide) at the International Science & Engineering Fair. In college, I decided to pursue a Computer Science degree and when that wasn't hard enough, I tacked on a Physics degree too. I took the hardest math classes available to me right out of the gate. I work on hard problems outside of my 18hr class load, both brainstorming and actually implementing them. But it’s not just academics. I started LindauerAI, an AI edtech company, and went through the intense process of building the concept, developing the technology, and pitching it to potential partners. It taught me a lot about leadership, resilience, and the intersection of technology and business. In high school, I pushed myself even further out of my comfort zone by joining NJROTC. As a tech and science-focused student, this was an entirely different world for me. It challenged me to think differently, develop discipline, and gain confidence in areas I never expected to. This sensibility has served me very well. I'm at Texas A&M on a full ride, I've already got a six-figure job offer (before college even) and, most importantly, I've got a good trajectory towards improving human intelligence and exploration. With all of this, I'm hoping to make my mark. Preferably in a big, notable way, but I'd be extraordinarily satisfied to be half as influential as Dennis Ritchie was, while being largely unknown. I want to work making life multi-planetary, hopefully by my technical and leadership skills. With enough luck and hard work, I might even be able to go to Mars. So that's why I do it. It might be a sentimental reason, sure, but I've already proven I'm willing to go to extreme lengths to progress towards that goal. The big question now? Can I handle the next big set of challenges life throws at me, given I'm largely on my own? You can never know for certain, but I certainly know it's within my capabilities."
+  },
+  {
+    "title": "OpenDraft",
+    "url": "opendraft/",
+    "category": "Projects",
+    "description": "OpenDraft is a free, open-source writing workshop for human writing and thoughtful critique, with a fair reading-room queue and focused manuscript tools.",
+    "tags": [
+      "TypeScript"
+    ],
+    "aliases": [
+      "open draft",
+      "writing workshop"
+    ],
+    "text": "← Back to Projects OpenDraft A free writing workshop. Give thoughtful feedback, earn credits, and find fresh eyes for your next draft. TypeScript Visit OpenDraft View source OpenDraft connects writers through reciprocal critique. Publish a story or an excerpt, ask for specific feedback, and read work from other writers. A credit exchange and a first-in, first-out reading-room queue give each piece a turn in the spotlight. A workshop built around the manuscript Write and autosave private drafts, publish revisions, and organize numbered parts of a larger work. Read in focus mode and leave passage annotations alongside structured critiques. Find writing circles, save work, follow revisions, and manage feedback in an inbox. Writing and critiques are human-written. Quality checks evaluate feedback; they do not compose it. Public ratings and final showcase decisions remain human. The open-source application uses TypeScript, React, Next.js, and PostgreSQL. The repository includes the workshop rules, database migrations, and setup instructions."
+  },
+  {
+    "title": "Orbits - Refined Celestial Bodies",
+    "url": "orbits/",
+    "category": "Games",
+    "description": "",
+    "tags": [],
+    "aliases": [],
+    "text": "Reset Pause Full Screen Guide Music Volume: SFX Volume: Prediction: 45s Use arrow keys or W/A/S/D to control the spaceship. Press \"T\" for trajectory, \"G\" for guide. The yellow arrow points to the next collectable to get. Collect fuel to keep flying, and upgrades to improve your ship. Deliver the drifting purple ship to the space station for 4 points!"
+  },
+  {
+    "title": "Photolib",
+    "url": "photolib/",
+    "category": "Projects",
+    "description": "A private, local photo library for Windows. Find photos by description or person, browse dates and places, organize albums, and spot duplicates. Search runs on your computer with a bundled offline model.",
+    "tags": [
+      "Python",
+      "Rust",
+      "JavaScript"
+    ],
+    "aliases": [
+      "photo library",
+      "photos"
+    ],
+    "text": "← Back to Projects Photolib A private, local photo library for Windows. Find photos by description or person, browse dates and places, organize albums, and spot duplicates. Search runs on your computer with a bundled offline model. Python Rust JavaScript Download Windows setup · View source Photolib keeps your photo library on your own computer. Describe a photo instead of remembering its filename, find people with face recognition, and combine date, place, folder, and person filters. The desktop app includes favorites, ratings, albums, reverse image search, and duplicate detection. It supports incremental indexing and cached previews when an original drive is offline. The Windows installer includes the image/text model; face recognition weights are an optional one-time download."
+  },
+  {
+    "title": "My Profile",
+    "url": "profile/",
+    "category": "Pages",
+    "description": "My profile and socials.",
+    "tags": [],
+    "aliases": [],
+    "text": "My Profile My profile and socials. Version v0.0.3 Updated Sep 23, 2026 Author Tiernan Lindauer License MIT My Profile The always-up-to-date, web-friendly version of my resume. Professional Resume Professional Experience Aerospace Software Engineer May 2026 – Aug 2026 Blue Origin · Kent, WA Developed proprietary ML solutions for advanced concepts at Blue Origin. Software Programmer Sep 2025 – Apr 2026 Brokk, Inc. · Remote Synced Brokk's unique AI code editor interface with SWEBench-Live and programmed the desktop application. GNC Systems Engineering Intern May 2025 – Sep 2025 The MITRE Corporation · Huntsville, AL Built a novel Next-Gen Interceptor (NGI) interception technique, enabling battlespace expansion via thrust vectoring and machine learning algorithms, from scratch in MATLAB. Received \"exceeded expectations\" performance review. Founder & Chief Engineer Jan 2024 – Present LindauerAI, LLC · Austin, TX Founded an AI edtech platform integrating Gyro (AI Socratic tutor) & CA (Classroom Analyzer) using LRAG technology for cited responses. Machine-Learning Intern Jun 2024 – Aug 2024 DataStax, Inc. · Austin, TX Built a GPU-accelerated product-quantization vector-search system with CUDA, achieving up to 72× speed-ups for AstraDB. Machine-Learning Intern Jun 2023 – Aug 2023 DataStax, Inc. · Austin, TX Contributed to vector-search R&D, built companywide AI NoSQL assistant, and evaluated the FINGER algorithm. Education Texas A&M University B.S. Computer Science & B.S. Physics (Dual Degree) · GPA 3.84 · 142 Credit Hours Completed Graduation 2025/2027 Brown Scholar (full ride) Engineering Honors National Merit Scholar $103,500 scholarships 1540 SAT 35 ACT Patents Reproductive Training Architecture for Machine Learning US20240320487A1 · Aug 2022 – Aug 2023 Novel RL architecture with dynamic pruning. 29% reduction in training time for equivalent accuracy. Available to view on Google Patents . System for Machine-Assisted Educational Interaction US 63/569,514 · Oct 2023 – Mar 2024 Introduces LRAG for contextual RAG retrieval. Outperforms GPT models by 3–7% on the CEBA educational benchmark. Selected Projects Kinect-Based Terrain Tracker 2017 Real-time floor detection in C++ using Xbox One Kinect depth. Semantic Photo Manager 2023 Local-first app indexing ~100k photos with CLIP & LanceDB embeddings. A Compendium of Practical Wisdom 2025 Authored & self-published philosophy book. Amazon link . Activities TAMU Ballroom Dance Event Coordinator Feb 2025 – Present Coordinated socials, dances, and managed instructors' contracts. TAMU RoboMasters Computer-Vision team member Aug 2023 – May 2024 Designed CV pipeline code for stereo vision and monovision approaches. Undergraduate Research Co-researcher Aug 2023 – May 2024 Worked with Prof. Shell on DFA/POMDP planning. Expanded on \"Planning To Chronicle\" paper for intelligent robotic planning. Technical Skills Python C++ Java MATLAB PyTorch PostgreSQL GCP Flask Docker BigQuery Cloud Run LLMs Artificial Intelligence Retrieval-Augmented Generation Reinforcement Learning Vector Search Software Engineering Motion Planning Systems Engineering Guidance, Navigation & Control Physics-based Modeling Model-based Systems Engineering Other Organizations The Triple Nine Society , the world's largest 3σ (145+) high-IQ society. Aggie Data Science Club , a student organization dedicated to data science. I occasionally present on GenAI/vector search. Get In Touch LinkedIn: Tiernan Lindauer Note: I do not usually respond to cold connects. GitHub: github.com/T-Lind Many of my commits are private due to LindauerAI."
+  },
+  {
+    "title": "My Projects",
+    "url": "projects/",
+    "category": "Pages",
+    "description": "Explore Tiernan Lindauer's software and hardware projects: OpenDraft, ty, Lightning Detector, Accessor, SatelliteSim.jl, Syngrafi, and more.",
+    "tags": [],
+    "aliases": [],
+    "text": "My Projects Personal projects that are not confidential (patents) or research. Version v0.0.8 Updated Oct 10, 2026 Author Tiernan Lindauer License MIT OpenDraft A free, open-source writing workshop for human writing and thoughtful critique. Share drafts, annotate passages, find writing circles, and exchange feedback through a fair reading-room queue. TypeScript ty Tiny, at your terminal. A quiet local coding and web research agent in one Python file, with no runtime dependencies. Models run through Ollama; tools, steering, and session history stay close at hand. Python Lightning Detector A battery-powered ESP32 and AS3935 observation station. Sensor interrupts wake the controller for signed Wi-Fi uploads to a private dashboard, with offline buffering and reproducible hardware build guides. C++ JavaScript Python Photolib A private, local photo library for Windows. Find photos by description or person, browse dates and places, organize albums, and spot duplicates. Search runs on your computer with a bundled offline model. Python Rust JavaScript Accessor A local voice gateway for coding agents. Talk to Codex, Claude Code, and other agent harnesses, with local speech recognition, spoken replies, and shared memory. Rust SatelliteSim.jl (ss.jl) Satellite mission simulation in Julia: launch vehicles, orbital flight, lunar missions, and atmospheric reentry, with an interactive browser interface. Julia JavaScript chess-3d A true 3D chess game, allowing pieces to move in three dimensions, with toptobes. Python TypeScript Lofall A four-dimensional browser platformer. Navigate 3D cross-sections of 4D space, rotate the w-axis to reveal hidden paths, and explore an infinite seeded universe. JavaScript Redsim Discrete-time simulation of an early Mars outpost. Models environmental physics, life-support systems, power generation, resource loops, agent physiology, and base operations — all exposed via a REST API, a Next.js dashboard, and a Java 3D graphical client. Java TypeScript Python Intellistream Real-time predictive conversational intelligence for meetings, with a free tier available. Java TypeScript Syngrafi Universal scripture study with highlights, notes, and tags, powered by semantic search. Supports the Bible, Koran, Bhagavad Gita, The Book of Mormon, and more. TypeScript Wormhole Simulation C++ kinect-terrain-tracker A fast and efficient floor detection system using raw depth data from the Xbox One Kinect, projecting the detected floor into a bird's-eye view with dynamic calibration. C++ 4d-projection Loads 4D meshes and renders them in 3D using hyperplanar slices. Python coyote A pathing and control library for 2-wheel differential swerve drives. I also used CAD to design the drivetrain & built it. Java motor-lib A library for PWM-based control of 12V DC motors in Python. Requires a GPIO device. Python turing-machine-language An instructional language based on Alan Turing's original conception of a Turing machines. Java space-mission-planner Demo project that calculates trajectories and fuel requirements for different transfers. C++ kalman-flight-demo Interactive Kalman filter demo: a rocket navigating by fusing a noisy IMU with intermittent GPS. Tune the filter, cut the GPS, and watch the uncertainty ellipse breathe. JavaScript"
+  },
+  {
+    "title": "Redsim",
+    "url": "https://mars-sim.onrender.com/",
+    "category": "Projects",
+    "description": "Discrete-time simulation of an early Mars outpost. Models environmental physics, life-support systems, power generation, resource loops, agent physiology, and base operations — all exposed via a REST API, a Next.js dashboard, and a Java 3D graphical client.",
+    "tags": [
+      "Java",
+      "TypeScript",
+      "Python"
+    ],
+    "aliases": [],
+    "text": "Redsim Discrete-time simulation of an early Mars outpost. Models environmental physics, life-support systems, power generation, resource loops, agent physiology, and base operations — all exposed via a REST API, a Next.js dashboard, and a Java 3D graphical client. Java TypeScript Python"
+  },
+  {
+    "title": "kinect-terrain-tracker",
+    "url": "https://github.com/T-Lind/kinect-terrain-tracker",
+    "category": "Projects",
+    "description": "A fast and efficient floor detection system using raw depth data from the Xbox One Kinect, projecting the detected floor into a bird's-eye view with dynamic calibration.",
+    "tags": [
+      "C++"
+    ],
+    "aliases": [],
+    "text": "kinect-terrain-tracker A fast and efficient floor detection system using raw depth data from the Xbox One Kinect, projecting the detected floor into a bird's-eye view with dynamic calibration. C++"
+  },
+  {
+    "title": "4d-projection",
+    "url": "https://github.com/T-Lind/4d-projection",
+    "category": "Projects",
+    "description": "Loads 4D meshes and renders them in 3D using hyperplanar slices.",
+    "tags": [
+      "Python"
+    ],
+    "aliases": [],
+    "text": "4d-projection Loads 4D meshes and renders them in 3D using hyperplanar slices. Python"
+  },
+  {
+    "title": "coyote",
+    "url": "https://github.com/T-Lind/Coyote",
+    "category": "Projects",
+    "description": "A pathing and control library for 2-wheel differential swerve drives. I also used CAD to design the drivetrain & built it.",
+    "tags": [
+      "Java"
+    ],
+    "aliases": [],
+    "text": "coyote A pathing and control library for 2-wheel differential swerve drives. I also used CAD to design the drivetrain & built it. Java"
+  },
+  {
+    "title": "motor-lib",
+    "url": "https://github.com/T-Lind/MotorLib",
+    "category": "Projects",
+    "description": "A library for PWM-based control of 12V DC motors in Python. Requires a GPIO device.",
+    "tags": [
+      "Python"
+    ],
+    "aliases": [],
+    "text": "motor-lib A library for PWM-based control of 12V DC motors in Python. Requires a GPIO device. Python"
+  },
+  {
+    "title": "turing-machine-language",
+    "url": "https://github.com/T-Lind/TuringMachineLanguage",
+    "category": "Projects",
+    "description": "An instructional language based on Alan Turing's original conception of a Turing machines.",
+    "tags": [
+      "Java"
+    ],
+    "aliases": [],
+    "text": "turing-machine-language An instructional language based on Alan Turing's original conception of a Turing machines. Java"
+  },
+  {
+    "title": "space-mission-planner",
+    "url": "https://github.com/T-Lind/space-mission-planner",
+    "category": "Projects",
+    "description": "Demo project that calculates trajectories and fuel requirements for different transfers.",
+    "tags": [
+      "C++"
+    ],
+    "aliases": [],
+    "text": "space-mission-planner Demo project that calculates trajectories and fuel requirements for different transfers. C++"
+  },
+  {
+    "title": "Reading List",
+    "url": "reading/",
+    "category": "Reading",
+    "description": "What I'm reading and what's on the shelf.",
+    "tags": [],
+    "aliases": [],
+    "text": "Reading List What I'm reading and what's on the shelf. Version v0.1.0 Updated Jan 20, 2026 Author Tiernan Lindauer License MIT 2026 Benjamin Franklin by Walter Isaacson Never Split the Difference by Chris Voss A Random Walk Down Wall Street by Burton Malkiel The Bogleheads' Guide to Investing by Taylor Larimore, Mel Lindauer, & Michael LeBoeuf Autobiography of a Yogi by Paramahansa Yogananda The Picture of Dorian Gray by Oscar Wilde The Three Body Problem by Liu Cixin Anna Karenina by Leo Tolstoy Man's Search for Meaning by Viktor Frankl Crime and Punishment by Fyodor Dostoevsky 2025 Orbital Mechanics for Engineering Students by Howard D. Curtis Logistics Principles and Applications by John Langford Zero to One by Peter Thiel The House of Love and Death by Andrew Klavan A Woman Underground by Andrew Klavan The Fellowship of the Ring by J.R.R. Tolkien The Two Towers by J.R.R. Tolkien The Return of the King by J.R.R. Tolkien Ad Shiloh by Adam King Democracy in America by Alexis de Tocqueville A Satyr Against Mankind by John Wilmot Essentials of Human Anatomy and Physiology by Marieb & Keller Marriage A-la-Mode by John Dryden"
+  },
+  {
+    "title": "T-Lind's Research",
+    "url": "research/",
+    "category": "Research",
+    "description": "My academic research papers are published here.",
+    "tags": [],
+    "aliases": [],
+    "text": "T-Lind's Research My academic research papers are published here. Version v0.0.1 Updated Sep 20, 2024 Author Tiernan Lindauer License MIT REPNET (2023) Designed and implemented the REProductive NETwork (REPNET) architecture, a custom data structure that reduces reinforcement learning training times by 29.3% and variability by 72.62%. REPNET dynamically prunes unproductive model branches using Adaptive Pruning Time Adjustment (APTA) and non-linear reproduction thresholds, significantly accelerating training in environments like OpenAI’s \"CartPole.\" This innovation optimizes AI model training and has applications across healthcare and sustainability technologies. REPNET is patent-pending. Research Paper This browser does not support PDFs. Please download the PDF to view it: Download PDF Cost-based Passive Observation of Events (2024) This paper presents a cost-based approach to planning for passive observation of unpredictable events, building on previous work that used a Markov model. The authors introduce a cost matrix to account for real-world factors like distance traveled or resources expended, aiming to minimize costs between states rather than just the number of steps. They demonstrate the feasibility of calculating an optimal policy using this cost-based modeling approach through experiments on a \"Wedding FOM\" scenario. The results show that while the cost-optimized algorithm doesn't significantly reduce the number of steps compared to the no-cost algorithm, it does achieve a statistically significant reduction in overall costs. The authors also developed a Python library and JSON configuration system to make their approach more accessible to other researchers and practitioners. The source code can be found here . Research Paper This browser does not support PDFs. Please download the PDF to view it: Download PDF"
+  },
+  {
+    "title": "SatelliteSim.jl (ss.jl)",
+    "url": "satellite-sim/",
+    "category": "Projects",
+    "description": "Satellite mission simulation in Julia: launch vehicles, orbital flight, lunar missions, and atmospheric reentry, with an interactive browser interface.",
+    "tags": [
+      "Julia",
+      "JavaScript"
+    ],
+    "aliases": [
+      "ss.jl",
+      "ssjl",
+      "satellite sim",
+      "satellitesim",
+      "moonshot"
+    ],
+    "text": "← Back to Projects SatelliteSim.jl (ss.jl) Satellite mission simulation in Julia: launch vehicles, orbital flight, lunar missions, and atmospheric reentry, with an interactive browser interface. Julia JavaScript Launch the demo · View source SatelliteSim.jl follows a mission from launch through orbital flight, lunar transfers, and atmospheric reentry. The Julia simulation models vehicle stages, propulsion, flight dynamics, and mission trajectories. The browser interface provides mission control, a vehicle builder, and a model inspector. Explore the simulation and its spacecraft models, then read the source for the physical models and mission design tools. From the launch pad to the Moon Design staged launch vehicles and follow gravity-turn ascent into a parking orbit. Fly a circumlunar free return, a guided lunar landing, or a low-Earth-orbit reentry. Inspect 3D spacecraft, terrain, trajectories, and flight telemetry in the browser. The simulation core uses Julia’s standard library. The browser version ports the models to JavaScript and includes parity checks against the Julia implementation. The repository documents numerical validation and the model’s fidelity limits."
+  },
+  {
+    "title": "Syngrafi",
+    "url": "syngrafi/",
+    "category": "Projects",
+    "description": "Syngrafi: scripture study with semantic search, passage highlights, notes, tags, and comparisons across traditions.",
+    "tags": [
+      "TypeScript"
+    ],
+    "aliases": [
+      "scripture",
+      "Bible",
+      "Quran",
+      "Koran"
+    ],
+    "text": "← Back to Projects Syngrafi TypeScript Visit the website Syngrafi is a scripture study experience with highlights, notes, and tags—built around semantic search so you can find passages by idea, not just keywords. Explore the library, search semantically, and move from close reading to broader comparisons across traditions. Highlight, annotate, and tag passages Search by idea (semantic matching) Comparative analysis side-by-side"
+  },
+  {
+    "title": "ty",
+    "url": "ty/",
+    "category": "Projects",
+    "description": "ty: a quiet local coding and web research agent in one Python file, with no runtime dependencies. Models run locally through Ollama.",
+    "tags": [
+      "Python"
+    ],
+    "aliases": [
+      "tiny terminal agent",
+      "ollama",
+      "local AI agent",
+      "LLM"
+    ],
+    "text": "← Back to Projects ty Tiny, at your terminal. A quiet local agent for small coding tasks, quick questions, and focused web research. Python View source and quick start Read the efficiency notes ty keeps the useful parts of an agent session visible: the answer, the files it touches, and the actions it takes. It runs in one Python file with no runtime dependencies, using a local model through Ollama. Small prompts, useful tools Read, search, edit, and review files, with compact tool activity and details on demand. Search the web and retrieve relevant source passages with a lightweight lexical ranker. Choose installed models, steer a running task, resume sessions, and inspect or undo file-tool changes. Python 3.11+ and Ollama are required. The README covers installation, model selection, and approval modes. Run ty --demo to preview the interface without a model."
+  },
+  {
+    "title": "Wormhole Simulation",
+    "url": "wormhole/",
+    "category": "Projects",
+    "description": "View on GitHub",
+    "tags": [],
+    "aliases": [],
+    "text": "← Back to Projects Wormhole Simulation View on GitHub This is a real-time, interactive simulation of a traversable wormhole connecting two distinct universes. The rendering is performed entirely on the GPU using a compute shader for high performance. Your browser does not support the video tag. How it Works The simulation visualizes what it might look like to approach a Morris-Thorne wormhole. The view from one universe into the other through the wormhole's throat is distorted by an approximated gravitational lensing effect, implemented as a refraction effect in the compute shader. While not a full general relativity calculation, this approach allows for an interactive, real-time experience. The project also includes a second, non-interactive, CPU-based renderer that calculates the physically accurate path of light by numerically solving the geodesic equations of general relativity. This produces a more accurate image at the cost of being extremely slow. Technologies Used C++ (C++17) OpenGL (4.3) GLSL (Compute Shaders) GLFW for windowing and input GLM for mathematics CMake for building"
+  }
+]

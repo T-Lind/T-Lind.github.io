@@ -199,7 +199,7 @@ window.addEventListener('load', function () {
 // Instead, find the first known top-level section segment and count "up" from there.
 // Keep this list in sync with sidebar.html when adding a new top-level section.
 function getPathPrefix() {
-    var knownTopLevels = ['wormhole', 'projects', 'reading', 'profile', 'lindauerai',
+    var knownTopLevels = ['opendraft', 'ty', 'lightning-detector', 'search', 'accessor', 'satellite-sim', 'photolib', 'chess-3d', 'lofall', 'wormhole', 'projects', 'reading', 'profile', 'lindauerai',
         'research', 'games', 'motivation', 'intellistream', 'syngrafi', 'kalman', 'orbits'];
     var pathname = window.location.pathname.replace(/\/?index\.html?$/i, '') || '/';
     var segments = pathname.split('/').filter(Boolean);

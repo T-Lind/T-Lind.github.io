@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="Tiernan Lindauer" />
-    <meta name="dcterms.date" content="2026-10-02" />
+    <meta name="dcterms.date" content="2026-10-10" />
     <meta name="description" content="A local voice gateway for coding agents. Talk to Codex, Claude Code, and other agent harnesses, with local speech recognition, spoken replies, and shared memory." />
     <title>Accessor | Tiernan Lindauer</title>
     <link rel="stylesheet" href="../reset.css" />
@@ -24,12 +24,24 @@
             </div>
         </header>
         <figure>
-            <img class="project-screenshot" src="../public/projects/accessor-29.png" alt="Accessor voice pipeline from wake word and local speech recognition to agent tools and spoken replies" />
-            <figcaption>Accessor’s voice pipeline, from the project’s own architecture diagram.</figcaption>
+            <img class="project-screenshot" src="../public/projects/accessor-demo.svg" alt="Accessor mock-mode terminal demo showing the conversation status, a harmless greeting, and message controls" width="1440" height="900" />
+            <figcaption>An illustrative terminal demo based on the real layout and a verified mock-mode greeting. No account or microphone was used.</figcaption>
         </figure>
-        <p class="project-links"><a href="https://github.com/T-Lind/accessor">View source and setup instructions</a></p>
+        <p class="project-links"><a href="https://github.com/T-Lind/accessor">View source and setup</a><a href="https://github.com/T-Lind/accessor/releases">Download a release</a></p>
         <p>Say “twenty-nine” to open a conversation with a coding agent. Accessor manages speech recognition, the conversation, and a terminal dashboard while reusing the agent’s tools and account connections.</p>
         <p>The Rust gateway supports Codex App Server, Claude Code, Antigravity, opencode, and Cursor. Local wake detection and transcription, configurable spoken replies, shared memory, and typed commands connect the voice workflow to the tools you already use.</p>
+        <h2>Voice or keyboard, the same conversation</h2>
+        <ul>
+            <li>Local Canary, Parakeet, or Whisper transcription, with Piper speech by default and optional cloud voices.</li>
+            <li>A terminal activity pane for replies and tool calls, plus settings, approval controls, and spoken harness switching.</li>
+            <li>Shared memory, notes, alarms, and scheduled tasks that persist across agent harnesses.</li>
+        </ul>
+        <p>Accessor is a local desktop tool. Windows, Linux, and Apple Silicon builds are available in Releases. Try <code>acc --text --agent mock</code> for a text-only session without an account or microphone.</p>
+        <h2>The voice pipeline</h2>
+        <figure>
+            <img class="project-screenshot" src="../public/projects/accessor-29.png" alt="Accessor architecture from local wake detection and speech recognition through agent tools and spoken replies" loading="lazy" />
+            <figcaption>The project’s architecture diagram, from wake detection to spoken replies.</figcaption>
+        </figure>
     </main>
 </div>
 <script src="../bh-nav.js"></script>

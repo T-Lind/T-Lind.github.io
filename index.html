@@ -295,6 +295,7 @@
     <a href="profile/">Profile</a>
     <a href="games/">Games</a>
     <a href="reading/">Reading</a>
+    <a href="search/" class="site-search-trigger" data-site-search aria-keyshortcuts="Control+k Meta+k /">Search <kbd>Ctrl / ⌘ K</kbd></a>
   </nav>
 
   <div id="welcome">
@@ -830,7 +831,7 @@ void main(){
     state.tDist = immersive ? 16.0 : parseFloat(layout.getPropertyValue("--hero-distance")) || PRESET.dist;
     requestFrame();
   }
-  const onUI = (e) => e.target && e.target.closest && e.target.closest("#ui, #site-nav");
+  const onUI = (e) => e.target && e.target.closest && e.target.closest("#ui, #site-nav, .site-search-dialog");
 
   window.addEventListener("pointerdown", (e) => {
     if (!immersive || onUI(e)) return;
@@ -1025,5 +1026,6 @@ void main(){
 </script>
 <script src="admire-audio.js"></script>
 <script src="bh-home.js"></script>
+<script src="search.js"></script>
 </body>
 </html>

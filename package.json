@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "search:index": "node scripts/build-search-index.mjs",
+    "test:site": "node --test tests/*.test.cjs",
+    "preview:site": "node scripts/preview-site.mjs"
   },
   "dependencies": {
     "@radix-ui/react-icons": "^1.3.0",

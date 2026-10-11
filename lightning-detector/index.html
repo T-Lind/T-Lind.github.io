@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-10-10" />
+    <meta name="description" content="A battery-powered ESP32 and AS3935 lightning observation station with signed Wi-Fi uploads, a private Cloudflare dashboard, and reproducible hardware build guides." />
+    <title>Lightning Detector | Tiernan Lindauer</title>
+    <link rel="stylesheet" href="../reset.css" />
+    <link rel="stylesheet" href="../index.css" />
+    <link rel="stylesheet" href="../bh.css" />
+</head>
+<body>
+<div class="site-layout">
+    <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+    <main class="main-content">
+        <a href="../projects/" class="back-link">&larr; Back to Projects</a>
+        <header class="page-head">
+            <h1 class="page-head-title">Lightning Detector</h1>
+            <p class="page-head-subtitle">A battery-powered observation station, from sensor firmware to enclosure design and a private cloud dashboard.</p>
+            <div class="project-tags">
+                <span class="project-tag" data-color="pink">C++</span>
+                <span class="project-tag" data-color="yellow">JavaScript</span>
+                <span class="project-tag" data-color="blue">Python</span>
+            </div>
+        </header>
+        <figure>
+            <img class="project-screenshot" src="../public/projects/lightning-detector-assembly.png" alt="3D assembly render of the lightning detector with a transparent enclosure, battery, ESP32 Feather, sensor board, and vent" width="1400" height="1000" />
+            <figcaption>The enclosure assembly with its cover hidden: carrier, battery, microcontroller, sensor, and wiring.</figcaption>
+        </figure>
+        <p class="project-links"><a href="https://github.com/T-Lind/lightning-detector">View source</a><a href="https://github.com/T-Lind/lightning-detector/blob/main/docs/build.md">Build your own</a><a href="https://github.com/T-Lind/lightning-detector/tree/main/hardware/3d">Explore the hardware design</a></p>
+        <p>An Adafruit Feather ESP32 V2 sleeps while the AS3935 sensor listens. A sensor interrupt wakes the controller, which records the observation, sends an HMAC-signed HTTPS batch over Wi-Fi, and goes back to sleep. A flash queue preserves observations during network outages.</p>
+        <h2>Hardware, firmware, and a dashboard</h2>
+        <p>A Cloudflare Worker stores observations in D1. The private dashboard shows a 24-hour distance plot, searchable event history, battery voltage, and explicit station-health states. Each replica uses its own deployment and access tokens.</p>
+        <p>The public repository includes PlatformIO firmware, a parts list, wiring diagrams, carrier files, build instructions, and software checks. USB bench checks have verified sensor communication, calibration, interrupt wake, and heartbeat uploads; field performance and complete-device battery life still need measurement.</p>
+        <p>A single sensor estimates storm distance; it cannot determine bearing or exact strike locations. This hobby instrument is not a certified lightning warning system.</p>
+    </main>
+</div>
+<script src="../bh-nav.js"></script>
+</body>
+</html>

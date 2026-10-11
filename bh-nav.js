@@ -13,7 +13,8 @@
         ["motivation/", "Motivation"],
         ["profile/", "Profile"],
         ["games/", "Games"],
-        ["reading/", "Reading"]
+        ["reading/", "Reading"],
+        ["search/", "Search"]
     ];
 
     var css =
@@ -50,6 +51,13 @@
         var a = document.createElement("a");
         a.href = base + it[0];
         a.textContent = it[1];
+        if (it[0] === "search/") {
+            a.className = "site-search-trigger";
+            a.setAttribute("data-site-search", "");
+            a.setAttribute("aria-keyshortcuts", "Control+k Meta+k /");
+            var key = document.createElement("kbd"); key.textContent = "Ctrl / ⌘ K";
+            a.appendChild(key);
+        }
         var target = (basePath + it[0]).replace(/\/+$/, "") || "/";
         if (target === here) a.setAttribute("aria-current", "page");
         nav.appendChild(a);
@@ -57,4 +65,6 @@
 
     if (document.body) document.body.appendChild(nav);
     else document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(nav); });
+    var search = document.createElement("script"); search.src = base + "search.js";
+    document.head.appendChild(search);
 })();

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Accessor mock-mode terminal demo</title>
+  <desc id="desc">A rendered view of Accessor 0.18.0 in mock mode, showing the genuine typed exchange “hello” and “Mock agent received: hello”. Microphone is off.</desc>
+  <defs>
+    <linearGradient id="bg" x2="0" y2="1"><stop stop-color="#0c1320"/><stop offset="1" stop-color="#080d16"/></linearGradient>
+    <linearGradient id="panel" x2="1" y2="1"><stop stop-color="#151f2e"/><stop offset="1" stop-color="#111a27"/></linearGradient>
+    <linearGradient id="accent" x2="1"><stop stop-color="#67e8c1"/><stop offset="1" stop-color="#71b9ff"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#000" flood-opacity=".28"/></filter>
+    <style>
+      .mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+      .ui{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+      .muted{fill:#8494a9}.bright{fill:#e7eef8}.green{fill:#71e4b5}.blue{fill:#8fcaff}
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <circle cx="1280" cy="110" r="240" fill="#1d5d76" opacity=".10"/>
+  <circle cx="140" cy="810" r="260" fill="#297264" opacity=".08"/>
+  <g filter="url(#shadow)">
+    <rect x="74" y="54" width="1292" height="792" rx="24" fill="#0c121c" stroke="#2c394b" stroke-width="2"/>
+    <rect x="76" y="56" width="1288" height="91" rx="22" fill="#141d2a"/>
+    <path d="M76 127v-48a23 23 0 0 1 23-23h1242a23 23 0 0 1 23 23v48" fill="#141d2a"/>
+    <circle cx="111" cy="101" r="8" fill="#ff6f68"/><circle cx="139" cy="101" r="8" fill="#f5c15d"/><circle cx="167" cy="101" r="8" fill="#68d391"/>
+    <text x="208" y="109" class="ui" font-size="16" fill="#95a4b7">LOCAL AGENT GATEWAY</text>
+    <text x="1268" y="109" text-anchor="end" class="mono muted" font-size="15">MOCK · MIC OFF</text>
+    <rect x="108" y="171" width="1224" height="105" rx="17" fill="url(#panel)" stroke="#304057"/>
+    <rect x="108" y="171" width="6" height="105" rx="3" fill="url(#accent)"/>
+    <text x="142" y="211" class="mono bright" font-size="24" font-weight="650">ACCESSOR <tspan class="muted" font-size="19">0.18.0</tspan><tspan class="muted" font-size="19"> · </tspan><tspan font-size="19">voice &amp; agents</tspan></text>
+    <rect x="1030" y="188" width="268" height="37" rx="18" fill="#17372f" stroke="#28634f"/>
+    <circle cx="1053" cy="206" r="5" fill="#65e3ae"/>
+    <text x="1068" y="212" class="mono green" font-size="12">Listening · conversation open</text>
+    <text x="142" y="247" class="mono muted" font-size="15">Main harness:</text>
+    <text x="263" y="247" class="mono blue" font-size="15">M L · mock · mock-light</text>
+
+    <rect x="108" y="302" width="1224" height="375" rx="17" fill="url(#panel)" stroke="#304057"/>
+    <path d="M125 302h1190a17 17 0 0 1 17 17v43H108v-43a17 17 0 0 1 17-17z" fill="#182433"/>
+    <text x="142" y="340" class="mono bright" font-size="16" font-weight="600">Activity</text>
+    <text x="1298" y="340" text-anchor="end" class="mono muted" font-size="13">mouse wheel or PgUp/PgDn</text>
+    <line x1="108" y1="362" x2="1332" y2="362" stroke="#2a394d"/>
+    <rect x="142" y="393" width="94" height="31" rx="15" fill="#1d3446"/>
+    <text x="189" y="414" text-anchor="middle" class="mono blue" font-size="13">You</text>
+    <text x="258" y="415" class="mono bright" font-size="18">hello</text>
+    <line x1="142" y1="446" x2="1298" y2="446" stroke="#233143"/>
+    <rect x="142" y="469" width="94" height="31" rx="15" fill="#18362e"/>
+    <text x="189" y="490" text-anchor="middle" class="mono green" font-size="13">Agent</text>
+    <text x="258" y="490" class="mono bright" font-size="18">Mock agent received: hello</text>
+    <text x="142" y="631" class="mono muted" font-size="13">Typed transcript · local mock backend · no tool calls</text>
+
+    <rect x="108" y="700" width="1224" height="91" rx="17" fill="#121b28" stroke="#304057"/>
+    <text x="142" y="732" class="mono bright" font-size="14" font-weight="600">Message or / command</text>
+    <text x="1298" y="732" text-anchor="end" class="mono muted" font-size="13">Tab completes · Enter sends</text>
+    <line x1="142" y1="750" x2="1298" y2="750" stroke="#2d3c50"/>
+    <text x="142" y="775" class="mono muted" font-size="13">Continue while thinking · Esc cancel · /sleep · /audio · /settings</text>
+  </g>
+  <text x="720" y="880" text-anchor="middle" class="ui" fill="#91a3b9" font-size="13" letter-spacing="1.5">MOCK-MODE TERMINAL DEMO · MICROPHONE OFF</text>
+</svg>

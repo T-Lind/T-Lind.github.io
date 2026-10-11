@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-10-10" />
+    <meta name="description" content="ty: a quiet local coding and web research agent in one Python file, with no runtime dependencies. Models run locally through Ollama." />
+    <title>ty | Tiernan Lindauer</title>
+    <link rel="stylesheet" href="../reset.css" />
+    <link rel="stylesheet" href="../index.css" />
+    <link rel="stylesheet" href="../bh.css" />
+</head>
+<body>
+<div class="site-layout">
+    <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
+    <main class="main-content">
+        <a href="../projects/" class="back-link">&larr; Back to Projects</a>
+        <header class="page-head">
+            <h1 class="page-head-title">ty</h1>
+            <p class="page-head-subtitle">Tiny, at your terminal. A quiet local agent for small coding tasks, quick questions, and focused web research.</p>
+            <div class="project-tags"><span class="project-tag" data-color="blue">Python</span></div>
+        </header>
+        <figure>
+            <img class="project-screenshot" src="../public/projects/ty-terminal.svg" alt="ty README terminal demo showing compact read, search, and edit activity and a formatted response" width="940" height="651" />
+            <figcaption>The project’s README example, generated from its synthetic terminal demo. Timings are illustrative.</figcaption>
+        </figure>
+        <p class="project-links"><a href="https://github.com/T-Lind/ty">View source and quick start</a><a href="https://github.com/T-Lind/ty/blob/main/docs/efficiency.md">Read the efficiency notes</a></p>
+        <p>ty keeps the useful parts of an agent session visible: the answer, the files it touches, and the actions it takes. It runs in one Python file with no runtime dependencies, using a local model through Ollama.</p>
+        <h2>Small prompts, useful tools</h2>
+        <ul>
+            <li>Read, search, edit, and review files, with compact tool activity and details on demand.</li>
+            <li>Search the web and retrieve relevant source passages with a lightweight lexical ranker.</li>
+            <li>Choose installed models, steer a running task, resume sessions, and inspect or undo file-tool changes.</li>
+        </ul>
+        <p>Python 3.11+ and Ollama are required. The README covers installation, model selection, and approval modes. Run <code>ty --demo</code> to preview the interface without a model.</p>
+    </main>
+</div>
+<script src="../bh-nav.js"></script>
+</body>
+</html>

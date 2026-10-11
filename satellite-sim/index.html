@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="Tiernan Lindauer" />
-    <meta name="dcterms.date" content="2026-10-02" />
+    <meta name="dcterms.date" content="2026-10-10" />
     <meta name="description" content="Satellite mission simulation in Julia: launch vehicles, orbital flight, lunar missions, and atmospheric reentry, with an interactive browser interface." />
     <title>SatelliteSim.jl (ss.jl) | Tiernan Lindauer</title>
     <link rel="stylesheet" href="../reset.css" />
@@ -25,12 +25,19 @@
             </div>
         </header>
         <figure>
-            <img class="project-screenshot" src="../public/projects/satellite-sim.png" alt="SatelliteSim model inspector showing a two-person lunar lander" />
-            <figcaption>The model inspector showing the project’s two-person lunar lander concept.</figcaption>
+            <img class="project-screenshot" src="../public/projects/ss-demo.jpg" alt="SatelliteSim’s live spacecraft viewer rendering the lunar lander exterior in 3D" />
+            <figcaption>A fresh screenshot of the live 3D spacecraft viewer, showing the lunar lander exterior.</figcaption>
         </figure>
         <p class="project-links"><a href="https://t-lind.github.io/ss.jl/">Launch the demo</a> &middot; <a href="https://github.com/T-Lind/ss.jl">View source</a></p>
         <p>SatelliteSim.jl follows a mission from launch through orbital flight, lunar transfers, and atmospheric reentry. The Julia simulation models vehicle stages, propulsion, flight dynamics, and mission trajectories.</p>
         <p>The browser interface provides mission control, a vehicle builder, and a model inspector. Explore the simulation and its spacecraft models, then read the source for the physical models and mission design tools.</p>
+        <h2>From the launch pad to the Moon</h2>
+        <ul>
+            <li>Design staged launch vehicles and follow gravity-turn ascent into a parking orbit.</li>
+            <li>Fly a circumlunar free return, a guided lunar landing, or a low-Earth-orbit reentry.</li>
+            <li>Inspect 3D spacecraft, terrain, trajectories, and flight telemetry in the browser.</li>
+        </ul>
+        <p>The simulation core uses Julia’s standard library. The browser version ports the models to JavaScript and includes parity checks against the Julia implementation. The repository documents numerical validation and the model’s fidelity limits.</p>
     </main>
 </div>
 <script src="../bh-nav.js"></script>
