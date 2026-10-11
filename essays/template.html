@@ -1,32 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="author" content="Tiernan Lindauer"/>
-    <meta name="dcterms.date" content="YYYY-MM-DD"/>
-    <title>[Essay Title]</title>
-    <link rel="stylesheet" href="../reset.css"/>
-    <link rel="stylesheet" href="../index.css"/>
-    <link rel="stylesheet" href="../bh.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Tiernan Lindauer">
+  <meta name="description" content="[Optional subtitle]">
+  <title>[Title] · Tiernan Lindauer</title>
+  <link rel="stylesheet" href="../reader.css">
+  <script src="../reader.js" defer></script>
 </head>
 <body>
-<div class="site-layout">
-    <aside id="sidebar-container" class="site-sidebar" aria-label="Site navigation"></aside>
-    <main class="main-content">
-<header class="page-head">
-    <h1 class="page-head-title">[Essay Title]</h1>
-    <p class="page-head-subtitle">[Optional Subtitle]</p>
-    <div class="page-head-meta">
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Version</span><span class="page-head-meta-value">v1.0.0</span></span>
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Updated</span><span class="page-head-meta-value">YYYY-MM-DD</span></span>
-        <span class="page-head-meta-item"><span class="page-head-meta-label">Author</span><span class="page-head-meta-value">Tiernan Lindauer</span></span>
-        <span class="page-head-meta-item"><span class="page-head-meta-label">License</span><span class="page-head-meta-value">MIT</span></span>
+  <a class="reader-skip" href="#story">Skip to reading</a>
+  <header class="reader-bar">
+    <div class="reader-bar-inner">
+      <nav class="reader-navigation" aria-label="Reader navigation">
+        <a class="reader-brand" href="../">T–Lind</a>
+        <a class="reader-back" href="./">← Writing</a>
+      </nav>
+      <div class="reader-actions">
+        <span class="reader-progress-label" data-reader-control hidden aria-label="Reading progress">0%</span>
+        <button type="button" class="reader-button" data-reader-focus data-reader-control hidden aria-pressed="false">Focus</button>
+        <details class="reader-settings" data-reader-control hidden>
+          <summary aria-label="Reading settings"><span aria-hidden="true">Aa</span><span class="reader-settings-label">Settings</span></summary>
+          <div class="reader-settings-panel">
+            <fieldset><legend>Page theme</legend><div class="reader-options">
+              <button type="button" data-reader-preference="theme" data-value="paper" aria-pressed="true">Paper</button>
+              <button type="button" data-reader-preference="theme" data-value="dusk" aria-pressed="false">Dusk</button>
+              <button type="button" data-reader-preference="theme" data-value="night" aria-pressed="false">Night</button>
+            </div></fieldset>
+            <fieldset><legend>Text size</legend><div class="reader-size-controls">
+              <button type="button" data-reader-size="-2" aria-label="Decrease text size">A−</button>
+              <output data-reader-size-output aria-live="polite">20 px</output>
+              <button type="button" data-reader-size="2" aria-label="Increase text size">A+</button>
+            </div></fieldset>
+            <fieldset><legend>Typeface</legend><div class="reader-options">
+              <button type="button" data-reader-preference="font" data-value="serif" aria-pressed="true">Serif</button>
+              <button type="button" data-reader-preference="font" data-value="sans" aria-pressed="false">Sans</button>
+            </div></fieldset>
+            <fieldset><legend>Line width</legend><div class="reader-options">
+              <button type="button" data-reader-preference="width" data-value="narrow" aria-pressed="false">Narrow</button>
+              <button type="button" data-reader-preference="width" data-value="standard" aria-pressed="true">Standard</button>
+              <button type="button" data-reader-preference="width" data-value="wide" aria-pressed="false">Wide</button>
+            </div></fieldset>
+            <button type="button" class="reader-reset" data-reader-reset>Reset reading settings</button>
+          </div>
+        </details>
+      </div>
     </div>
-</header>
-
-        <div class="essay-content">
-            <p>Start writing your essay here. This is a paragraph.</p>
+    <div class="reader-progress" data-reader-control hidden aria-hidden="true"><div class="reader-progress-fill"></div></div>
+  </header>
+  <button type="button" class="reader-button reader-focus-exit" hidden>Exit focus</button>
+  <main class="reader-main" id="story" tabindex="-1">
+    <article class="reader-article" aria-labelledby="story-title">
+      <header class="reader-heading">
+        <p class="reader-eyebrow">Essay</p>
+        <h1 id="story-title">[Title]</h1>
+        <p class="reader-subtitle">[Optional subtitle]</p>
+        <p class="reader-meta"><span>Tiernan Lindauer</span><span>1 min read</span></p>
+        <details class="reader-contents" hidden><summary>Contents</summary><ol></ol></details>
+        <button type="button" class="reader-button reader-resume" hidden>Continue reading</button>
+      </header>
+      <div class="reader-prose">
+<p>Start writing your essay here. This is a paragraph.</p>
             <h2>This is a subheading</h2>
             <p>Use subheadings to structure the piece. Links look like <a href="#">this</a>, and you can
                 <strong>emphasize</strong> or <em>italicize</em> text, or drop in a quote:</p>
@@ -35,12 +70,10 @@
                 <span class="attribution">&mdash; Someone</span>
             </blockquote>
             <p>Copy this file to a new name, replace the bracketed parts, and add it to the list on the
-                <a href="./">Essays</a> page.</p>
-        </div>
-
-        <p class="note">&uarr; <a href="./">Back to Essays</a></p>
-    </main>
-</div>
-    <script src="../bh-nav.js"></script>
+                <a href="./">Writing</a> page.</p>
+      </div>
+      <footer class="reader-footer"><a href="./">← All writing</a><a href="#story">Back to the beginning ↑</a></footer>
+    </article>
+  </main>
 </body>
 </html>

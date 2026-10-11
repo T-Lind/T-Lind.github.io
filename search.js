@@ -5,7 +5,7 @@
     var indexPromise;
     var dialog, dialogPanel, previousFocus;
     var page = document.getElementById("site-search-page");
-    var categories = ["All", "Projects", "Research", "Essays", "Reading", "Games", "Pages"];
+    var categories = ["All", "Projects", "Research", "Essays", "Stories", "Reading", "Games", "Pages"];
 
     function loadIndex() {
         if (!indexPromise) indexPromise = fetch(new URL("search-index.json", base)).then(function (response) {

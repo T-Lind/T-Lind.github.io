@@ -14,6 +14,7 @@
         ["profile/", "Profile"],
         ["games/", "Games"],
         ["reading/", "Reading"],
+        ["essays/", "Writing"],
         ["search/", "Search"]
     ];
 

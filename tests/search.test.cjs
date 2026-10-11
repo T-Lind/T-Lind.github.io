@@ -40,6 +40,8 @@ test('whole-site content, category filters, and empty results work', () => {
     assert(search.excerpt(reading[0].doc, 'Dostoevsky').includes('Dostoevsky'));
     assert(search.search(documents, 'planning', 'Research').length > 0);
     assert(search.search(documents, 'hard things', 'Essays').length > 0);
+    assert.equal(top('To Survive Her Beauty'), 'To Survive Her Beauty');
+    assert(search.search(documents, 'Celeste Courtois', 'Stories').some(result => result.doc.url === 'essays/to-survive-her-beauty.html'));
     assert.equal(search.search(documents, 'OpenDraft', 'Research').length, 0);
     assert.equal(search.search(documents, 'xzyqwvunknown', 'All').length, 0);
     assert(search.search(documents, '', 'Projects').every(r => r.doc.category === 'Projects'));
