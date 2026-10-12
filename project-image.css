@@ -1,0 +1,6 @@
+/* Keep the wide ss.jl launch screenshot intact at every card width. */
+.project-card img.project-image-launch {
+    aspect-ratio: 1915 / 886;
+    object-fit: contain;
+    background: #0b1014;
+}
