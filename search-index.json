@@ -31,7 +31,7 @@
   {
     "title": "On Doing Hard Things",
     "url": "essays/hard-things.html",
-    "category": "Essays",
+    "category": "Writing",
     "description": "A short note on ambition, and why I pick the harder path.",
     "tags": [],
     "aliases": [],
@@ -40,7 +40,7 @@
   {
     "title": "Writing",
     "url": "essays/",
-    "category": "Essays",
+    "category": "Writing",
     "description": "Short stories and essays by Tiernan Lindauer.",
     "tags": [],
     "aliases": [],
@@ -49,7 +49,7 @@
   {
     "title": "To Survive Her Beauty",
     "url": "essays/to-survive-her-beauty.html",
-    "category": "Stories",
+    "category": "Writing",
     "description": "To Survive Her Beauty — a short story by Tiernan Lindauer.",
     "tags": [],
     "aliases": [],
@@ -71,7 +71,7 @@
     "description": "Tiernan Lindauer's software, research, browser games, and experiments in physics. Explore a real-time black hole and the projects below.",
     "tags": [],
     "aliases": [],
-    "text": "About > Well hi there! Welcome to my corner of the internet: software, research, and a few experiments in physics. The black hole above is rendered in real time — click Admire to orbit it, with a little music for the journey. I'm Tiernan Lindauer — I build things and write about them. In 2024 I founded LindauerAI , an ed-tech startup that built a dual-AI learning platform ( Gyro for students, CA for teachers). Start with Why I Choose Hard Problems , then Projects and Research . GitHub LinkedIn Get in touch Selected Work Photolib — a private, local photo library with natural-language and face search. Accessor — a local voice gateway for coding agents. SatelliteSim.jl — launch, orbit, and lunar missions, built in Julia. LindauerAI — dual-AI learning platform; founder & engineer. Research — cost-based policies for narrative observation of unpredictable events. Games — interactive experiments in physics, graphics, and systems. Writing — short stories and essays on motivation, learning, and building. Words I Live By Live Data NASA Astronomy Picture of the Day Loading Next Rocket Launch Loading Latest Commits Loading ISS Position Loading Elsewhere LindauerAI — the ed-tech startup and its story. Writing — short stories and essays. Reading — what I'm reading and recommending. Back to the black hole"
+    "text": "About > Well hi there! Welcome to my corner of the internet: software, research, and a few experiments in physics. The black hole above is rendered in real time — click Admire to orbit it, with a little music for the journey. I'm Tiernan Lindauer — I build things and write about them. In 2024 I founded LindauerAI , an ed-tech startup that built a dual-AI learning platform ( Gyro for students, CA for teachers). In 2026, I co-founded Lobe , a connected AI platform for senior living. It helps communities answer families across phone, text, and web, book visits, and carry conversation context into team follow-up. Start with Why I Choose Hard Problems , then Projects and Research . GitHub LinkedIn Get in touch Selected Work Lobe — connected AI platform for senior living; co-founded in 2026. Photolib — a private, local photo library with natural-language and face search. Accessor — a local voice gateway for coding agents. SatelliteSim.jl — launch, orbit, and lunar missions, built in Julia. LindauerAI — dual-AI learning platform; founder & engineer. Research — cost-based policies for narrative observation of unpredictable events. Games — interactive experiments in physics, graphics, and systems. Writing — short stories and essays on motivation, learning, and building. Words I Live By Live Data NASA Astronomy Picture of the Day Loading Next Rocket Launch Loading Latest Commits Loading ISS Position Loading Elsewhere LindauerAI — the ed-tech startup and its story. Writing — short stories and essays. Reading — what I'm reading and recommending. Back to the black hole"
   },
   {
     "title": "Intellistream",
@@ -134,7 +134,7 @@
   {
     "title": "Why I Choose Hard Problems",
     "url": "motivation/",
-    "category": "Essays",
+    "category": "Writing",
     "description": "A personal essay on meaningful work, ambition, curiosity, technology, and exploration.",
     "tags": [],
     "aliases": [],

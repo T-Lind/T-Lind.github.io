@@ -5,7 +5,7 @@
     var indexPromise;
     var dialog, dialogPanel, previousFocus;
     var page = document.getElementById("site-search-page");
-    var categories = ["All", "Projects", "Research", "Essays", "Stories", "Reading", "Games", "Pages"];
+    var categories = ["All", "Projects", "Research", "Writing", "Reading", "Games", "Pages"];
 
     function loadIndex() {
         if (!indexPromise) indexPromise = fetch(new URL("search-index.json", base)).then(function (response) {
@@ -32,8 +32,8 @@
         container.classList.add("site-search-panel");
         container.innerHTML = '<div class="search-heading"><h2>Search the site</h2>' +
             (fullPage ? '' : '<button type="button" class="search-close" aria-label="Close search">Esc ×</button>') + '</div>' +
-            '<label class="search-field"><span>Projects, topics, languages, and more</span>' +
-            '<input class="search-input" type="search" placeholder="Try ss.jl, voice agents, or Python…" autocomplete="off" spellcheck="false" maxlength="200"></label>' +
+            '<label class="search-field"><span>Projects, writing, topics, and more</span>' +
+            '<input class="search-input" type="search" placeholder="Try a story, ss.jl, voice agents, or Python…" autocomplete="off" spellcheck="false" maxlength="200"></label>' +
             '<div class="search-filters" role="group" aria-label="Filter search results"></div>' +
             '<p class="search-status" role="status" aria-live="polite">Start typing to search.</p>' +
             '<ul class="search-results" aria-label="Search results"></ul>' +

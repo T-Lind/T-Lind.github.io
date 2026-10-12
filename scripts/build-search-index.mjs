@@ -34,7 +34,7 @@ for (const file of files.sort()) {
     const title = plain(main.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || html.match(/<title>(.*?)<\/title>/i)?.[1] || section);
     const description = plain(html.match(/<meta\s+name="description"\s+content="([^"]*)"/i)?.[1] || main.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1] || '');
     const tags = projectSections.has(section) ? [...main.matchAll(/<span\b[^>]*class="project-tag"[^>]*>(.*?)<\/span>/g)].map(match => plain(match[1])) : [];
-    const category = projectSections.has(section) ? 'Projects' : section === 'research' ? 'Research' : section === 'essays' || section === 'motivation' ? (html.includes('reader-story') ? 'Stories' : 'Essays') : section === 'reading' ? 'Reading' : section === 'games' || section === 'orbits' ? 'Games' : 'Pages';
+    const category = projectSections.has(section) ? 'Projects' : section === 'research' ? 'Research' : section === 'essays' || section === 'motivation' ? 'Writing' : section === 'reading' ? 'Reading' : section === 'games' || section === 'orbits' ? 'Games' : 'Pages';
     const url = file === 'index.html' ? './' : file.endsWith('/index.html') ? file.replace(/index\.html$/, '') : file;
     documents.push({ title, url, category, description, tags: [...new Set(tags)], aliases: aliases[section] || [], text: plain(main.replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, '')) });
     // Older projects without a detail page are still searchable individually.
