@@ -30,7 +30,16 @@ for (const file of files.sort()) {
     let html = await readFile(resolve(root, file), 'utf8');
     html = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|nav|aside)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
     const section = file.split('/')[0];
-    const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] || html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1] || html;
+    let main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] || html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1] || html;
+    // Reader chrome is UI, not prose: keep the sticky bar, table of contents,
+    // skip link, focus button, and footer out of the searchable text.
+    main = main
+        .replace(/<header\b[^>]*class="reader-bar"[\s\S]*?<\/header>/i, ' ')
+        .replace(/<a\b[^>]*class="reader-skip"[\s\S]*?<\/a>/i, ' ')
+        .replace(/<details\b[^>]*class="reader-contents"[\s\S]*?<\/details>/i, ' ')
+        .replace(/<button\b[^>]*class="reader-button reader-focus-exit"[\s\S]*?<\/button>/i, ' ')
+        .replace(/<button\b[^>]*class="[^"]*reader-resume[^"]*"[\s\S]*?<\/button>/i, ' ')
+        .replace(/<footer\b[^>]*class="reader-footer"[\s\S]*?<\/footer>/i, ' ');
     const title = plain(main.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || html.match(/<title>(.*?)<\/title>/i)?.[1] || section);
     const description = plain(html.match(/<meta\s+name="description"\s+content="([^"]*)"/i)?.[1] || main.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1] || '');
     const tags = projectSections.has(section) ? [...main.matchAll(/<span\b[^>]*class="project-tag"[^>]*>(.*?)<\/span>/g)].map(match => plain(match[1])) : [];
