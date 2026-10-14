@@ -749,3 +749,11 @@ kbd {
         transition: none;
     }
 }
+
+/* Clear the fixed shared site navigation (#site-nav): 4rem on desktop,
+   3.5rem below the 900px nav breakpoint. Without this the nav covers the
+   title and back link. box-sizing is border-box, so height:100dvh still holds. */
+.app { padding-top: calc(16px + 4rem); }
+@media (max-width: 900px) {
+    .app { padding-top: calc(12px + 3.5rem); }
+}

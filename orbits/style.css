@@ -48,3 +48,14 @@ html, body {
     font-size: 14px;
     z-index: 10;
 }
+
+/* Clear the fixed shared site navigation (#site-nav), which otherwise sits on
+   top of the on-screen controls: 4rem on desktop, 3.5rem below 900px. */
+#controls, #status {
+    top: calc(10px + 4rem);
+}
+@media (max-width: 900px) {
+    #controls, #status {
+        top: calc(10px + 3.5rem);
+    }
+}

@@ -85,6 +85,9 @@ button:disabled { cursor: default; opacity: .4; }
 .reader-story p { margin: 0 0 .25em; }
 .reader-story p + p { text-indent: 1.3em; }
 .reader-footer { border-top: 1px solid var(--reader-line); padding-top: 1.75rem; margin-top: 4rem; font-size: .8rem; color: var(--reader-muted); display: flex; gap: 1rem; justify-content: space-between; flex-wrap: wrap; }
+.reader-pager { flex-basis: 100%; display: flex; justify-content: space-between; gap: 1rem 1.5rem; flex-wrap: wrap; font-size: .85rem; }
+.reader-pager .reader-pager-next { margin-left: auto; text-align: right; }
+.reader-pager a { color: var(--reader-accent); }
 .reader-focus-exit { position: fixed; top: 1rem; right: 1rem; z-index: 11; background: var(--reader-bg); }
 body.reader-focused .reader-bar { display: none; }
 body.reader-focused .reader-main { padding-top: 4rem; }

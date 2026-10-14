@@ -503,6 +503,7 @@ canvas[data-cosmos] {
     gap: .15rem 2.2rem;
 }
 .book-list li {
+    position: relative;
     display: flex;
     align-items: baseline;
     gap: .65rem;
@@ -524,6 +525,9 @@ canvas[data-cosmos] {
     border-color: var(--bh-accent);
 }
 .book-list label { color: #c6c6c9; font-size: .92rem; }
+/* Make the whole row, including the checkbox square, a tap target. */
+.book-list label::after { content: ""; position: absolute; inset: 0; cursor: pointer; }
+.book-list li:has(input:disabled) label::after { cursor: default; }
 .book-list li:has(input:checked) label { color: #8a8a8f; }
 @media (max-width: 680px) { .book-list { grid-template-columns: 1fr; } }
 

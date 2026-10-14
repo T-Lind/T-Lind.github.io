@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tiernan Lindauer · Writing</title>
+    <link>https://t-lind.github.io/essays/</link>
+    <description>Short stories and essays by Tiernan Lindauer.</description>
+    <language>en</language>
+    <copyright>© Tiernan Lindauer</copyright>
+    <atom:link href="https://t-lind.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>What It Takes to Change the World</title>
+      <link>https://t-lind.github.io/essays/changing-the-world.html</link>
+      <guid isPermaLink="true">https://t-lind.github.io/essays/changing-the-world.html</guid>
+      <pubDate>Mon, 12 Oct 2026 00:00:00 GMT</pubDate>
+      <description>On ambition, resilience, and the people who help us keep going.</description>
+    </item>
+    <item>
+      <title>On Doing Hard Things</title>
+      <link>https://t-lind.github.io/essays/hard-things.html</link>
+      <guid isPermaLink="true">https://t-lind.github.io/essays/hard-things.html</guid>
+      <pubDate>Thu, 30 Oct 2025 00:00:00 GMT</pubDate>
+      <description>A short note on ambition, and why I pick the harder path.</description>
+    </item>
+    <item>
+      <title>Why I Choose Hard Problems</title>
+      <link>https://t-lind.github.io/motivation/</link>
+      <guid isPermaLink="true">https://t-lind.github.io/motivation/</guid>
+      <pubDate>Sun, 22 Sep 2024 00:00:00 GMT</pubDate>
+      <description>A personal essay on meaningful work, ambition, curiosity, technology, and exploration.</description>
+    </item>
+    <item>
+      <title>To Survive Her Beauty</title>
+      <link>https://t-lind.github.io/essays/to-survive-her-beauty.html</link>
+      <guid isPermaLink="true">https://t-lind.github.io/essays/to-survive-her-beauty.html</guid>
+      <description>To Survive Her Beauty — a short story by Tiernan Lindauer.</description>
+    </item>
+  </channel>
+</rss>

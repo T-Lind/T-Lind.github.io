@@ -4,7 +4,9 @@
   var article = document.querySelector('.reader-article');
   var prose = document.querySelector('.reader-prose');
   if (!article || !prose) return;
-  var defaults = { theme: 'paper', font: 'serif', size: 20, width: 'standard' };
+  // First-time readers follow the system theme; an explicit choice always wins.
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var defaults = { theme: prefersDark ? 'night' : 'paper', font: 'serif', size: 20, width: 'standard' };
   var measures = { narrow: '55ch', standard: '65ch', wide: '75ch' };
   function read(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (_) { return null; } }
   function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {} }
