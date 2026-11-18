@@ -32,12 +32,25 @@
             worker = new Worker('worker.js');
             worker.onmessage = onWorker;
             worker.onerror = e => status('Worker error: ' + e.message, 'err');
-            setupControls();
-            useCatalog(cat, true);
+            const linked = U.readOrbitLink(location.hash);
+            const showTab = setupControls();
+            useCatalog(cat, true, linked?.time);
+            if (linked) {
+                setPlaying(false);
+                editor.setSource(linked.source);
+                st.mineSource = linked.source;
+                updateMine();
+                showTab('exposure');
+            } else {
+                editor.preset.value = 'iss';
+                editor._fromPreset();
+            }
+            updateClock();
+            requestAnimationFrame(loop);
         } catch (err) { status('Could not load the catalog: ' + err.message, 'err'); }
     }
 
-    function useCatalog(cat, initial) {
+    function useCatalog(cat, initial, linkedTime) {
         st.cat = cat; st.F = Object.fromEntries(cat.fields.map((f, i) => [f, i]));
         derive();
         status(`Initialising SGP4 for ${st.n.toLocaleString()} objects…`, 'busy');
@@ -45,7 +58,8 @@
         const m = cat.metadata || {};
         $('badge-count').textContent = st.n.toLocaleString();
         const ref = m.referenceEpoch ? new Date(m.referenceEpoch) : medianEpoch();
-        $('badge-date').textContent = ref.toISOString().slice(0, 10);
+        $('catalog-epoch').dateTime = ref.toISOString();
+        $('catalog-epoch').textContent = U.utc(ref);
         st.refEpoch = ref;
         const kv = $('cat-kv'); kv.replaceChildren();
         const add = (k, v) => kv.append(h('dt', { text: k }), h('dd', { text: v }));
@@ -59,8 +73,9 @@
         if (initial) {
             // open at the catalog epoch if "now" is far from it; elements age quickly
             const gap = Math.abs(Date.now() - ref.getTime()) / 86400e3;
-            st.simTime = gap > 14 ? ref.getTime() : Date.now();
+            st.simTime = linkedTime ?? (gap > 14 ? ref.getTime() : Date.now());
         }
+        updateClock();
         buildFilterOptions(); applyFilters(); renderObject();
     }
     function medianEpoch() {
@@ -194,7 +209,7 @@
         $('scr-run').onclick = runScreen;
         document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => exportCSV(b.dataset.csv));
         editor = new U.OrbitEditor($('editor'), { idPrefix: 'db', epoch: () => new Date(st.simTime), onChange: src => { st.mineSource = src; updateMine(); } });
-        U.tabs($('tabs'), name => { st.tab = name; renderAnalysis(); });
+        const showTab = U.tabs($('tabs'), name => { st.tab = name; renderAnalysis(); });
         st.tab = 'object';
         if (globe) {
             globe.onclick = e => {
@@ -205,12 +220,10 @@
             globe.onchange = placeTags;
             new ResizeObserver(() => draw()).observe($('globe-wrap'));
         }
-        // default "your orbit": the ISS preset
-        editor.preset.value = 'iss'; editor._fromPreset();
-        requestAnimationFrame(loop);
+        return showTab;
     }
     function setPlaying(on) { st.playing = on; $('play').textContent = on ? 'Pause' : 'Play'; $('play').setAttribute('aria-pressed', String(on)); }
-    function setTime(t) { st.simTime = t; requestPositions(true); updateTracksForTime(); draw(); }
+    function setTime(t) { st.simTime = t; updateClock(); requestPositions(true); updateTracksForTime(); draw(); }
 
     /* ---------------------------------------------------------------- animation */
     let lastFrame = performance.now(), lastUi = 0;
@@ -280,12 +293,16 @@
     function updateClock() {
         const d = new Date(st.simTime);
         $('clock').textContent = U.utc(d, true);
+        $('clock').dateTime = d.toISOString();
         if (document.activeElement !== $('when')) $('when').value = U.toLocalInput(d);
         if (st.refEpoch) {
-            const age = (st.simTime - st.refEpoch.getTime()) / 86400e3, el = $('age');
-            el.textContent = `${Math.abs(age).toFixed(1)} days ${age >= 0 ? 'after' : 'before'} catalog epoch${Math.abs(age) > 7 ? ' · positions degrade' : ''}`;
-            el.classList.toggle('warn', Math.abs(age) > 7);
+            const offset = (st.simTime - st.refEpoch.getTime()) / 86400e3;
+            const days = Math.abs(offset), el = $('age');
+            const distance = days < 1 / 24 ? `${Math.round(days * 1440)} min` : days < 1 ? `${(days * 24).toFixed(1)} h` : `${days.toFixed(1)} d`;
+            el.textContent = days < 1 / 1440 ? 'Within a minute of the catalog epoch' : `${distance} ${offset > 0 ? 'after' : 'before'} catalog epoch${days > 7 ? ' · positions degrade' : ''}`;
+            el.classList.toggle('warn', days > 7);
         }
+        updateRadiationLink();
     }
 
     /* ---------------------------------------------------------------- worker */
@@ -392,7 +409,13 @@
         try { st.mine = st.mineSource ? O.satrecFromSource(st.mineSource) : null; st.mineEl = st.mine ? O.elementsOf(st.mine) : null; }
         catch (err) { st.mine = null; st.mineEl = null; }
         st.mineTrack = st.mine ? mineTrack() : null; st.tracksDirty = true; st.dirty = true;
+        updateRadiationLink();
         renderAnalysis();
+    }
+    function updateRadiationLink() {
+        const link = $('open-radiation');
+        link.hidden = !st.mine;
+        if (st.mine) link.href = U.orbitLink('../van-allen/', st.mineSource, st.simTime);
     }
     function mineTrack() {
         const P = st.mineEl.period * 60e3, out = [];

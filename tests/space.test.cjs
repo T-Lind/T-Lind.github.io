@@ -7,6 +7,8 @@ const { vanAllen, loadWorker, root } = require('./space-harness.cjs');
 const R = require('../space/lib/radiation.js');
 const O = require('../space/lib/orbit.js');
 const D = require('../space/lib/debris-env.js');
+require('../space/lib/ui.js');
+const U = globalThis.SpaceUI;
 
 const data = f => path.join(root, 'space/data', f);
 const quantile = (a, q) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(q * (s.length - 1))]; };
@@ -62,6 +64,35 @@ test('typed elements and TLE text round-trip through SGP4', () => {
     assert(Math.abs(b.a - a.a) < 0.01 && Math.abs(b.e - a.e) < 1e-6 && Math.abs(b.raan - a.raan) < 1e-3);
     const bad = O.parseTLE(tle.replace(/\d$/, d => String((+d + 1) % 10)));
     assert(bad.sets[0].warnings.some(w => /checksum/.test(w)), 'checksum errors are reported');
+});
+
+test('orbit handoffs preserve original elements and an independent analysis time', () => {
+    const epoch = new Date('2026-10-23T00:00:00Z');
+    const time = Date.parse('2026-10-24T12:34:56.789Z');
+    const elements = { ...U.presetSource('gto', epoch), name: 'Orbíte de transfert' };
+    const [name, line1, line2] = O.toTLE(O.elementsOf(O.satrecFromSource(elements)), 'GTO').split('\n');
+    const tle = { kind: 'tle', name, line1, line2 };
+    const omm = {
+        kind: 'omm', name: 'GTO',
+        omm: { EPOCH: epoch.toISOString(), MEAN_MOTION: 2.28, ECCENTRICITY: 0.72, INCLINATION: 27,
+            RA_OF_ASC_NODE: 0, ARG_OF_PERICENTER: 178, MEAN_ANOMALY: 0, NORAD_CAT_ID: 99999 }
+    };
+    for (const source of [elements, tle, omm]) {
+        const href = new URL(U.orbitLink('../van-allen/', source, time), 'https://example.com/debris/');
+        assert.deepEqual(U.readOrbitLink(href.hash), { source, time });
+    }
+
+    const example = U.readOrbitLink('#preset=gto&time=2026-10-23T00:00:00Z');
+    assert.deepEqual(example, { source: U.presetSource('gto', epoch), time: epoch.getTime() });
+    for (const hash of ['#orbit=invalid&time=2026-10-23T00:00:00Z', '#preset=unknown&time=2026-10-23T00:00:00Z', '#preset=gto']) {
+        assert.equal(U.readOrbitLink(hash), null);
+    }
+
+    // Existing radiation analysis links used UTF-8 JSON with unpadded URL-safe Base64.
+    const savedAnalysis = { v: 1, s: { start: epoch.toISOString() }, c: [elements, tle] };
+    const oldHash = Buffer.from(JSON.stringify(savedAnalysis)).toString('base64url');
+    assert.equal(U.encodeLink(savedAnalysis), oldHash);
+    assert.deepEqual(U.decodeLink(oldHash), savedAnalysis);
 });
 
 test('small-debris proxy keeps its ORDEM calibration and size ordering', () => {

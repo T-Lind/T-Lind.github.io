@@ -39,6 +39,42 @@
         try { await navigator.clipboard.writeText(text); return true; } catch (err) { return false; }
     }
 
+    function presetSource(id, epoch) {
+        const p = O.PRESETS.find(x => x.id === id);
+        if (!p) return null;
+        const { perigee, apogee, inc, raan, argp, ma } = p;
+        return { kind: 'elements', name: p.name.split(' (')[0], epoch: epoch.toISOString(), perigee, apogee, inc, raan, argp, ma, bstar: 0, preset: id };
+    }
+
+    function encodeLink(value) {
+        const bytes = new TextEncoder().encode(JSON.stringify(value));
+        return btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function decodeLink(value) {
+        if (!value) return null;
+        try {
+            const bytes = Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), char => char.charCodeAt(0));
+            return JSON.parse(new TextDecoder().decode(bytes));
+        } catch (err) { return null; }
+    }
+    function orbitLink(path, source, time) {
+        const hash = new URLSearchParams({ orbit: encodeLink(source), time: new Date(time).toISOString() });
+        return path + '#' + hash;
+    }
+    function readOrbitLink(hash) {
+        const params = new URLSearchParams(hash.slice(1));
+        if (!params.has('orbit') && !params.has('preset')) return null;
+        const time = Date.parse(params.get('time'));
+        if (!Number.isFinite(time)) return null;
+        const source = params.has('orbit') ? decodeLink(params.get('orbit')) : presetSource(params.get('preset'), new Date(time));
+        if (!source || !['elements', 'tle', 'omm'].includes(source.kind) || typeof source.name !== 'string') return null;
+        try {
+            const { epoch, perigee, apogee, inc, period } = O.elementsOf(O.satrecFromSource(source));
+            if ([epoch.getTime(), perigee, apogee, inc, period].every(Number.isFinite) && period > 0) return { source, time };
+        } catch (err) { /* fall back to the page defaults for invalid links */ }
+        return null;
+    }
+
     const FIELDS = [
         ['perigee', 'Perigee altitude', 'km', 120, 400000, 1],
         ['apogee', 'Apogee altitude', 'km', 120, 400000, 1],
@@ -59,7 +95,7 @@
             this.tabs = h('div', { class: 'seg', role: 'tablist', 'aria-label': 'Orbit entry method' });
             this.panes = {};
             for (const [mode, label] of [['preset', 'Preset'], ['elements', 'Elements'], ['tle', 'TLE / OMM']]) {
-                const b = h('button', { type: 'button', role: 'tab', 'data-mode': mode, id: id + 'tab-' + mode, 'aria-controls': id + mode, text: label, onclick: () => this.setMode(mode) });
+                const b = h('button', { type: 'button', role: 'tab', 'data-mode': mode, id: id + 'tab-' + mode, 'aria-controls': id + mode + '-pane', text: label, onclick: () => this.setMode(mode) });
                 this.tabs.append(b);
             }
             // preset
@@ -68,7 +104,7 @@
             for (const p of O.PRESETS) { groups[p.group] = groups[p.group] || h('optgroup', { label: p.group }); groups[p.group].append(h('option', { value: p.id, text: p.name })); }
             Object.values(groups).forEach(g => this.preset.append(g));
             this.preset.addEventListener('change', () => this._fromPreset());
-            this.panes.preset = h('div', { class: 'oe-pane', id: id + 'preset', role: 'tabpanel' },
+            this.panes.preset = h('div', { class: 'oe-pane', id: id + 'preset-pane', role: 'tabpanel' },
                 h('label', { class: 'fld wide', for: id + 'preset' }, h('span', { text: 'Reference orbit' }), this.preset),
                 h('p', { class: 'hint', text: 'Presets fill the element fields; switch to Elements to fine-tune them.' }));
             // elements
@@ -87,7 +123,7 @@
             grid.append(h('label', { class: 'fld', for: id + 'bstar', title: 'SGP4 drag term in 1/Earth radii. 0 disables drag decay.' }, h('span', {}, 'B* drag', h('em', { text: '1/ER' })), this.bstarIn));
             const onEdit = debounce(() => this._fromElements(), 250);
             grid.addEventListener('input', onEdit);
-            this.panes.elements = h('div', { class: 'oe-pane', id: id + 'elements', role: 'tabpanel' }, grid);
+            this.panes.elements = h('div', { class: 'oe-pane', id: id + 'elements-pane', role: 'tabpanel' }, grid);
             // tle
             this.text = h('textarea', { id: id + 'tle', rows: 4, spellcheck: 'false', autocomplete: 'off', placeholder: 'ISS (ZARYA)\n1 25544U 98067A   26322.51239583  .00016717  00000-0  30571-3 0  9993\n2 25544  51.6416 247.4627 0006703 130.5360 325.0288 15.50094086 12345' });
             this.tleMsg = h('div', { class: 'oe-msg', role: 'status' });
@@ -128,9 +164,8 @@
             this.bstarIn.value = src.bstar || 0;
         }
         _fromPreset() {
-            const p = O.PRESETS.find(x => x.id === this.preset.value) || O.PRESETS[0];
             const epoch = this.opts.epoch ? this.opts.epoch() : new Date(Math.floor(Date.now() / 60000) * 60000);
-            const src = { kind: 'elements', name: p.name.split(' (')[0], epoch: epoch.toISOString(), perigee: p.perigee, apogee: p.apogee, inc: p.inc, raan: p.raan, argp: p.argp, ma: p.ma, bstar: 0, preset: p.id };
+            const src = presetSource(this.preset.value || O.PRESETS[0].id, epoch);
             this._fillElements(src); this._emit(src);
         }
         _fromElements() {
@@ -209,5 +244,5 @@
         return show;
     }
 
-    root.SpaceUI = { h, debounce, utc, toLocalInput, fromLocalInput, num, km, regime, summary, copyText, OrbitEditor, tabs };
+    root.SpaceUI = { h, debounce, utc, toLocalInput, fromLocalInput, num, km, regime, summary, copyText, presetSource, encodeLink, decodeLink, orbitLink, readOrbitLink, OrbitEditor, tabs };
 })(typeof self !== 'undefined' ? self : globalThis);

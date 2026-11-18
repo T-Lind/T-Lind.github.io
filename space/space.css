@@ -111,6 +111,7 @@ input[type=checkbox], input[type=radio] { accent-color: #e2e2e6; width: 15px; he
 .btn.ghost:hover { border-color: rgba(255,255,255,.45); color: #fff; }
 .btn.small { min-height: 28px; padding: .3rem .55rem; font-size: .7rem; }
 .btn.icon { width: 34px; padding: 0; font-family: var(--mono); }
+.orbit-handoff { margin-top: .65rem; text-decoration: none; }
 
 .seg { display: flex; border: 1px solid var(--line-2); border-radius: 2px; overflow: hidden; margin-bottom: .7rem; }
 .seg button {

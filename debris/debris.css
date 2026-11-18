@@ -1,15 +1,22 @@
 /* Debris visualizer: globe viewport and overlays. */
 .globe-card { overflow: hidden; }
+.globe-controls {
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: .85rem 1.4rem;
+    padding: .8rem .9rem; border-bottom: 1px solid var(--line);
+}
+.clock-controls, .catalog-clock { flex: 1 1 16rem; min-width: 0; }
+.globe-controls .row { margin-top: .45rem; }
+.clock-controls select { width: auto; min-height: 28px; font-size: 11px; padding: .25rem .4rem; }
+.catalog-clock { font: 12px/1.45 var(--mono); color: var(--text-2); }
+.catalog-clock time, .clock { color: var(--white); }
+.catalog-clock .hint { font-family: var(--sans); }
 .globe-wrap { position: relative; height: min(72vh, 760px); min-height: 420px; background: #050507; }
 #globe { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #globe:active { cursor: grabbing; }
 .hud { position: absolute; z-index: 3; font: 11px/1.45 var(--mono); color: var(--text); background: rgba(6,6,9,.82); border: 1px solid var(--line-2); border-radius: 2px; padding: .55rem .65rem; }
-.hud.tl { top: .7rem; left: .7rem; max-width: 19rem; }
 .hud.tr { top: .7rem; right: .7rem; }
 .hud.br { bottom: .6rem; right: .7rem; color: var(--text-3); background: transparent; border: 0; padding: 0; }
-.hud select, .hud input { min-height: 28px; padding: .25rem .4rem; font-size: 11px; }
-.hud select { width: auto; }
-.clock { font-size: 13px; color: var(--white); margin-bottom: .4rem; letter-spacing: .02em; }
+.clock { display: block; font: 13px/1.45 var(--mono); letter-spacing: .02em; }
 .age { margin-top: .35rem; color: var(--text-3); }
 .age.warn { color: var(--warn); }
 .legend { display: grid; gap: .15rem; }
@@ -34,7 +41,7 @@
 .metric .val small { font-size: .72rem; color: var(--text-2); font-weight: 500; }
 @media (max-width: 720px) {
     .globe-wrap { height: 62vh; min-height: 360px; }
-    .hud.tl { max-width: calc(100% - 1.4rem); padding: .45rem .5rem; }
+    .globe-controls .btn.small, .clock-controls select { min-height: 36px; }
     .hud.tr { top: auto; bottom: 2rem; right: .7rem; }
     .hud.br { display: none; }
 }

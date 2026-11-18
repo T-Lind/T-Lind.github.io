@@ -35,17 +35,13 @@
             worker.postMessage({ type: 'init', ae8ap8, fieldMeta: meta, fields: { 1970: f1970 }, nist }, [f1970]);
             fieldLoaded[1970] = true;
         } catch (err) { status('Could not load model data: ' + err.message, 'err'); return; }
-        setupControls();
-        restore();
+        const showTab = setupControls();
+        restore(showTab);
         renderMethod();
     }
 
     /* ---------------------------------------------------------- cases */
     function defaultStart() { const d = new Date(); d.setUTCHours(0, 0, 0, 0); return d; }
-    function presetSource(id, epoch) {
-        const p = O.PRESETS.find(x => x.id === id);
-        return { kind: 'elements', name: p.name.split(' (')[0], epoch: epoch.toISOString(), perigee: p.perigee, apogee: p.apogee, inc: p.inc, raan: p.raan, argp: p.argp, ma: p.ma, bstar: 0, preset: p.id };
-    }
     function freeColor() { const used = new Set(state.cases.map(c => c.color)); return COLORS.find(c => !used.has(c)) || COLORS[state.cases.length % COLORS.length]; }
     function addCase(source, select = true) {
         if (state.cases.length >= MAX_CASES) { status(`Up to ${MAX_CASES} cases can be compared at once.`, 'err'); return null; }
@@ -81,6 +77,7 @@
         state.sel = key;
         const c = state.cases.find(x => x.key === key);
         if (c) { editor.setSource(c.source); $('edit-name').textContent = c.source.name; }
+        updateDebrisLink();
         for (const li of $('cases').children) li.setAttribute('aria-current', String(li.dataset.key === key));
         $('dose-case').value = key; $('map-case').value = key;
         if (Object.keys(state.results).length) { renderDose(); renderMap(); }
@@ -98,7 +95,7 @@
             idPrefix: 'va', epoch: () => new Date(state.settings.start),
             onChange: src => {
                 const c = state.cases.find(x => x.key === state.sel); if (!c) return;
-                c.source = src; $('edit-name').textContent = src.name; renderCases(); schedule();
+                c.source = src; $('edit-name').textContent = src.name; renderCases(); updateDebrisLink(); schedule();
             },
             onMany: sets => {
                 for (const s of sets) if (state.cases.length < MAX_CASES) addCase(s.omm ? { kind: 'omm', name: s.name, omm: s.omm } : { kind: 'tle', name: s.name, line1: s.line1, line2: s.line2 }, false);
@@ -108,7 +105,7 @@
         const eSel = $('e-thr'), pSel = $('p-thr'), bSel = $('belt-e');
         for (const E of energies.e) eSel.append(h('option', { value: E, text: E }));
         for (const E of energies.p) pSel.append(h('option', { value: E, text: E }));
-        $('add-case').onclick = () => addCase(presetSource('hst', new Date(state.settings.start)));
+        $('add-case').onclick = () => addCase(U.presetSource('hst', new Date(state.settings.start)));
         $('dup-case').onclick = () => { const c = state.cases.find(x => x.key === state.sel); if (c) addCase(JSON.parse(JSON.stringify({ ...c.source, name: c.source.name + ' (copy)', preset: undefined }))); };
         $('start-now').onclick = () => { const d = new Date(); d.setUTCSeconds(0, 0); $('start').value = U.toLocalInput(d); readSettings(); };
         $('start-epoch').onclick = () => { const c = state.cases.find(x => x.key === state.sel); const el = c && caseElements(c); if (el) { $('start').value = U.toLocalInput(el.epoch); readSettings(); } };
@@ -125,9 +122,10 @@
         $('share').onclick = async () => { saveHash(); const ok = await U.copyText(location.href); status(ok ? 'Link copied. It reproduces these cases and settings.' : 'Copy the address bar to share this analysis.', 'ok'); };
         $('export-summary').onclick = () => P.download('van-allen-summary.csv', summaryCSV());
         document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => exportCSV(b.dataset.csv));
-        U.tabs($('tabs'), name => { state.tab = name; requestAnimationFrame(() => { drawTab(name); }); });
+        const showTab = U.tabs($('tabs'), name => { state.tab = name; requestAnimationFrame(() => { drawTab(name); }); });
         bindMapHover(); bindBeltHover();
         window.addEventListener('resize', U.debounce(() => drawTab(state.tab || 'spectra'), 150));
+        return showTab;
     }
     function readSettings() {
         const s = state.settings;
@@ -138,6 +136,7 @@
         s.geometry = $('geometry').value; s.refMm = Math.max(0.01, +$('ref-mm').value || 2.54); s.rdm = Math.max(1, +$('rdm').value || 1);
         s.ef = $('ef').value; s.eThr = +$('e-thr').value; s.pThr = +$('p-thr').value; s.samples = +$('samples').value; s.windowS = +$('window').value;
         $('badge-field').textContent = 'IGRF ' + s.field; $('badge-solar').textContent = s.solar.toUpperCase();
+        updateDebrisLink();
         schedule();
     }
     function writeSettings() {
@@ -151,15 +150,20 @@
     const schedule = U.debounce(() => { saveHash(); if ($('auto').checked && state.ready) run(); else if (state.ready) status('Inputs changed. Press Run analysis to update.', ''); }, 450);
 
     /* ---------------------------------------------------------- share link */
+    function updateDebrisLink() {
+        const source = state.cases.find(c => c.key === state.sel)?.source;
+        const link = $('open-debris');
+        link.hidden = !source;
+        if (source) link.href = U.orbitLink('../debris/', source, state.settings.start);
+    }
     function saveHash() {
         const doc = { v: 1, s: state.settings, c: state.cases.map(c => c.source) };
-        const enc = btoa(unescape(encodeURIComponent(JSON.stringify(doc)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        history.replaceState(null, '', '#a=' + enc);
+        history.replaceState(null, '', '#a=' + U.encodeLink(doc));
     }
-    function restore() {
-        let doc = null;
-        const m = location.hash.match(/a=([\w-]+)/);
-        if (m) { try { doc = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))))); } catch (err) { doc = null; } }
+    function restore(showTab) {
+        const linked = U.readOrbitLink(location.hash);
+        const doc = linked ? { s: { start: new Date(linked.time).toISOString() }, c: [linked.source] }
+            : U.decodeLink(new URLSearchParams(location.hash.slice(1)).get('a'));
         if (doc && Array.isArray(doc.c) && doc.c.length) {
             Object.assign(state.settings, doc.s || {});
             if (!state.settings.start) state.settings.start = defaultStart().toISOString();
@@ -170,11 +174,12 @@
         if (!state.cases.length) {
             state.settings.start = defaultStart().toISOString(); writeSettings();
             const ep = new Date(state.settings.start);
-            for (const id of ['iss', 'gto', 'gps']) addCase(presetSource(id, ep), false);
+            for (const id of ['iss', 'gto', 'gps']) addCase(U.presetSource(id, ep), false);
         }
         selectCase(state.cases[0].key);
         renderCases();
         $('map-h').value = Math.round(meanAlt(state.cases[0].key));
+        if (linked) showTab('belts');
         state.ready = true;
         run();
     }

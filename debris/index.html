@@ -17,10 +17,10 @@
         <div class="crumb"><a href="../space/">Space environment tools</a> / Orbital debris</div>
         <h1>Space Debris Visualizer</h1>
         <p>Explore the public catalog of tracked objects in orbit. Filter by type, orbit and fragmentation event, study the population by altitude, and check your own orbit's debris exposure and close approaches.</p>
+        <a class="btn small ghost orbit-handoff" id="open-radiation" hidden>Open in Radiation &rarr;</a>
     </div>
     <div class="badges" aria-label="Data in use">
         <span class="badge">Catalog <b id="badge-count">—</b></span>
-        <span class="badge">Elements <b id="badge-date">—</b></span>
         <span class="badge">Propagator <b>SGP4</b></span>
     </div>
 </header>
@@ -86,22 +86,19 @@
             <section class="sect" aria-labelledby="h-data">
                 <h2 id="h-data">Catalog data</h2>
                 <dl class="kv" id="cat-kv"></dl>
-                <div class="row" style="margin-top:.7rem">
-                    <button type="button" class="btn small ghost" id="load-file">Load TLE / OMM file…</button>
-                    <button type="button" class="btn small ghost" id="load-default" hidden>Restore snapshot</button>
-                    <input type="file" id="file" accept=".txt,.tle,.3le,.json,text/plain,application/json" hidden />
-                </div>
-                <p class="hint">Load a current catalog from CelesTrak or Space-Track to replace the snapshot. The file is read in your browser and never uploaded.</p>
             </section>
         </div>
     </aside>
 
     <main class="tool-main" id="main">
         <section class="card globe-card" aria-label="Globe">
-            <div class="globe-wrap" id="globe-wrap">
-                <canvas id="globe" aria-label="3D globe of catalogued objects in orbit. Drag to rotate, scroll or pinch to zoom, click an object to select it."></canvas>
-                <div class="hud tl">
-                    <div class="clock" id="clock">—</div>
+            <div class="globe-controls">
+                <div class="clock-controls">
+                    <label class="fld" for="when">
+                        <span>Simulation time</span>
+                        <time class="clock" id="clock">—</time>
+                        <input type="datetime-local" id="when" step="1" aria-label="Set simulation time (UTC)" />
+                    </label>
                     <div class="row">
                         <button type="button" class="btn small" id="play" aria-pressed="true">Pause</button>
                         <select id="rate" aria-label="Time rate">
@@ -110,9 +107,20 @@
                         <button type="button" class="btn small ghost" id="now">Now</button>
                         <button type="button" class="btn small ghost" id="epoch">Catalog epoch</button>
                     </div>
-                    <label class="fld" for="when" style="margin-top:.4rem"><span>Set time (UTC)</span><input type="datetime-local" id="when" step="1" /></label>
-                    <div class="age" id="age"></div>
                 </div>
+                <div class="catalog-clock">
+                    <div>Catalog epoch <time id="catalog-epoch">—</time></div>
+                    <div class="age" id="age"></div>
+                    <div class="row">
+                        <button type="button" class="btn small ghost" id="load-file" aria-describedby="catalog-file-note">Load TLE / OMM catalog…</button>
+                        <button type="button" class="btn small ghost" id="load-default" hidden>Restore snapshot</button>
+                        <input type="file" id="file" accept=".txt,.tle,.3le,.json,text/plain,application/json" hidden />
+                    </div>
+                    <p class="hint" id="catalog-file-note">Choose a newer catalog from CelesTrak or Space-Track. The file stays in your browser.</p>
+                </div>
+            </div>
+            <div class="globe-wrap" id="globe-wrap">
+                <canvas id="globe" aria-label="3D globe of catalogued objects in orbit. Drag to rotate, scroll or pinch to zoom, click an object to select it."></canvas>
                 <div class="hud tr legend" id="legend"></div>
                 <div class="hud br hintline">Drag to rotate · scroll or pinch to zoom · click an object</div>
                 <div class="tag" id="tag" hidden></div>
