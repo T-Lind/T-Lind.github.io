@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-11-18" />
+    <meta name="description" content="Space debris visualizer: the public orbital catalog on a 3D globe with filters, fragmentation families, spatial density, Gabbard diagrams, debris exposure for your orbit from TLE or elements, and conjunction screening." />
+    <title>Space Debris Visualizer | T-Lind</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070708'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%2316304a' stroke='%23e8e8ec'/%3E%3Ccircle cx='5' cy='9' r='1.4' fill='%23ff8a80'/%3E%3Ccircle cx='26' cy='7' r='1.4' fill='%237fb8ff'/%3E%3Ccircle cx='27' cy='22' r='1.4' fill='%23ff8a80'/%3E%3Ccircle cx='7' cy='25' r='1.4' fill='%23ffb347'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="../space/space.css" />
+    <link rel="stylesheet" href="debris.css" />
+</head>
+<body class="tool">
+<header class="tool-head">
+    <div>
+        <div class="crumb"><a href="../space/">Space environment tools</a> / Orbital debris</div>
+        <h1>Space Debris Visualizer</h1>
+        <p>Explore the public catalog of tracked objects in orbit. Filter by type, orbit and fragmentation event, study the population by altitude, and check your own orbit's debris exposure and close approaches.</p>
+    </div>
+    <div class="badges" aria-label="Data in use">
+        <span class="badge">Catalog <b id="badge-count">—</b></span>
+        <span class="badge">Elements <b id="badge-date">—</b></span>
+        <span class="badge">Propagator <b>SGP4</b></span>
+    </div>
+</header>
+
+<div class="tool-body">
+    <aside class="tool-panel" aria-label="Catalog filters and your orbit">
+        <div class="tool-panel-inner">
+            <section class="sect" aria-labelledby="h-filter">
+                <h2 id="h-filter">Filter catalog <span class="n" id="shown">—</span></h2>
+                <div class="stack">
+                    <label class="fld" for="search"><span>Name, NORAD ID or COSPAR ID</span><input type="search" id="search" placeholder="e.g. ISS, 25544, 1999-025" autocomplete="off" spellcheck="false" /></label>
+                    <div id="types" role="group" aria-label="Object types"></div>
+                    <label class="fld" for="family"><span>Fragmentation family <em>debris by launch</em></span><select id="family"><option value="">All objects</option></select></label>
+                    <label class="fld" for="regime"><span>Orbit regime</span>
+                        <select id="regime">
+                            <option value="">All regimes</option>
+                            <option value="leo">LEO · apogee below 2,000 km</option>
+                            <option value="meo">MEO · 2,000 km to near-GEO</option>
+                            <option value="geo">GEO belt · period 1,436 ± 30 min, e &lt; 0.05</option>
+                            <option value="heo">HEO · eccentricity above 0.25</option>
+                        </select></label>
+                    <div class="fld-grid">
+                        <label class="fld" for="pmin"><span>Perigee ≥ <em>km</em></span><input type="number" id="pmin" min="0" step="10" placeholder="0" /></label>
+                        <label class="fld" for="amax"><span>Apogee ≤ <em>km</em></span><input type="number" id="amax" min="0" step="10" placeholder="any" /></label>
+                        <label class="fld" for="imin"><span>Incl. ≥ <em>deg</em></span><input type="number" id="imin" min="0" max="180" step="0.5" placeholder="0" /></label>
+                        <label class="fld" for="imax"><span>Incl. ≤ <em>deg</em></span><input type="number" id="imax" min="0" max="180" step="0.5" placeholder="180" /></label>
+                        <label class="fld" for="country"><span>Owner</span><select id="country"><option value="">Any</option></select></label>
+                        <label class="fld" for="rcs"><span>Radar size</span><select id="rcs"><option value="">Any</option><option value="L">Large (&gt; 1 m²)</option><option value="M">Medium</option><option value="S">Small (&lt; 0.1 m²)</option><option value="?">Unknown</option></select></label>
+                        <label class="fld" for="ymin"><span>Launched from</span><input type="number" id="ymin" min="1957" max="2100" step="1" placeholder="1957" /></label>
+                        <label class="fld" for="ymax"><span>to</span><input type="number" id="ymax" min="1957" max="2100" step="1" placeholder="now" /></label>
+                    </div>
+                    <div class="row spread">
+                        <label class="check"><input type="checkbox" id="dim" /> Dim instead of hide</label>
+                        <button type="button" class="btn small ghost" id="reset">Reset filters</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="h-mine">
+                <h2 id="h-mine">Your orbit</h2>
+                <label class="check" style="margin-bottom:.6rem"><input type="checkbox" id="mine-on" checked /> Show on globe and analyse</label>
+                <div id="editor"></div>
+                <div class="fld-grid" style="margin-top:.7rem">
+                    <label class="fld" for="area"><span>Exposed area <em>m²</em></span><input type="number" id="area" min="0.0001" step="any" value="10" /></label>
+                    <label class="fld" for="years"><span>Mission <em>years</em></span><input type="number" id="years" min="0.01" max="50" step="any" value="5" /></label>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="h-display">
+                <h2 id="h-display">Display</h2>
+                <div class="stack">
+                    <div class="seg" id="frame" role="group" aria-label="Reference frame">
+                        <button type="button" data-v="inertial" aria-pressed="true">Inertial (TEME)</button>
+                        <button type="button" data-v="fixed" aria-pressed="false">Earth-fixed</button>
+                    </div>
+                    <label class="fld" for="psize"><span>Point size <em id="psize-v">3 px</em></span><input type="range" id="psize" min="1" max="7" step="0.5" value="3" /></label>
+                    <label class="check"><input type="checkbox" id="orbits" /> Draw orbits of filtered objects (up to 300)</label>
+                    <label class="check"><input type="checkbox" id="grid" checked /> Graticule</label>
+                    <label class="check"><input type="checkbox" id="light" checked /> Day / night shading</label>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="h-data">
+                <h2 id="h-data">Catalog data</h2>
+                <dl class="kv" id="cat-kv"></dl>
+                <div class="row" style="margin-top:.7rem">
+                    <button type="button" class="btn small ghost" id="load-file">Load TLE / OMM file…</button>
+                    <button type="button" class="btn small ghost" id="load-default" hidden>Restore snapshot</button>
+                    <input type="file" id="file" accept=".txt,.tle,.3le,.json,text/plain,application/json" hidden />
+                </div>
+                <p class="hint">Load a current catalog from CelesTrak or Space-Track to replace the snapshot. The file is read in your browser and never uploaded.</p>
+            </section>
+        </div>
+    </aside>
+
+    <main class="tool-main" id="main">
+        <section class="card globe-card" aria-label="Globe">
+            <div class="globe-wrap" id="globe-wrap">
+                <canvas id="globe" aria-label="3D globe of catalogued objects in orbit. Drag to rotate, scroll or pinch to zoom, click an object to select it."></canvas>
+                <div class="hud tl">
+                    <div class="clock" id="clock">—</div>
+                    <div class="row">
+                        <button type="button" class="btn small" id="play" aria-pressed="true">Pause</button>
+                        <select id="rate" aria-label="Time rate">
+                            <option value="1">1×</option><option value="10">10×</option><option value="60" selected>60×</option><option value="300">300×</option><option value="1000">1,000×</option><option value="3600">3,600×</option>
+                        </select>
+                        <button type="button" class="btn small ghost" id="now">Now</button>
+                        <button type="button" class="btn small ghost" id="epoch">Catalog epoch</button>
+                    </div>
+                    <label class="fld" for="when" style="margin-top:.4rem"><span>Set time (UTC)</span><input type="datetime-local" id="when" step="1" /></label>
+                    <div class="age" id="age"></div>
+                </div>
+                <div class="hud tr legend" id="legend"></div>
+                <div class="hud br hintline">Drag to rotate · scroll or pinch to zoom · click an object</div>
+                <div class="tag" id="tag" hidden></div>
+                <div class="tag mine" id="tag-mine" hidden></div>
+                <div class="globe-msg" id="globe-msg" hidden></div>
+            </div>
+        </section>
+
+        <section class="card" aria-label="Analysis">
+            <div class="tabstrip" role="tablist" id="tabs" aria-label="Analysis views">
+                <button type="button" role="tab" data-tab="object" aria-controls="p-object" aria-selected="true">Selected object</button>
+                <button type="button" role="tab" data-tab="density" aria-controls="p-density" aria-selected="false" tabindex="-1">Spatial density</button>
+                <button type="button" role="tab" data-tab="gabbard" aria-controls="p-gabbard" aria-selected="false" tabindex="-1">Gabbard diagram</button>
+                <button type="button" role="tab" data-tab="incl" aria-controls="p-incl" aria-selected="false" tabindex="-1">Inclination vs altitude</button>
+                <button type="button" role="tab" data-tab="counts" aria-controls="p-counts" aria-selected="false" tabindex="-1">Population</button>
+                <button type="button" role="tab" data-tab="exposure" aria-controls="p-exposure" aria-selected="false" tabindex="-1">Your orbit: exposure</button>
+                <button type="button" role="tab" data-tab="screen" aria-controls="p-screen" aria-selected="false" tabindex="-1">Close approaches</button>
+                <button type="button" role="tab" data-tab="method" aria-controls="p-method" aria-selected="false" tabindex="-1">Method &amp; data</button>
+            </div>
+
+            <div role="tabpanel" id="p-object" aria-label="Selected object">
+                <div class="card-body" id="object-body"><p class="note">Click an object on the globe, or search for one by name or number.</p></div>
+            </div>
+
+            <div role="tabpanel" id="p-density" aria-label="Spatial density" hidden>
+                <div class="panel-tools">
+                    <label class="fld" for="dens-range"><span>Altitude range</span><select id="dens-range"><option value="leo" selected>LEO · 200–2,000 km</option><option value="all">All · 200–40,000 km (log)</option></select></label>
+                    <span class="hint" style="margin:0">Time-averaged spatial density of the filtered set, objects per km³</span>
+                    <button type="button" class="btn small ghost" data-csv="density">Download CSV</button>
+                </div>
+                <div class="plots" style="grid-template-columns:1fr"><div class="plot-cell"><div id="plot-density" class="tall"></div></div></div>
+            </div>
+
+            <div role="tabpanel" id="p-gabbard" aria-label="Gabbard diagram" hidden>
+                <div class="panel-tools"><span class="hint" style="margin:0">Apogee and perigee against orbital period for the filtered set. Choose a fragmentation family to see the characteristic X of a breakup cloud.</span><button type="button" class="btn small ghost" data-csv="gabbard">Download CSV</button></div>
+                <div class="plots" style="grid-template-columns:1fr"><div class="plot-cell"><div id="plot-gabbard" class="tall"></div></div></div>
+            </div>
+
+            <div role="tabpanel" id="p-incl" aria-label="Inclination versus altitude" hidden>
+                <div class="panel-tools"><span class="hint" style="margin:0">Each point is one object at its mean altitude, coloured by type. Shells and sun-synchronous bands stand out.</span></div>
+                <div class="plots" style="grid-template-columns:1fr"><div class="plot-cell"><div id="plot-incl" class="tall"></div></div></div>
+            </div>
+
+            <div role="tabpanel" id="p-counts" aria-label="Population" hidden>
+                <div class="plots">
+                    <div class="plot-cell"><h3>Objects by launch year <span class="sub">filtered set, still in orbit</span></h3><div id="plot-years"></div></div>
+                    <div class="plot-cell"><h3>Objects by mean altitude <span class="sub">log bins</span></h3><div id="plot-alt"></div></div>
+                </div>
+                <div class="table-wrap"><table class="data" id="count-table"></table></div>
+            </div>
+
+            <div role="tabpanel" id="p-exposure" aria-label="Your orbit exposure" hidden>
+                <div class="card-body" id="exposure-head"></div>
+                <div class="plots">
+                    <div class="plot-cell"><h3>Cumulative impact flux vs particle size <span class="sub" id="exp-sub"></span></h3><div id="plot-flux"></div></div>
+                    <div class="plot-cell"><h3>Tracked-object density along your orbit <span class="sub">catalog, filtered set</span></h3><div id="plot-shell"></div></div>
+                </div>
+                <div class="table-wrap"><table class="data" id="exposure-table"></table></div>
+                <p class="hint" style="padding:0 .8rem .8rem" id="exposure-note"></p>
+            </div>
+
+            <div role="tabpanel" id="p-screen" aria-label="Close approaches" hidden>
+                <div class="panel-tools">
+                    <label class="fld" for="scr-hours"><span>Window</span><select id="scr-hours"><option value="6">6 h</option><option value="24" selected>24 h</option><option value="48">48 h</option><option value="72">72 h</option></select></label>
+                    <label class="fld" for="scr-km"><span>Miss distance ≤</span><input type="number" id="scr-km" min="0.5" max="200" step="0.5" value="10" style="width:5rem" /><span>km</span></label>
+                    <span class="hint" style="margin:0" id="scr-start"></span>
+                    <button type="button" class="btn small primary" id="scr-run">Screen your orbit</button>
+                    <progress id="scr-prog" max="1" value="0" hidden></progress>
+                </div>
+                <div class="table-wrap"><table class="data" id="scr-table"><tbody><tr><td class="l">Screens your orbit against every catalog object whose perigee–apogee band overlaps it, starting at the current globe time.</td></tr></tbody></table></div>
+                <p class="hint" style="padding:.5rem .8rem .8rem">Screening uses public mean elements and SGP4, whose position errors are around 1 km at epoch and grow to tens of km over days. Results show where to look, not collision probabilities. Operators rely on 18th/19th SDS conjunction data messages with covariance.</p>
+            </div>
+
+            <div role="tabpanel" id="p-method" aria-label="Method and data" hidden>
+                <div class="card-body prose" id="method"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<footer class="statusbar" role="status" aria-live="polite">
+    <span><span class="dot" id="dot"></span><span id="status">Loading the orbital catalog…</span></span>
+    <progress id="progress" max="1" value="0" hidden></progress>
+    <span class="grow"></span>
+    <span id="stamp"></span>
+</footer>
+
+<script src="../space/lib/satellite.min.js"></script>
+<script src="../space/lib/orbit.js"></script>
+<script src="../space/lib/plot.js"></script>
+<script src="../space/lib/ui.js"></script>
+<script src="../space/lib/debris-env.js"></script>
+<script src="globe.js"></script>
+<script src="debris.js"></script>
+<script src="../bh-nav.js"></script>
+</body>
+</html>

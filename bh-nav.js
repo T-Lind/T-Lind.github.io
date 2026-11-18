@@ -3,7 +3,7 @@
  "use strict";
  var script = document.currentScript;
  var base = new URL('./', script.src);
- var items = [['', 'Home'], ['projects/', 'Projects'], ['research/', 'Research'], ['motivation/', 'Motivation'], ['profile/', 'Profile'], ['games/', 'Games'], ['reading/', 'Reading'], ['essays/', 'Writing'], ['search/', 'Search']];
+ var items = [['', 'Home'], ['projects/', 'Projects'], ['research/', 'Research'], ['motivation/', 'Motivation'], ['profile/', 'Profile'], ['games/', 'Games'], ['space/', 'Space'], ['reading/', 'Reading'], ['essays/', 'Writing'], ['search/', 'Search']];
  if (!document.querySelector('link[data-site-nav-style]')) {
   var style = document.createElement('link'); style.rel = 'stylesheet'; style.href = new URL('site-nav.css', base).href;
   style.setAttribute('data-site-nav-style', ''); document.head.appendChild(style);

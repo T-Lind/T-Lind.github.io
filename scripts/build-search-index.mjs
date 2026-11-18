@@ -10,12 +10,14 @@ function plain(html) {
         return entities[entity] || ' ';
     }).replace(/\s+/g, ' ').trim();
 }
-const projectSections = new Set(['opendraft', 'ty', 'lightning-detector', 'accessor', 'satellite-sim', 'syngrafi', 'photolib', 'chess-3d', 'lofall', 'intellistream', 'wormhole', 'lindauerai', 'kalman']);
+const projectSections = new Set(['opendraft', 'ty', 'lightning-detector', 'accessor', 'satellite-sim', 'syngrafi', 'photolib', 'chess-3d', 'lofall', 'intellistream', 'wormhole', 'lindauerai', 'kalman', 'space', 'debris', 'van-allen']);
 const aliases = {
     opendraft: ['open draft', 'writing workshop'], ty: ['tiny terminal agent', 'ollama', 'local AI agent', 'LLM'],
     'lightning-detector': ['lightning detector', 'AS3935', 'ESP32'], accessor: ['29', 'twenty nine', 'voice agent'],
     'satellite-sim': ['ss.jl', 'ssjl', 'satellite sim', 'satellitesim', 'moonshot'], syngrafi: ['scripture', 'Bible', 'Quran', 'Koran'],
-    photolib: ['photo library', 'photos'], 'chess-3d': ['3d chess'], lofall: ['4d platformer', 'tesseract']
+    photolib: ['photo library', 'photos'], 'chess-3d': ['3d chess'], lofall: ['4d platformer', 'tesseract'],
+    space: ['space tools', 'space environment'], debris: ['space debris', 'orbital debris', 'TLE', 'satellite catalog', 'conjunction', 'Gabbard'],
+    'van-allen': ['Van Allen belts', 'radiation belts', 'trapped radiation', 'AE8', 'AP8', 'SAA', 'total ionizing dose']
 };
 const files = ['index.html'];
 // Only public static pages, never node_modules, app sources, or environment files.

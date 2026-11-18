@@ -1,0 +1,20 @@
+/* Space tools hub: two large tool cards in the shared deep-space theme. */
+.tool-cards, .tool-cards * { margin-top: 0; box-sizing: border-box; }
+.tool-cards { display: grid; grid-template-columns: 1fr; gap: 1.4rem; margin-bottom: 2.4rem; }
+.tool-card { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 6px; background: rgba(12,12,16,.9); }
+.tool-art { display: block; border: 0 !important; border-right: 1px solid rgba(255,255,255,.12) !important; background: #050507; }
+.tool-art img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.tool-body { display: flex; flex-direction: column; gap: .7rem; padding: 1.3rem 1.4rem; }
+.tool-kind { font-family: var(--bh-mono); font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: #b2b2ba; }
+.tool-body h2 { font-size: 1.35rem; margin: 0; padding: 0; line-height: 1.25; }
+.tool-body h2::after { display: none; }
+.tool-body h2 a { color: #fff; border: 0; }
+.main-content .tool-body p, .main-content .tool-body li { font-size: .9rem; line-height: 1.6; color: #b8b8c0; margin: 0; }
+.tool-body ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .3rem; }
+.tool-actions { margin-top: auto; padding-top: .5rem; }
+.tool-open { display: inline-block; padding: .6rem .85rem; border: 1px solid rgba(255,255,255,.38) !important; border-radius: 3px; color: #fff; background: rgba(255,255,255,.05); font-size: .84rem; }
+.tool-open:hover { background: rgba(255,255,255,.12); }
+@media (max-width: 760px) {
+    .tool-card { grid-template-columns: 1fr; }
+    .tool-art { border-right: 0 !important; border-bottom: 1px solid rgba(255,255,255,.12) !important; aspect-ratio: 16 / 9; }
+}

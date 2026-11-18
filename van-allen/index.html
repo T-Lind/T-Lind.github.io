@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-11-18" />
+    <meta name="description" content="Van Allen belt radiation analysis: compare orbits from TLEs or elements against NASA AE8/AP8 trapped electron and proton models, with mission fluence, dose-depth curves, SAA maps and belt cross-sections." />
+    <title>Van Allen Belt Radiation | T-Lind</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070708'/%3E%3Cpath d='M16 8c6 0 11 4 11 8s-5 8-11 8' fill='none' stroke='%23ffb347' stroke-width='2'/%3E%3Cpath d='M16 8C10 8 5 12 5 16s5 8 11 8' fill='none' stroke='%237fb8ff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23e8e8ec'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="../space/space.css" />
+    <link rel="stylesheet" href="van-allen.css" />
+</head>
+<body class="tool">
+<header class="tool-head">
+    <div>
+        <div class="crumb"><a href="../space/">Space environment tools</a> / Trapped radiation</div>
+        <h1>Van Allen Belt Radiation</h1>
+        <p>Compare orbits against the NASA AE8/AP8 trapped electron and proton models. See orbit-averaged spectra, mission fluence, total ionizing dose behind shielding, South Atlantic Anomaly passes and where each orbit sits in the belts.</p>
+    </div>
+    <div class="badges" aria-label="Models in use">
+        <span class="badge">Belts <b>AE8 / AP8</b></span>
+        <span class="badge">Field <b id="badge-field">IGRF 1970</b></span>
+        <span class="badge">Solar <b id="badge-solar">MAX</b></span>
+        <span class="badge">Orbits <b>SGP4</b></span>
+    </div>
+</header>
+
+<div class="tool-body">
+    <aside class="tool-panel" aria-label="Analysis inputs">
+        <div class="tool-panel-inner">
+            <section class="sect" aria-labelledby="h-cases">
+                <h2 id="h-cases">Orbit cases <span class="n" id="case-count">0 / 6</span></h2>
+                <ul class="cases" id="cases"></ul>
+                <div class="row">
+                    <button type="button" class="btn small" id="add-case">+ Add case</button>
+                    <button type="button" class="btn small ghost" id="dup-case">Duplicate</button>
+                </div>
+            </section>
+            <section class="sect" aria-labelledby="h-edit">
+                <h2 id="h-edit">Edit case <span class="n" id="edit-name"></span></h2>
+                <div id="editor"></div>
+            </section>
+            <section class="sect" aria-labelledby="h-mission">
+                <h2 id="h-mission">Mission</h2>
+                <div class="fld-grid">
+                    <label class="fld wide" for="start"><span>Start (UTC) <em>applies to all cases</em></span><input type="datetime-local" id="start" step="1" /></label>
+                    <label class="fld" for="dur"><span>Duration</span><input type="number" id="dur" min="0.01" max="30" step="any" value="1" /></label>
+                    <label class="fld" for="dur-unit"><span>Unit</span>
+                        <select id="dur-unit"><option value="3600">hours</option><option value="86400">days</option><option value="31557600" selected>years</option></select></label>
+                </div>
+                <div class="row" style="margin-top:.55rem">
+                    <button type="button" class="btn small ghost" id="start-epoch" title="Start the mission at the selected case's element epoch">Use case epoch</button>
+                    <button type="button" class="btn small ghost" id="start-now">Now</button>
+                </div>
+            </section>
+            <section class="sect" aria-labelledby="h-env">
+                <h2 id="h-env">Environment</h2>
+                <div class="stack">
+                    <div>
+                        <div class="fld"><span>Solar cycle phase</span></div>
+                        <div class="seg" id="solar" role="group" aria-label="Solar cycle phase">
+                            <button type="button" data-v="min" aria-pressed="false">Solar min</button>
+                            <button type="button" data-v="max" aria-pressed="true">Solar max</button>
+                        </div>
+                    </div>
+                    <label class="fld" for="field"><span>Geomagnetic field for (B, L)</span>
+                        <select id="field">
+                            <option value="1970" selected>IGRF 1970 · model epoch (standard)</option>
+                            <option value="2025">IGRF 2025 · present-day field (SAA drift)</option>
+                        </select></label>
+                    <p class="hint">AE8/AP8 were built with 1960s field models. Using a present-day field moves the South Atlantic Anomaly to where it is now, but the models are not calibrated for it. Treat that as a sensitivity case.</p>
+                </div>
+            </section>
+            <section class="sect" aria-labelledby="h-dose">
+                <h2 id="h-dose">Shielding and dose</h2>
+                <div class="fld-grid">
+                    <label class="fld wide" for="geometry"><span>Shield geometry</span>
+                        <select id="geometry"><option value="sphere" selected>Centre of solid Al sphere</option><option value="slab">Semi-infinite Al slab (one face)</option></select></label>
+                    <label class="fld" for="ref-mm"><span>Reference Al <em>mm</em></span><input type="number" id="ref-mm" min="0.01" max="50" step="any" value="2.54" /></label>
+                    <label class="fld" for="rdm"><span>Design margin <em>×</em></span><input type="number" id="rdm" min="1" max="10" step="0.5" value="2" /></label>
+                    <label class="fld wide" for="ef"><span>Electron transport</span>
+                        <select id="ef"><option value="practical" selected>Practical range (Katz–Penfold) · nominal</option><option value="csda">CSDA straight-ahead · upper bound</option><option value="detour">Scattering detour, path × 1.6 · lower</option></select></label>
+                </div>
+            </section>
+            <section class="sect" aria-labelledby="h-an">
+                <h2 id="h-an">Analysis</h2>
+                <div class="fld-grid">
+                    <label class="fld" for="e-thr"><span>Electrons above <em>MeV</em></span><select id="e-thr"></select></label>
+                    <label class="fld" for="p-thr"><span>Protons above <em>MeV</em></span><select id="p-thr"></select></label>
+                    <label class="fld" for="samples"><span>Mission samples</span>
+                        <select id="samples"><option value="20000">20,000 (fast)</option><option value="60000" selected>60,000</option><option value="150000">150,000 (fine)</option></select></label>
+                    <label class="fld" for="window"><span>Time-history window</span>
+                        <select id="window"><option value="21600">6 hours</option><option value="86400" selected>1 day</option><option value="259200">3 days</option><option value="604800">7 days</option></select></label>
+                </div>
+                <p class="hint">Mission samples are spread over the whole duration with random jitter, so J2 precession and Earth rotation cover every geometry. The time history uses a fixed step from the mission start.</p>
+                <div class="row" style="margin-top:.7rem">
+                    <button type="button" class="btn primary" id="run">Run analysis</button>
+                    <label class="check"><input type="checkbox" id="auto" checked /> Recompute on change</label>
+                </div>
+            </section>
+        </div>
+    </aside>
+
+    <main class="tool-main" id="main">
+        <section class="card" aria-labelledby="h-summary">
+            <div class="card-head">
+                <h2 id="h-summary">Summary</h2>
+                <div class="row">
+                    <button type="button" class="btn small ghost" id="share">Copy link to this analysis</button>
+                    <button type="button" class="btn small ghost" id="export-summary">Export CSV</button>
+                </div>
+            </div>
+            <div class="card-body flush table-wrap">
+                <table class="data" id="summary">
+                    <thead></thead>
+                    <tbody><tr><td class="l">Loading models…</td></tr></tbody>
+                </table>
+            </div>
+            <div class="card-body" id="warnings" hidden></div>
+        </section>
+
+        <section class="card" aria-label="Results">
+            <div class="tabstrip" role="tablist" id="tabs" aria-label="Result views">
+                <button type="button" role="tab" data-tab="spectra" aria-controls="p-spectra" aria-selected="true">Spectra</button>
+                <button type="button" role="tab" data-tab="fluence" aria-controls="p-fluence" aria-selected="false" tabindex="-1">Mission fluence</button>
+                <button type="button" role="tab" data-tab="dose" aria-controls="p-dose" aria-selected="false" tabindex="-1">Dose–depth</button>
+                <button type="button" role="tab" data-tab="map" aria-controls="p-map" aria-selected="false" tabindex="-1">Ground track &amp; SAA</button>
+                <button type="button" role="tab" data-tab="belts" aria-controls="p-belts" aria-selected="false" tabindex="-1">Belt cross-section</button>
+                <button type="button" role="tab" data-tab="history" aria-controls="p-history" aria-selected="false" tabindex="-1">Time history</button>
+                <button type="button" role="tab" data-tab="lshell" aria-controls="p-lshell" aria-selected="false" tabindex="-1">L-shell exposure</button>
+                <button type="button" role="tab" data-tab="method" aria-controls="p-method" aria-selected="false" tabindex="-1">Method &amp; limits</button>
+            </div>
+
+            <div role="tabpanel" id="p-spectra" aria-label="Spectra">
+                <div class="plots">
+                    <div class="plot-cell"><h3>Trapped electrons · AE8 <span class="sub">orbit-averaged integral flux</span></h3><div id="plot-se"></div></div>
+                    <div class="plot-cell"><h3>Trapped protons · AP8 <span class="sub">orbit-averaged integral flux</span></h3><div id="plot-sp"></div></div>
+                </div>
+                <div class="panel-tools"><span class="hint" style="margin:0">Drag across a plot to zoom; double-click resets. Click legend entries to hide series.</span><button type="button" class="btn small ghost" data-csv="spectra">Download CSV</button></div>
+            </div>
+
+            <div role="tabpanel" id="p-fluence" aria-label="Mission fluence" hidden>
+                <div class="plots">
+                    <div class="plot-cell"><h3>Cumulative electron fluence <span class="sub" id="fl-e-sub"></span></h3><div id="plot-fe"></div></div>
+                    <div class="plot-cell"><h3>Cumulative proton fluence <span class="sub" id="fl-p-sub"></span></h3><div id="plot-fp"></div></div>
+                </div>
+                <div class="panel-tools"><span class="hint" style="margin:0">Mission fluence = orbit-averaged flux × time. The trace shows how it accumulates over the mission timeline.</span><button type="button" class="btn small ghost" data-csv="fluence">Download CSV</button></div>
+            </div>
+
+            <div role="tabpanel" id="p-dose" aria-label="Dose depth" hidden>
+                <div class="panel-tools">
+                    <label class="fld" for="dose-case"><span>Components for</span><select id="dose-case"></select></label>
+                    <label class="fld" for="dose-unit"><span>Units</span><select id="dose-unit"><option value="krad">krad(Si)</option><option value="rad">rad(Si)</option><option value="Gy">Gy(Si)</option></select></label>
+                    <label class="check"><input type="checkbox" id="dose-margin" /> Include design margin</label>
+                    <button type="button" class="btn small ghost" data-csv="dose">Download CSV</button>
+                </div>
+                <p class="callout info" style="margin:.8rem .8rem 0">Shaded band: electron dose for the selected case between the scattering-detour estimate and the CSDA upper bound. Monte Carlo transport such as SHIELDOSE-2 usually falls near the low side behind a few mm of aluminium. Use this curve for trades and screening, and a transport code for qualification.</p>
+                <div class="plots" style="grid-template-columns:1fr">
+                    <div class="plot-cell"><h3>Total ionizing dose vs aluminium thickness <span class="sub" id="dose-sub"></span></h3><div id="plot-dose" class="tall"></div></div>
+                </div>
+                <div class="table-wrap"><table class="data" id="dose-table"></table></div>
+            </div>
+
+            <div role="tabpanel" id="p-map" aria-label="Ground track and SAA" hidden>
+                <div class="panel-tools">
+                    <label class="fld" for="map-case"><span>Case</span><select id="map-case"></select></label>
+                    <label class="fld" for="map-part"><span>Background</span><select id="map-part"><option value="p">Protons</option><option value="e">Electrons</option></select></label>
+                    <label class="fld" for="map-h"><span>at altitude</span><input type="number" id="map-h" min="100" max="60000" step="any" value="500" style="width:6.5rem" /><span>km</span></label>
+                    <button type="button" class="btn small ghost" id="map-h-case">Case mean altitude</button>
+                    <div class="scale" id="map-scale"></div>
+                </div>
+                <div class="map-wrap"><canvas id="map" aria-label="World map of trapped flux at the chosen altitude with the case ground track"></canvas><div class="splot-tip" id="map-tip" hidden></div></div>
+                <div class="card-body"><dl class="kv" id="map-kv"></dl></div>
+            </div>
+
+            <div role="tabpanel" id="p-belts" aria-label="Belt cross-section" hidden>
+                <div class="panel-tools">
+                    <label class="fld" for="belt-part"><span>Particle</span><select id="belt-part"><option value="e">Electrons</option><option value="p">Protons</option></select></label>
+                    <label class="fld" for="belt-e"><span>above</span><select id="belt-e"></select><span>MeV</span></label>
+                    <label class="fld" for="belt-r"><span>Extent</span><select id="belt-r"><option value="3">3 R⊕</option><option value="5">5 R⊕</option><option value="8" selected>8 R⊕</option><option value="12">12 R⊕</option></select></label>
+                    <div class="scale" id="belt-scale"></div>
+                </div>
+                <div class="belt-wrap"><canvas id="belt" aria-label="Meridional cross-section of the radiation belts with case orbits"></canvas><div class="splot-tip" id="belt-tip" hidden></div></div>
+                <p class="hint" style="padding:0 .8rem .8rem">Dipole meridian plane, distances in Earth radii. Orbits are drawn at their dipole-equivalent position computed from the real (B, L) along the first time-history window. A low orbit that touches the inner belt here does so in the South Atlantic Anomaly.</p>
+            </div>
+
+            <div role="tabpanel" id="p-history" aria-label="Time history" hidden>
+                <div class="plots" style="grid-template-columns:1fr">
+                    <div class="plot-cell"><h3>Flux along the orbit <span class="sub" id="hist-sub"></span></h3><div id="plot-hist"></div></div>
+                    <div class="plot-cell"><h3>McIlwain L and altitude</h3><div id="plot-hl"></div></div>
+                </div>
+                <div class="panel-tools"><span class="hint" style="margin:0">Fixed-step propagation from the mission start. Belt passes count each entry into proton flux above the threshold at more than 1 cm⁻² s⁻¹.</span><button type="button" class="btn small ghost" data-csv="history">Download CSV</button></div>
+            </div>
+
+            <div role="tabpanel" id="p-lshell" aria-label="L-shell exposure" hidden>
+                <div class="plots" style="grid-template-columns:1fr">
+                    <div class="plot-cell"><h3>Fraction of mission time by McIlwain L <span class="sub">0.2-wide bins</span></h3><div id="plot-L"></div></div>
+                </div>
+            </div>
+
+            <div role="tabpanel" id="p-method" aria-label="Method and limits" hidden>
+                <div class="card-body prose" id="method"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<footer class="statusbar" role="status" aria-live="polite">
+    <span><span class="dot" id="dot"></span><span id="status">Loading AE8/AP8 tables and field grid…</span></span>
+    <progress id="progress" max="1" value="0" hidden></progress>
+    <span class="grow"></span>
+    <span id="stamp"></span>
+</footer>
+
+<script src="../space/lib/satellite.min.js"></script>
+<script src="../space/lib/orbit.js"></script>
+<script src="../space/lib/plot.js"></script>
+<script src="../space/lib/ui.js"></script>
+<script src="van-allen.js"></script>
+<script src="../bh-nav.js"></script>
+</body>
+</html>
