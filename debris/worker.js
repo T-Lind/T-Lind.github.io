@@ -1,9 +1,9 @@
 /* Debris visualizer worker: SGP4 for the whole catalog, orbit tracks and conjunction screening. */
 'use strict';
-const commonJS = typeof module !== 'undefined' && module.exports;
-if (!commonJS) importScripts('../space/lib/satellite.min.js', '../space/lib/orbit.js');
-const O = commonJS ? require('../space/lib/orbit.js') : self.SpaceOrbit;
-const S = O.satellite;
+importScripts('../space/lib/satellite.min.js', '../space/lib/orbit.js');
+const O = self.SpaceOrbit, S = self.satellite;
+let recs = [];          // satrecs, index-aligned with the catalog rows (null when SGP4 cannot initialise)
+let perigee, apogee;    // km, from mean elements
 
 function ommFromRow(r, F) {
     return {
@@ -13,11 +13,9 @@ function ommFromRow(r, F) {
     };
 }
 
-function loadCatalog(rows, fields) {
+function load(rows, fields) {
     const F = Object.fromEntries(fields.map((f, i) => [f, i]));
-    // Index-aligned with the catalog, including records SGP4 cannot initialise.
-    const recs = new Array(rows.length);
-    const perigee = new Float32Array(rows.length), apogee = new Float32Array(rows.length);
+    recs = new Array(rows.length); perigee = new Float32Array(rows.length); apogee = new Float32Array(rows.length);
     let bad = 0;
     for (let k = 0; k < rows.length; k++) {
         try {
@@ -28,10 +26,10 @@ function loadCatalog(rows, fields) {
             perigee[k] = a * (1 - s.ecco) - O.RE; apogee[k] = a * (1 + s.ecco) - O.RE;
         } catch (err) { recs[k] = null; bad++; perigee[k] = apogee[k] = NaN; }
     }
-    return { recs, perigee, apogee, bad };
+    return bad;
 }
 
-function positions(recs, timeMs) {
+function positions(timeMs) {
     const n = recs.length, pos = new Float32Array(n * 3), vel = new Float32Array(n * 3);
     const date = new Date(timeMs);
     let fail = 0;
@@ -105,7 +103,7 @@ function ric(pa, dr) {
     return { r: dotp(dr, R), i: dotp(dr, I), c: dotp(dr, C) };
 }
 
-function screen({ recs, perigee, apogee }, msg, post = () => {}, deadline = Infinity) {
+function screen(msg, post) {
     const primary = O.satrecFromSource(msg.source);
     const t0 = msg.start, hours = msg.hours, thr = msg.threshold, step = 120, sub = 12;
     const count = Math.floor(hours * 3600 / step) + 1;
@@ -127,9 +125,6 @@ function screen({ recs, perigee, apogee }, msg, post = () => {}, deadline = Infi
     const gateSq = (thr + 15 * step / sub) ** 2;      // max relative motion between sub-samples
     const rejectSq = (thr + 16 * step * 1.05 + 50) ** 2;
     for (let c = 0; c < cand.length; c++) {
-        if (deadline !== Infinity && c % 128 === 0 && Date.now() >= deadline) {
-            throw new Error('The screening time budget was exceeded. Try a shorter window or use the browser visualizer.');
-        }
         const k = cand[c], s = recs[k];
         const sec = nodes(s, times, prim.valid);
         const n = Math.min(prim.valid, sec.valid);
@@ -164,40 +159,34 @@ function screen({ recs, perigee, apogee }, msg, post = () => {}, deadline = Infi
         if (c % 200 === 0) post({ type: 'screen-progress', id: msg.id, frac: c / cand.length, candidates: cand.length });
     }
     events.sort((x, y) => x.miss - y.miss);
-    return { events: events.slice(0, 500), eventCount: events.length, candidates: cand.length, windowEnd: t0 + (prim.valid - 1) * step * 1000, truncated: prim.valid < count };
+    return { events: events.slice(0, 500), candidates: cand.length, windowEnd: t0 + (prim.valid - 1) * step * 1000, truncated: prim.valid < count };
 }
 
-if (commonJS) module.exports = { loadCatalog, screen };
-else self.onmessage = createMessageHandler();
-
-function createMessageHandler() {
-    let catalog = { recs: [], perigee: [], apogee: [] };
-    return ({ data: m }) => {
-        try {
-            if (m.type === 'load') {
-                catalog = loadCatalog(m.rows, m.fields);
-                const { bad, perigee, apogee } = catalog;
-                self.postMessage({ type: 'loaded', bad, perigee, apogee });
-            } else if (m.type === 'positions') {
-                const r = positions(catalog.recs, m.time);
-                self.postMessage({ type: 'positions', time: m.time, pos: r.pos, vel: r.vel, fail: r.fail }, [r.pos.buffer, r.vel.buffer]);
-            } else if (m.type === 'track') {
-                const s = m.source ? O.satrecFromSource(m.source) : catalog.recs[m.index];
-                if (!s) throw new Error('No elements for this object.');
-                const pts = trackOf(s, m.time, m.periods || 1, m.n || 240);
-                self.postMessage({ type: 'track', id: m.id, points: pts }, [pts.buffer]);
-            } else if (m.type === 'tracks') {
-                const out = [];
-                for (const k of m.indices) { const s = catalog.recs[k]; if (s) out.push(trackOf(s, m.time, 1, 120)); }
-                self.postMessage({ type: 'tracks', id: m.id, tracks: out }, out.map(t => t.buffer));
-            } else if (m.type === 'state') {
-                const s = m.source ? O.satrecFromSource(m.source) : catalog.recs[m.index];
-                const pv = s ? S.propagate(s, new Date(m.time)) : null;
-                self.postMessage({ type: 'state', id: m.id, pv: pv ? { position: pv.position, velocity: pv.velocity } : null });
-            } else if (m.type === 'screen') {
-                const r = screen(catalog, m, x => self.postMessage(x));
-                self.postMessage({ type: 'screen', id: m.id, ...r });
-            }
-        } catch (err) { self.postMessage({ type: 'error', id: m.id, what: m.type, error: err.message }); }
-    };
-}
+self.onmessage = e => {
+    const m = e.data;
+    try {
+        if (m.type === 'load') {
+            const bad = load(m.rows, m.fields);
+            self.postMessage({ type: 'loaded', bad, perigee, apogee });
+        } else if (m.type === 'positions') {
+            const r = positions(m.time);
+            self.postMessage({ type: 'positions', time: m.time, pos: r.pos, vel: r.vel, fail: r.fail }, [r.pos.buffer, r.vel.buffer]);
+        } else if (m.type === 'track') {
+            const s = m.source ? O.satrecFromSource(m.source) : recs[m.index];
+            if (!s) throw new Error('No elements for this object.');
+            const pts = trackOf(s, m.time, m.periods || 1, m.n || 240);
+            self.postMessage({ type: 'track', id: m.id, points: pts }, [pts.buffer]);
+        } else if (m.type === 'tracks') {
+            const out = [];
+            for (const k of m.indices) { const s = recs[k]; if (s) out.push(trackOf(s, m.time, 1, 120)); }
+            self.postMessage({ type: 'tracks', id: m.id, tracks: out }, out.map(t => t.buffer));
+        } else if (m.type === 'state') {
+            const s = m.source ? O.satrecFromSource(m.source) : recs[m.index];
+            const pv = s ? S.propagate(s, new Date(m.time)) : null;
+            self.postMessage({ type: 'state', id: m.id, pv: pv ? { position: pv.position, velocity: pv.velocity } : null });
+        } else if (m.type === 'screen') {
+            const r = screen(m, x => self.postMessage(x));
+            self.postMessage({ type: 'screen', id: m.id, ...r });
+        }
+    } catch (err) { self.postMessage({ type: 'error', id: m.id, what: m.type, error: err.message }); }
+};

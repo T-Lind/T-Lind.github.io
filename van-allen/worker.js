@@ -1,10 +1,8 @@
 /* Van Allen tool computation worker: SGP4 sampling, AE8/AP8 lookup, fluence and dose. */
 'use strict';
-const commonJS = typeof module !== 'undefined' && module.exports;
-if (!commonJS) importScripts('../space/lib/satellite.min.js', '../space/lib/orbit.js', '../space/lib/radiation.js');
-const O = commonJS ? require('../space/lib/orbit.js') : self.SpaceOrbit;
-const R = commonJS ? require('../space/lib/radiation.js') : self.SpaceRad;
-const state = { model: null, fields: {}, dose: null };
+importScripts('../space/lib/satellite.min.js', '../space/lib/orbit.js', '../space/lib/radiation.js');
+const O = self.SpaceOrbit, R = self.SpaceRad;
+let model = null, fields = {}, dose = null;
 
 const DEG = Math.PI / 180;
 const DIPOLE_POLE = { 1970: [78.6, -70.1], 2025: [80.8, -72.7] };   // IGRF geomagnetic north pole (lat, lon)
@@ -28,10 +26,11 @@ function geomagSign(lat, lon, year) {
     return z >= 0 ? 1 : -1;
 }
 
-function runCase(job, c, { model, field, dose }, post = () => {}, summaryOnly = false) {
+function runCase(job, c, post) {
     const S = job.settings;
     const satrec = O.satrecFromSource(c.source);
     const el = O.elementsOf(satrec);
+    const field = fields[S.field];
     const kE = 'e_' + S.solar, kP = 'p_' + S.solar;
     const EE = model.energies.e, EP = model.energies.p;
     const nE = EE.length, nP = EP.length;
@@ -76,16 +75,6 @@ function runCase(job, c, { model, field, dose }, post = () => {}, summaryOnly = 
         if (k % 4000 === 0) post({ type: 'progress', id: job.id, key: c.key, frac: k / N * 0.85 });
     }
     const spectra = { e: { E: EE.slice(), J: Array.from(sumE, v => v / N) }, p: { E: EP.slice(), J: Array.from(sumP, v => v / N) } };
-    const ref = dose.depthCurve(spectra, [S.refMm], S.geometry, S.ef);
-    const live = decayedAt == null ? D : decayedAt;
-    if (outside / N > 0.001) warnings.push(`${(100 * outside / N).toFixed(1)}% of the time is above 60,000 km, beyond the tabulated field; trapped flux there is taken as zero (AE8 ends at L = 11).`);
-    const summary = {
-        name: c.source.name, elements: { ...el, epoch: el.epoch.toISOString() }, N, durationS: D, liveS: live, warnings,
-        spectra, peak: { e: peakE, p: peakP }, frac: { e: inBeltE / N, p: inBeltP / N, outside: outside / N },
-        fluence: { e: cumE, p: cumP }, Lmax,
-        refDose: { e: ref.e[0] * D, p: ref.p[0] * D, b: ref.b[0] * D, total: ref.total[0] * D }
-    };
-    if (summaryOnly) return summary;
 
     // High-resolution time history over the first window (ground track, SAA passes, belt view)
     const W = Math.min(S.windowS, D);
@@ -125,16 +114,22 @@ function runCase(job, c, { model, field, dose }, post = () => {}, summaryOnly = 
     const scale = arr => arr.map(v => v * D);
     const std = [0.1, 0.5, 1, 2, 2.54, 3, 4, 5, 7.5, 10, 15, 20];
     const table = dose.depthCurve(spectra, std, S.geometry, S.ef);
+    const ref = dose.depthCurve(spectra, [S.refMm], S.geometry, S.ef);
     const Wd = W / 86400;
+    const live = decayedAt == null ? D : decayedAt;
+    if (outside / N > 0.001) warnings.push(`${(100 * outside / N).toFixed(1)}% of the time is above 60,000 km, beyond the tabulated field; trapped flux there is taken as zero (AE8 ends at L = 11).`);
     return {
-        ...summary, cum, Lhist: { lo: 1, step: 0.2, frac: Array.from(Lhist, v => v / N) },
+        name: c.source.name, elements: { ...el, epoch: el.epoch.toISOString() }, N, durationS: D, liveS: live, warnings,
+        spectra, peak: { e: peakE, p: peakP }, frac: { e: inBeltE / N, p: inBeltP / N, outside: outside / N },
+        fluence: { e: cumE, p: cumP }, cum, Lhist: { lo: 1, step: 0.2, frac: Array.from(Lhist, v => v / N) }, Lmax,
         hist, passes: { count: passes, perDay: Wd > 0 ? passes / Math.min(Wd, (n * step) / 86400) : 0, minutesPerDay: Wd > 0 ? passTime / 60 / Math.min(Wd, (n * step) / 86400) : 0, windowS: n * step },
         dose: { mm, e: scale(curve.e), p: scale(curve.p), b: scale(curve.b), total: scale(curve.total), eLo: scale(eLo), eHi: scale(eHi) },
-        table: { mm: std, e: scale(table.e), p: scale(table.p), b: scale(table.b), total: scale(table.total) }
+        table: { mm: std, e: scale(table.e), p: scale(table.p), b: scale(table.b), total: scale(table.total) },
+        refDose: { e: ref.e[0] * D, p: ref.p[0] * D, b: ref.b[0] * D, total: ref.total[0] * D }
     };
 }
 
-function mapGrid(msg, { model, fields }) {
+function mapGrid(msg) {
     const field = fields[msg.field], key = msg.key, E = msg.E, part = key[0];
     const en = model.energies[part], spec = new Float64Array(en.length);
     const nx = 180, ny = 90, out = new Float32Array(nx * ny), fl = {}, w = {};
@@ -150,7 +145,7 @@ function mapGrid(msg, { model, fields }) {
     return { nx, ny, data: out };
 }
 
-function beltImage(msg, model) {
+function beltImage(msg) {
     const key = msg.key, E = msg.E, part = key[0];
     const en = model.energies[part], spec = new Float64Array(en.length);
     const nx = msg.nx, nz = msg.nz, rmax = msg.rmax, out = new Float32Array(nx * nz), w = {};
@@ -168,30 +163,27 @@ function beltImage(msg, model) {
     return { nx, nz, data: out };
 }
 
-if (commonJS) module.exports = { runCase };
-else self.onmessage = e => {
+self.onmessage = e => {
     const msg = e.data;
     try {
         if (msg.type === 'init') {
-            state.model = new R.TrappedModel(msg.ae8ap8);
-            for (const [year, buf] of Object.entries(msg.fields)) state.fields[year] = new R.FieldGrid({ ...msg.fieldMeta, year: +year }, buf);
-            state.dose = new R.DoseModel(msg.nist);
+            model = new R.TrappedModel(msg.ae8ap8);
+            for (const [year, buf] of Object.entries(msg.fields)) fields[year] = new R.FieldGrid({ ...msg.fieldMeta, year: +year }, buf);
+            dose = new R.DoseModel(msg.nist);
             self.postMessage({ type: 'ready' });
         } else if (msg.type === 'field') {
-            state.fields[msg.year] = new R.FieldGrid({ ...msg.fieldMeta, year: msg.year }, msg.buffer);
+            fields[msg.year] = new R.FieldGrid({ ...msg.fieldMeta, year: msg.year }, msg.buffer);
             self.postMessage({ type: 'field-ready', year: msg.year });
         } else if (msg.type === 'run') {
-            const { model, fields, dose } = state;
-            const data = { model, field: fields[msg.settings.field], dose };
             for (const c of msg.cases) {
-                try { self.postMessage({ type: 'case', id: msg.id, key: c.key, result: runCase(msg, c, data, m => self.postMessage(m)) }); }
+                try { self.postMessage({ type: 'case', id: msg.id, key: c.key, result: runCase(msg, c, m => self.postMessage(m)) }); }
                 catch (err) { self.postMessage({ type: 'case', id: msg.id, key: c.key, error: err.message }); }
             }
             self.postMessage({ type: 'done', id: msg.id });
         } else if (msg.type === 'map') {
-            const r = mapGrid(msg, state); self.postMessage({ type: 'map', id: msg.id, ...r }, [r.data.buffer]);
+            const r = mapGrid(msg); self.postMessage({ type: 'map', id: msg.id, ...r }, [r.data.buffer]);
         } else if (msg.type === 'belt') {
-            const r = beltImage(msg, state.model); self.postMessage({ type: 'belt', id: msg.id, ...r }, [r.data.buffer]);
+            const r = beltImage(msg); self.postMessage({ type: 'belt', id: msg.id, ...r }, [r.data.buffer]);
         }
     } catch (err) { self.postMessage({ type: 'error', id: msg.id, error: err.message }); }
 };
