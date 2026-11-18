@@ -327,6 +327,7 @@ figcaption { font-size: .78rem; color: var(--text-color-alt); margin-top: .6rem;
 
 /* Cards grow with their content; screenshots keep a useful, consistent crop. */
 .projects-container { padding: 0; grid-auto-rows: auto; }
+.projects-container.project-sections { grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); margin-bottom: 2rem; }
 .project-card, .project-card-noimg, .project-card-noimg-tall { height: auto; gap: .85rem; min-width: 0; }
 .project-card img { height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
 .project-links { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0; }

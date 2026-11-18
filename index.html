@@ -16,6 +16,7 @@
 <meta name="twitter:title" content="The Home of T-Lind" />
 <meta name="twitter:description" content="Tiernan Lindauer's software, research, browser games, and experiments in physics." />
 <meta name="twitter:image" content="https://t-lind.github.io/public/bh-hero.png" />
+<link rel="stylesheet" href="site-nav.css" data-site-nav-style />
 <style>
   :root { color-scheme: dark; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -87,7 +88,7 @@
     z-index: 3;
   }
   .skip-link {
-    position: fixed; top: .7rem; left: 1rem; z-index: 6;
+    position: fixed; top: .7rem; left: 1rem; z-index: 200;
     transform: translateY(-200%);
     background: #fff; color: #08080a; padding: .75rem 1rem;
     font-size: .85rem; text-decoration: none;
@@ -168,31 +169,6 @@
   body.scrolled #scroll-cue { opacity: 0; pointer-events: none; }
   @keyframes bob { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(9px); } }
 
-  /* ---- slim top navigation (matches the article-page nav) ---- */
-  #site-nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 5;
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .4rem;
-    padding: .6rem clamp(.8rem, 4vw, 2rem);
-    background: rgba(8,8,10,.72);
-    border-bottom: 1px solid rgba(255,255,255,.09);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    transform: translateZ(0);
-  }
-  #site-nav a {
-    font-size: clamp(.68rem, 1.4vw, .82rem);
-    letter-spacing: .01em; text-transform: none; text-decoration: none;
-    color: rgba(255,255,255,.66); padding: .45em .9em;
-    border: 1px solid rgba(255,255,255,.14); border-radius: 0;
-    white-space: nowrap;
-    transition: color .18s ease, background .18s ease, border-color .18s ease;
-  }
-  #site-nav a:hover, #site-nav a:focus-visible { color: #fff; border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.06); outline: none; }
-  #site-nav a[aria-current="page"] { color: #0b0b0d; background: #fff; border-color: #fff; }
-  body.immersive #site-nav { display: none; }
-
   /* ---- Scrolled content (styled after the main monospace site) ---- */
   #content {
     position: relative; z-index: 2; background: #08080a; color: #b8b8bc;
@@ -266,9 +242,6 @@
     }
     #welcome h1 { white-space: normal; text-wrap: balance; }
 
-    #site-nav { padding: .5rem .5rem; gap: .3rem; }
-    #site-nav a { font-size: .74rem; padding: .4em .6em; }
-
     #hint { bottom: auto; top: max(6.2rem, calc(env(safe-area-inset-top) + 6.2rem)); font-size: .56rem; letter-spacing: .2em; text-indent: .2em; }
 
     #content .wrap { padding: clamp(2rem, 6vh, 3rem) 1.1rem 4rem; }
@@ -280,7 +253,7 @@
   }
   @media (prefers-reduced-motion: reduce) { #scroll-cue { animation: none; } }
   @media (pointer: coarse) {
-    #admire, #motion, #admire-sound, #site-nav a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    #admire, #motion, #admire-sound { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
     #hint { top: max(7.2rem, calc(env(safe-area-inset-top) + 7.2rem)); bottom: auto; }
   }
 
@@ -301,13 +274,9 @@
   <nav id="site-nav" aria-label="Site navigation">
     <a href="./" aria-current="page">Home</a>
     <a href="projects/">Projects</a>
-    <a href="research/">Research</a>
-    <a href="motivation/">Motivation</a>
+    <a href="space/">Tools</a>
+    <a href="lit/">Lit</a>
     <a href="profile/">Profile</a>
-    <a href="games/">Games</a>
-    <a href="space/">Space</a>
-    <a href="reading/">Reading</a>
-    <a href="essays/">Writing</a>
     <a href="search/" class="site-search-trigger" data-site-search aria-keyshortcuts="Control+k Meta+k /">Search <kbd>Ctrl / ⌘ K</kbd></a>
   </nav>
 
@@ -359,7 +328,6 @@
       <li><a href="lindauerai/">LindauerAI</a> &mdash; dual-AI learning platform; founder &amp; engineer.</li>
       <li><a href="research/">Research</a> &mdash; cost-based policies for narrative observation of unpredictable events.</li>
       <li><a href="games/">Games</a> &mdash; interactive experiments in physics, graphics, and systems.</li>
-      <li><a href="essays/">Writing</a> &mdash; short stories and essays on motivation, learning, and building.</li>
     </ul>
 
     <h2>Words I Live By</h2>
@@ -379,8 +347,8 @@
     <h2>Elsewhere</h2>
     <ul>
       <li><a href="lindauerai/">LindauerAI</a> &mdash; the ed-tech startup and its story.</li>
-      <li><a href="essays/">Writing</a> &mdash; short stories and essays.</li>
-      <li><a href="reading/">Reading</a> &mdash; what I'm reading and recommending.</li>
+      <li><a href="lit/">Lit</a> &mdash; short stories, essays, and my reading list.</li>
+      <li><a href="space/">Tools</a> &mdash; browser tools for orbital debris and radiation.</li>
     </ul>
 
     <p class="note">&uarr; <a href="#hero">Back to the black hole</a></p>
@@ -399,6 +367,6 @@
 <script src="blackhole.js"></script>
 <script src="admire-audio.js"></script>
 <script src="bh-home.js"></script>
-<script src="search.js"></script>
+<script src="bh-nav.js"></script>
 </body>
 </html>

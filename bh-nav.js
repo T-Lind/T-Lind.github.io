@@ -3,7 +3,14 @@
  "use strict";
  var script = document.currentScript;
  var base = new URL('./', script.src);
- var items = [['', 'Home'], ['projects/', 'Projects'], ['research/', 'Research'], ['motivation/', 'Motivation'], ['profile/', 'Profile'], ['games/', 'Games'], ['space/', 'Space'], ['reading/', 'Reading'], ['essays/', 'Writing'], ['search/', 'Search']];
+ var items = [
+  ['', 'Home'],
+  ['projects/', 'Projects', ['accessor', 'chess-3d', 'games', 'intellistream', 'kalman', 'lightning-detector', 'lindauerai', 'lofall', 'opendraft', 'orbits', 'photolib', 'research', 'satellite-sim', 'syngrafi', 'ty', 'wormhole']],
+  ['space/', 'Tools', ['debris', 'van-allen']],
+  ['lit/', 'Lit', ['essays', 'motivation', 'reading']],
+  ['profile/', 'Profile'],
+  ['search/', 'Search']
+ ];
  if (!document.querySelector('link[data-site-nav-style]')) {
   var style = document.createElement('link'); style.rel = 'stylesheet'; style.href = new URL('site-nav.css', base).href;
   style.setAttribute('data-site-nav-style', ''); document.head.appendChild(style);
@@ -21,11 +28,19 @@
  if (!links.querySelector('a')) items.forEach(function (item) {
   var a = document.createElement('a'); a.href = new URL(item[0], base).href; a.textContent = item[1]; links.appendChild(a);
  });
- var here = location.pathname.replace(/index\.html$/, '').replace(/\/+$/, '') || '/';
+ function pagePath(url) {
+  return url.pathname.replace(/\/index\.html$/, '/').replace(/\/+$/, '');
+ }
+ var here = pagePath(location);
+ var section = location.pathname.slice(base.pathname.length).split('/')[0];
+ var parent = items.find(function (item) { return item[2] && item[2].includes(section); });
+ var parentPath = parent && pagePath(new URL(parent[0], base));
+ var searchPath = pagePath(new URL('search/', base));
  links.querySelectorAll('a').forEach(function (a) {
-  var target = new URL(a.href).pathname.replace(/index\.html$/, '').replace(/\/+$/, '') || '/';
+  var target = pagePath(new URL(a.href));
   if (target === here) a.setAttribute('aria-current', 'page');
-  if (target === new URL('search/', base).pathname.replace(/\/+$/, '')) {
+  else if (target === parentPath) a.setAttribute('aria-current', 'location');
+  if (target === searchPath) {
    a.classList.add('site-search-trigger'); a.setAttribute('data-site-search', ''); a.setAttribute('aria-keyshortcuts', 'Control+k Meta+k /');
    if (!a.querySelector('kbd')) { var key = document.createElement('kbd'); key.textContent = 'Ctrl / ⌘ K'; a.appendChild(key); }
   }
@@ -50,7 +65,7 @@
  });
  document.addEventListener('click', function (event) { if (!nav.contains(event.target)) setOpen(false); });
  document.addEventListener('focusin', function (event) { if (!nav.contains(event.target)) setOpen(false); });
- var compact = window.matchMedia('(max-width: 900px)'); compact.addEventListener('change', function () { setOpen(false); });
+ var compact = window.matchMedia('(max-width: 640px)'); compact.addEventListener('change', function () { setOpen(false); });
  function measureNav() {
   if (nav.dataset.open === 'true' || document.body.classList.contains('immersive')) return;
   document.documentElement.style.setProperty('--site-nav-height', nav.getBoundingClientRect().height + 'px');
