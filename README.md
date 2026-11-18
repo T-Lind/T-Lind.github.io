@@ -22,6 +22,8 @@ Project image sources and demo labels are recorded in `public/projects/README.md
 
 `npm run test:site` checks the browser models against direct AE8/AP8 calls and CREME96 dose, TLE round-trips, and conjunction screening.
 
+The [Space Tools MCP server](mcp/README.md) exposes debris screening and radiation estimates to MCP clients.
+
 ## Legacy Next.js app
 
 This separate app was bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
