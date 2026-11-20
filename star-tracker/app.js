@@ -25,6 +25,15 @@
     let worker, ready = false, busy = null, next = null, last = null, imported = null;
     let revision = 0, serial = 0, playing = false, playStamp = 0, lastDispatch = 0;
     let savedInertial = null;
+    // Every displayed frame keeps a snapshot of the inputs it ran with, so the page can say whether it is current.
+    let runs = 0, pendingReset = false, profile = null, profileKey = '', jumps = [];
+    let autoRun = true;
+    try { autoRun = localStorage.getItem('star-tracker-autorun') !== 'off'; } catch { /* storage unavailable */ }
+    el('autorun').checked = autoRun;
+    const clock = seconds => {
+        const total = Math.max(0, Math.round(seconds));
+        return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+    };
 
     function status(message, state = '', stamp = '') {
         text('status', message);
@@ -35,8 +44,11 @@
     function updateClock() {
         const elapsed = Math.max(0, Math.floor((time - epoch) / 1000));
         el('timeline').value = elapsed;
-        text('elapsed', '+' + String(Math.floor(elapsed / 60)).padStart(2, '0') + ':' + String(elapsed % 60).padStart(2, '0'));
+        text('elapsed', '+' + clock(elapsed));
+        text('period-text', 'of ' + clock(period) + ' (one orbit)');
         if (document.activeElement !== el('when') || playing) el('when').value = U.toLocalInput(new Date(time));
+        drawStrip();
+        refreshRun();
     }
 
     function configureOrbit(src, elements) {
@@ -46,7 +58,8 @@
         if (src.kind !== 'elements') time = epoch = Math.round(elements.epoch.getTime() / 1000) * 1000;
         else epoch = time;
         updateClock();
-        request({ reset: true });
+        requestProfile();
+        edited({ reset: true });
     }
 
     const editor = new U.OrbitEditor(el('orbit-editor'), {
@@ -101,7 +114,145 @@
     function request(args = {}) {
         revision++;
         next = args;
+        pendingReset = false;
         dispatch();
+        refreshRun();
+    }
+
+    // Edits run immediately with auto-run on; otherwise they wait for Simulate frame.
+    function edited(args = {}) {
+        if (autoRun || !last) request(args);
+        else {
+            pendingReset ||= !!args.reset;
+            refreshRun();
+        }
+    }
+
+    function simulate() {
+        play(false);
+        request({ reset: pendingReset });
+    }
+
+    function snapshot() {
+        return { settings: cameraSettings(), threshold: el('threshold').valueAsNumber, minimum: el('minimum').valueAsNumber,
+            blind: el('blind').checked, time: Math.round(time), epoch, source: JSON.stringify(source), imported: !!imported };
+    }
+
+    function labelOf(input) {
+        const label = input.closest('label');
+        if (!label) return input.id;
+        if (input.type === 'checkbox') return label.textContent.trim().replace(/\s*\(.*\)$/, '');
+        const span = label.querySelector('span').cloneNode(true);
+        span.querySelectorAll('em').forEach(unit => unit.remove());
+        return span.textContent.trim();
+    }
+
+    function differences(before, now) {
+        const changed = new Set();
+        for (const key of Object.keys(now.settings)) {
+            if (Object.is(before.settings[key], now.settings[key])) continue;
+            changed.add(key === 'width' || key === 'height' ? 'Detector format' : labelOf(el(key)));
+        }
+        for (const key of ['threshold', 'minimum', 'blind']) if (!Object.is(before[key], now[key])) changed.add(labelOf(el(key)));
+        if (before.time !== now.time) changed.add('Observation time');
+        if (before.source !== now.source) changed.add('Orbit');
+        return [...changed];
+    }
+
+    function refreshRun() {
+        const invalid = inputs.find(input => !input.disabled && !input.validity.valid);
+        let state = 'idle', message = 'No frame yet.';
+        if (!ready) message = 'Loading the star catalog…';
+        else if (last && playing) {
+            state = 'current';
+            message = `Playing · showing frame ${last.run}`;
+        } else if (busy) {
+            state = 'running';
+            message = busy.preset ? 'Preparing the scenario…' : `Running frame ${runs + 1}…`;
+        } else if (invalid) {
+            state = 'invalid';
+            message = `Fix ${labelOf(invalid)} to simulate.`;
+        } else if (last) {
+            const changes = differences(last.snapshot, snapshot());
+            if (changes.length) {
+                state = 'stale';
+                const names = changes.length > 3 ? changes.slice(0, 3).join(', ') + ` and ${changes.length - 3} more` : changes.join(', ');
+                message = `Frame ${last.run} is out of date. Changed: ${names}.` + (autoRun ? '' : ' Press Simulate frame.');
+            } else {
+                state = 'current';
+                message = `Frame ${last.run} matches the current settings.`;
+            }
+        }
+        el('run-state').dataset.state = state;
+        text('run-text', message);
+        for (const button of document.querySelectorAll('.simulate')) {
+            button.disabled = !ready || !!invalid;
+            button.toggleAttribute('data-stale', state === 'stale');
+        }
+    }
+
+    function requestProfile() {
+        if (!ready) return;
+        const key = [JSON.stringify(source), epoch, period].join('|');
+        if (key === profileKey) return;
+        profileKey = key;
+        worker.postMessage({ type: 'profile', key, source, epoch, period });
+    }
+
+    // Named orbit points from the 10 s profile: eclipse edges, nodes, latitude extremes and the proton peak.
+    function buildJumps() {
+        const samples = profile.samples;
+        jumps = [{ t: 0, name: 'Start of timeline' }];
+        let north = samples[0], south = samples[0], peak = null;
+        for (let i = 1; i < samples.length; i++) {
+            const [t0, light0, lat0] = samples[i - 1], [t1, light1, lat1, flux] = samples[i];
+            const at = (v0, v1, level) => t0 + (t1 - t0) * (level - v0) / (v1 - v0);
+            if (light0 >= 0.5 && light1 < 0.5) jumps.push({ t: at(light0, light1, 0.5), name: 'Eclipse entry (sunset)' });
+            if (light0 < 0.5 && light1 >= 0.5) jumps.push({ t: at(light0, light1, 0.5), name: 'Eclipse exit (sunrise)' });
+            if (lat0 < 0 && lat1 >= 0) jumps.push({ t: at(lat0, lat1, 0), name: 'Ascending node' });
+            if (lat0 >= 0 && lat1 < 0) jumps.push({ t: at(lat0, lat1, 0), name: 'Descending node' });
+            if (lat1 > north[2]) north = samples[i];
+            if (lat1 < south[2]) south = samples[i];
+            if (flux > 1 && (!peak || flux > peak[3])) peak = samples[i];
+        }
+        jumps.push({ t: north[0], name: `Northernmost point (${north[2].toFixed(1)}° N)` });
+        jumps.push({ t: south[0], name: `Southernmost point (${Math.abs(south[2]).toFixed(1)}° S)` });
+        if (peak) jumps.push({ t: peak[0], name: `Trapped-proton peak (${Math.round(peak[3]).toLocaleString()} cm⁻²s⁻¹)` });
+        jumps = jumps.map(jump => ({ ...jump, t: Math.round(jump.t) })).sort((a, b) => a.t - b.t);
+        const options = jumps.map((jump, i) => U.h('option', { value: String(i), text: `+${clock(jump.t)} · ${jump.name}` }));
+        if (profile.radiation === 'loading') options.push(U.h('option', { value: '', disabled: true, text: 'Trapped protons: model loading…' }));
+        if (!peak && profile.radiation === 'ready') options.push(U.h('option', { value: '', disabled: true, text: 'No South Atlantic Anomaly pass this orbit' }));
+        el('jump').replaceChildren(U.h('option', { value: '', text: 'Jump to orbit point…' }), ...options);
+    }
+
+    function drawStrip() {
+        const canvas = el('orbit-strip'), w = canvas.clientWidth, h = canvas.clientHeight;
+        if (!w || !h) return;
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        if (canvas.width !== Math.round(w * dpr)) canvas.width = Math.round(w * dpr);
+        if (canvas.height !== Math.round(h * dpr)) canvas.height = Math.round(h * dpr);
+        const c = canvas.getContext('2d');
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        c.fillStyle = '#0e1118';
+        c.fillRect(0, 0, w, h);
+        if (profile && profile.key === profileKey) {
+            const width = w * 10 / period + 0.75;
+            for (const [t, light, , flux] of profile.samples) {
+                const x = t / period * w;
+                c.fillStyle = light > 0.999 ? '#4a3f22' : light < 0.001 ? '#151a24' : '#33291a';
+                c.fillRect(x, 0, width, h);
+                if (flux > 1) {
+                    const bar = Math.min(1, Math.log10(flux) / 4) * (h - 4);
+                    c.fillStyle = '#e0605f';
+                    c.fillRect(x, h - bar, width, bar);
+                }
+            }
+            c.fillStyle = 'rgba(244, 244, 246, 0.45)';
+            for (const jump of jumps) c.fillRect(Math.round(jump.t / period * w), 0, 1, 6);
+        }
+        const x = Math.round((time - epoch) / 1000 / period * w);
+        c.fillStyle = '#f4f4f6';
+        c.fillRect(Math.min(w - 2, Math.max(0, x - 1)), 0, 2, h);
     }
 
     function dispatch() {
@@ -110,7 +261,7 @@
         next = null;
         const id = ++serial;
         if (args.name) {
-            busy = { id, revision };
+            busy = { id, revision, preset: true };
             worker.postMessage({ type: 'preset', id, name: args.name, time, source });
             status('Preparing scenario…', 'busy');
             return;
@@ -121,9 +272,10 @@
             return;
         }
         lastDispatch = performance.now();
-        busy = { id, revision };
+        const ran = snapshot();
+        busy = { id, revision, snapshot: ran };
         const message = {
-            type: imported ? 'import' : 'render', id, source, time: Math.round(time), epoch, settings: cameraSettings(),
+            type: imported ? 'import' : 'render', id, source, time: Math.round(time), epoch, settings: ran.settings,
             threshold: +el('threshold').value, minMatches: +el('minimum').value, blind: args.blind || el('blind').checked, reset: args.reset
         };
         if (imported) message.pixels = imported.pixels.slice();
@@ -137,6 +289,7 @@
         el('play').textContent = on ? 'Pause' : 'Play';
         el('play').setAttribute('aria-pressed', String(on));
         if (on) requestAnimationFrame(tick);
+        refreshRun();
     }
 
     function tick(at) {
@@ -171,6 +324,9 @@
             sample.sort((a, b) => a - b);
             low = sample[Math.floor(sample.length * 0.5)];
             high = Math.max(low + 140, sample[Math.floor(sample.length * 0.994)]);
+            // A mostly saturated frame (sunlit Earth or the Sun filling the view) must read as white, not black.
+            const ceiling = frame.imported ? sample[sample.length - 1] : 12096;
+            if (low >= 0.9 * ceiling) [low, high] = [Math.min(sample[0], ceiling - 1), ceiling];
         }
         const span = Math.max(1, high - low);
         const lut = new Uint8Array(65536);
@@ -260,7 +416,7 @@
     function metrics(frame) {
         const { estimate, truth, solution, stats, error } = frame;
         const count = solution.matches?.length || 0;
-        text('frame-meta', `${frame.width} × ${frame.height} · ${frame.imported ? 'Imported PGM' : 'Simulated detector'} · ${U.utc(new Date(frame.time), true)}`);
+        text('frame-meta', `Frame ${frame.run} · ${frame.width} × ${frame.height} · ${frame.imported ? 'Imported PGM' : 'Simulated detector'} · ${U.utc(new Date(frame.time), true)}`);
         text('frame-summary', `${solution.detections.length} centroids · ${count} catalog matches${stats ? ' · ' + (stats.saturated * 100).toFixed(1) + '% saturated' : ''}`);
         text('lock', estimate ? 'Attitude locked' : 'No attitude solution');
         el('lock').dataset.lock = estimate ? 'yes' : 'no';
@@ -318,8 +474,16 @@
             ready = true;
             setSettings(data.settings);
             text('catalog-count', data.count.toLocaleString());
-            for (const id of ['scenario', 'play', 'step', 'timeline', 'import-frame']) el(id).disabled = false;
+            for (const id of ['scenario', 'play', 'back', 'step', 'timeline', 'jump', 'import-frame']) el(id).disabled = false;
             request({ name: 'clear' });
+            return;
+        }
+        if (data.type === 'profile') {
+            if (data.key === profileKey) {
+                profile = data;
+                buildJumps();
+                drawStrip();
+            }
             return;
         }
         if (data.type === 'error' && data.id == null) {
@@ -327,16 +491,18 @@
             return;
         }
         if (!busy || busy.id !== data.id) return;
-        const current = busy.revision === revision;
+        const current = busy.revision === revision, ran = busy.snapshot;
         busy = null;
         if (!current) {
             dispatch();
+            refreshRun();
             return;
         }
         if (data.type === 'preset') {
             setSettings(data.settings);
             time = epoch = data.time;
             updateClock();
+            requestProfile();
             request({ reset: true });
             return;
         }
@@ -344,9 +510,16 @@
             play(false);
             if (!last) fail(data.message);
             else status(data.message, 'err');
+            refreshRun();
             return;
         }
+        data.run = ++runs;
+        data.snapshot = ran;
         last = data;
+        if (data.radiation === 'ready' && profile?.radiation === 'loading') {
+            profileKey = '';
+            requestProfile();
+        }
         el('placeholder').hidden = true;
         el('export-frame').disabled = false;
         el('reacquire').disabled = false;
@@ -355,6 +528,7 @@
         metrics(data);
         status(data.estimate ? 'Attitude locked' : 'No attitude solution', data.estimate ? 'ok' : '', U.utc(new Date(data.time), true));
         dispatch();
+        refreshRun();
     }
 
     function fail(message) {
@@ -366,7 +540,7 @@
     function importMode(frame) {
         imported = frame;
         play(false);
-        for (const id of ['play', 'step', 'timeline', 'format']) el(id).disabled = !!frame;
+        for (const id of ['play', 'back', 'step', 'timeline', 'jump', 'format']) el(id).disabled = !!frame;
         el('resume').hidden = !frame;
         request({ reset: true });
     }
@@ -390,13 +564,52 @@
                 if (input.value === 'inertial') savedInertial = null;
                 updateMode();
             }
-            request({ reset: true });
+            edited({ reset: true });
         });
+        input.addEventListener('input', refreshRun);
     }
+    for (const button of document.querySelectorAll('.simulate')) button.addEventListener('click', simulate);
+    el('autorun').addEventListener('change', () => {
+        autoRun = el('autorun').checked;
+        try { localStorage.setItem('star-tracker-autorun', autoRun ? 'on' : 'off'); } catch { /* storage unavailable */ }
+        if (autoRun && last && el('run-state').dataset.state === 'stale') request({ reset: true });
+        refreshRun();
+    });
+    function moveTo(seconds) {
+        play(false);
+        time = epoch + 1000 * Math.round(Math.min(period, Math.max(0, seconds)));
+        updateClock();
+        edited({ reset: true });
+    }
+    el('jump').addEventListener('change', () => {
+        const value = el('jump').value;
+        el('jump').selectedIndex = 0;
+        if (value !== '' && jumps[+value]) moveTo(jumps[+value].t);
+    });
+    let dragging = false;
+    const stripTime = event => {
+        const box = el('orbit-strip').getBoundingClientRect();
+        return (event.clientX - box.left) / box.width * period;
+    };
+    el('orbit-strip').addEventListener('pointerdown', event => {
+        if (el('timeline').disabled) return;
+        dragging = true;
+        el('orbit-strip').setPointerCapture(event.pointerId);
+        moveTo(stripTime(event));
+    });
+    el('orbit-strip').addEventListener('pointermove', event => { if (dragging) moveTo(stripTime(event)); });
+    el('orbit-strip').addEventListener('pointerup', () => { dragging = false; });
+    new ResizeObserver(drawStrip).observe(el('orbit-strip'));
+    el('back').addEventListener('click', () => {
+        play(false);
+        time = Math.max(epoch, time - 1000);
+        updateClock();
+        request();
+    });
     el('scenario').addEventListener('change', () => {
         if (imported) {
             imported = null;
-            for (const id of ['play', 'step', 'timeline', 'format']) el(id).disabled = false;
+            for (const id of ['play', 'back', 'step', 'timeline', 'jump', 'format']) el(id).disabled = false;
             el('resume').hidden = true;
         }
         play(false);
@@ -423,14 +636,10 @@
         play(false);
         time = epoch = date.getTime();
         updateClock();
-        request({ reset: true });
+        requestProfile();
+        edited({ reset: true });
     });
-    el('timeline').addEventListener('input', () => {
-        play(false);
-        time = epoch + 1000 * +el('timeline').value;
-        updateClock();
-        request({ reset: true });
-    });
+    el('timeline').addEventListener('input', () => moveTo(+el('timeline').value));
     el('reacquire').addEventListener('click', () => {
         play(false);
         request({ blind: true });
@@ -486,6 +695,7 @@
             reference: 'J2000-aligned inertial', cameraAxes: ['right', 'down', 'forward'],
             cameraToInertialWxyz: last.estimate.quaternion,
             rightAscensionDeg: last.estimate.ra, declinationDeg: last.estimate.dec, rollDeg: last.estimate.roll,
+            frameNumber: last.run, simulatedWith: { ...last.snapshot, source: JSON.parse(last.snapshot.source) },
             rmsResidualArcsec: last.solution.rms, sigmaArcsec: last.solution.sigma,
             bodyRateCameraDegPerS: last.estimate.rate, truth: last.truth, attitudeErrorArcsec: last.error,
             matches: last.solution.matches

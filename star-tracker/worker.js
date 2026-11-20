@@ -104,6 +104,16 @@ async function preset(name, source, start) {
     return { settings, time };
 }
 
+// Sunlight, latitude and trapped-proton flux every 10 s across one orbit, for the timeline strip and jump points.
+function profile(source, epoch, period) {
+    const sat = orbit(source), samples = [];
+    for (let t = 0; t <= period; t += 10) {
+        const scene = S.environment(sat, epoch + t * 1000);
+        samples.push([t, scene.sunlight, scene.geo.lat, radiation ? trappedProtons(scene.geo)?.trapped ?? 0 : null]);
+    }
+    return { samples, radiation: radiation === null ? 'loading' : radiation ? 'ready' : 'failed' };
+}
+
 async function init() {
     const response = await fetch('../space/data/stars.json');
     if (!response.ok) throw new Error('Could not load the HYG star catalog.');
@@ -119,6 +129,11 @@ self.onmessage = async ({ data }) => {
     try {
         if (type === 'init') {
             self.postMessage({ type: 'ready', count: await init(), settings: S.defaults });
+            return;
+        }
+        if (type === 'profile') {
+            // A bad orbit is reported by the frame request; the strip just stays empty.
+            try { self.postMessage({ type, key: data.key, ...profile(source, epoch, data.period) }); } catch { /* ignored */ }
             return;
         }
         if (type === 'preset') {

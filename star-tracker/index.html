@@ -101,6 +101,11 @@
                 <label class="check"><input id="calibrated" data-setting type="checkbox" /> Apply radial lens calibration</label>
                 <label class="check"><input id="blind" data-setting type="checkbox" /> Acquire independently every frame</label>
             </section>
+
+            <section class="sect run-sect" aria-label="Run the simulation">
+                <button class="btn primary simulate" type="button" disabled>Simulate frame</button>
+                <p class="hint">Renders the detector image and solves it with the settings above.</p>
+            </section>
         </div>
     </aside>
 
@@ -128,16 +133,30 @@
                 <span class="mono pixel-readout" id="pixel-readout" hidden></span>
                 <span class="frame-legend" id="legend" hidden><span class="key match"><i></i> Trusted match</span><span class="key unmatched"><i></i> Unmatched centroid</span><span class="key weak"><i></i> Down-weighted</span></span>
             </div>
+            <div class="run-bar">
+                <button class="btn primary simulate" id="simulate" type="button" disabled>Simulate frame</button>
+                <label class="check"><input id="autorun" type="checkbox" checked /> Re-run on every change</label>
+                <span class="run-state" id="run-state" data-state="idle" role="status"><i aria-hidden="true"></i><span id="run-text">Loading the star catalog…</span></span>
+            </div>
             <div class="clock-deck">
                 <div class="row clock-row">
                     <div class="row playback">
-                        <button class="btn primary" id="play" type="button" aria-pressed="false" disabled>Play</button>
+                        <button class="btn" id="play" type="button" aria-pressed="false" disabled>Play</button>
+                        <button class="btn ghost" id="back" type="button" disabled>−1 s</button>
                         <button class="btn ghost" id="step" type="button" disabled>+1 s</button>
-                        <select id="rate" aria-label="Simulation speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="60">60×</option><option value="300">300×</option></select>
+                        <select id="rate" aria-label="Playback speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="60">60×</option><option value="300">300×</option></select>
                     </div>
                     <label class="fld inline-field"><span>Observation UTC</span><input type="datetime-local" id="when" min="1950-01-01T00:00" max="2100-01-01T00:00" step="1" required /></label>
                 </div>
-                <label class="fld timeline-field"><span>Orbit timeline <output id="elapsed">+00:00</output></span><input id="timeline" type="range" min="0" max="5550" step="1" value="0" disabled /></label>
+                <div class="timeline-field">
+                    <div class="timeline-head">
+                        <span id="timeline-label">Orbit timeline <output id="elapsed">+00:00</output> <span class="period" id="period-text"></span></span>
+                        <select id="jump" aria-label="Jump to a point in the orbit" disabled><option value="">Jump to orbit point…</option></select>
+                    </div>
+                    <canvas id="orbit-strip" title="Click to move to this point in the orbit" aria-hidden="true"></canvas>
+                    <input id="timeline" type="range" min="0" max="5550" step="1" value="0" aria-labelledby="timeline-label" disabled />
+                    <div class="strip-legend"><span class="key lit"><i></i> Sunlit</span><span class="key dark"><i></i> Eclipse</span><span class="key saa"><i></i> Trapped protons</span><span class="key now"><i></i> Current time</span></div>
+                </div>
             </div>
         </section>
 
