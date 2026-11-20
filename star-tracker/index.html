@@ -34,6 +34,7 @@
                         <option value="moon">Moon in the field</option>
                         <option value="glint">Specular glint</option>
                         <option value="slew">Fast slew · long exposure</option>
+                        <option value="saa">South Atlantic Anomaly</option>
                     </select>
                 </label>
                 <p class="hint">Presets reset camera and sensor settings. They use your selected orbit.</p>
@@ -56,8 +57,9 @@
                     <label class="fld"><span><span id="ra-label">Right ascension</span><em>°</em></span><input id="ra" data-setting type="number" min="-360" max="360" step="any" required /></label>
                     <label class="fld"><span><span id="dec-label">Declination</span><em>°</em></span><input id="dec" data-setting type="number" min="-90" max="90" step="any" required /></label>
                     <label class="fld"><span>Roll <em>°</em></span><input id="roll" data-setting type="number" min="-180" max="180" step="any" required /></label>
-                    <label class="fld" id="slew-field"><span>Sky slew <em>°/s</em></span><input id="slew" data-setting type="number" min="-5" max="5" step="0.05" required /></label>
-                    <label class="fld"><span>Jitter amplitude <em>arcsec</em></span><input id="jitter" data-setting type="number" min="0" max="600" step="1" required /></label>
+                    <label class="fld" data-inertial><span>Slew rate <em>°/s</em></span><input id="slew" data-setting type="number" min="-5" max="5" step="0.05" required /></label>
+                    <label class="fld" data-inertial><span>Roll rate <em>°/s</em></span><input id="rollRate" data-setting type="number" min="-10" max="10" step="0.1" required /></label>
+                    <label class="fld"><span>Jitter <em>arcsec</em></span><input id="jitter" data-setting type="number" min="0" max="600" step="1" required /></label>
                 </div>
             </section>
 
@@ -67,7 +69,10 @@
                     <label class="fld"><span>Horizontal field <em>°</em></span><input id="fov" data-setting type="number" min="10" max="36" step="0.5" required /></label>
                     <label class="fld"><span>Aperture <em>mm</em></span><input id="aperture" data-setting type="number" min="8" max="90" step="1" required /></label>
                     <label class="fld"><span>Exposure <em>ms</em></span><input id="exposure" data-setting type="number" min="1" max="1500" step="1" required /></label>
-                    <label class="fld"><span>Detector format</span><select id="format" data-setting><option value="320">320 × 240</option><option value="640">640 × 480</option></select></label>
+                    <label class="fld"><span>Detector format</span><select id="format" data-setting>
+                        <option value="320x240">320 × 240</option><option value="640x480">640 × 480</option>
+                        <option value="512x512">512 × 512</option><option value="1024x1024">1024 × 1024</option>
+                    </select></label>
                     <label class="fld"><span>PSF σ <em>px</em></span><input id="psf" data-setting type="number" min="0.55" max="2.5" step="0.05" required /></label>
                     <label class="fld"><span>Read noise <em>e⁻ RMS</em></span><input id="readNoise" data-setting type="number" min="0" max="25" step="0.5" required /></label>
                     <label class="fld"><span>Radial distortion <em>k₁</em></span><input id="distortion" data-setting type="number" min="-0.55" max="0.55" step="0.01" required /></label>
@@ -80,7 +85,8 @@
                 <h2 id="effects-title">Environmental effects</h2>
                 <label class="check"><input id="glare" data-setting type="checkbox" /> Sun, Moon and Earth stray light</label>
                 <label class="check"><input id="glint" data-setting type="checkbox" /> Specular glint and ghost</label>
-                <label class="check"><input id="particles" data-setting type="checkbox" /> Particle hits</label>
+                <label class="check"><input id="particles" data-setting type="checkbox" /> Particle hits (cosmic rays and trapped protons)</label>
+                <label class="check"><input id="faint" data-setting type="checkbox" /> Uncatalogued faint stars (V 7.5–10)</label>
                 <label class="check"><input id="noise" data-setting type="checkbox" /> Photon and detector noise</label>
                 <label class="check"><input id="aberration" data-setting type="checkbox" /> Stellar aberration correction</label>
                 <p class="hint">Aberration is present in simulated exposures. The correction tells the tracker to use the orbit and timestamp.</p>
@@ -106,7 +112,7 @@
                     <div class="frame-meta mono" id="frame-meta">Loading catalog and camera…</div>
                 </div>
                 <div class="row frame-actions">
-                    <label class="fld inline-field"><span>Display</span><select id="overlay" aria-label="Focal plane overlay"><option value="matches">Matches</option><option value="centroids">Centroids</option><option value="raw">Raw image</option></select></label>
+                    <label class="fld inline-field"><span>Display</span><select id="overlay" aria-label="Focal plane overlay"><option value="matches">Matches</option><option value="residuals">Residuals ×100</option><option value="centroids">Centroids</option><option value="raw">Raw image</option></select></label>
                     <label class="check"><input id="stretch" type="checkbox" checked /> Auto stretch</label>
                 </div>
             </div>
@@ -119,7 +125,8 @@
             </div>
             <div class="frame-toolbar frame-readout">
                 <span class="mono" id="frame-summary">—</span>
-                <span class="frame-legend" id="legend" hidden><i></i> Catalog match <i></i> Unmatched centroid</span>
+                <span class="mono pixel-readout" id="pixel-readout" hidden></span>
+                <span class="frame-legend" id="legend" hidden><span class="key match"><i></i> Trusted match</span><span class="key unmatched"><i></i> Unmatched centroid</span><span class="key weak"><i></i> Down-weighted</span></span>
             </div>
             <div class="clock-deck">
                 <div class="row clock-row">
@@ -151,14 +158,19 @@
                         <div><span>Right ascension</span><strong id="fit-ra">—</strong></div>
                         <div><span>Declination</span><strong id="fit-dec">—</strong></div>
                         <div><span>Roll</span><strong id="fit-roll">—</strong></div>
-                        <div><span>Attitude error</span><strong id="fit-error">—</strong></div>
+                        <div><span>Angular rate</span><strong id="fit-rate">—</strong></div>
+                    </div>
+                    <div class="readings accuracy">
+                        <div><span>Cross-boresight error</span><strong id="fit-cross">—</strong><small id="sigma-cross"></small></div>
+                        <div><span>Roll error</span><strong id="fit-roll-error">—</strong><small id="sigma-roll"></small></div>
+                        <div><span>Residual RMS</span><strong id="fit-rms">—</strong><small id="fit-trusted"></small></div>
                     </div>
                     <p class="note mono" id="fit-stats">—</p>
                 </div>
                 <details id="matches-detail">
                     <summary>Matched stars and residuals</summary>
                     <div class="table-wrap"><table class="data">
-                        <thead><tr><th>Star</th><th>Visual mag.</th><th>X (px)</th><th>Y (px)</th><th>Peak SNR</th><th>Residual (arcsec)</th></tr></thead>
+                        <thead><tr><th>Star</th><th>V mag.</th><th>Instr. mag.</th><th>X (px)</th><th>Y (px)</th><th>Peak SNR</th><th>Residual (arcsec)</th><th>Fit weight</th></tr></thead>
                         <tbody id="matches"></tbody>
                     </table></div>
                 </details>
@@ -182,23 +194,34 @@
                         <div><span>Moon separation</span><strong id="env-moon">—</strong></div>
                         <div><span>Specular glint</span><strong id="env-glint">—</strong></div>
                         <div><span>Saturated pixels</span><strong id="env-saturated">—</strong></div>
-                        <div><span>Particle events</span><strong id="env-particles">—</strong></div>
+                        <div><span>Sub-satellite point</span><strong id="env-geo">—</strong></div>
+                        <div><span>Geomagnetic L-shell</span><strong id="env-l">—</strong></div>
+                        <div><span>Particle flux</span><strong id="env-flux">—</strong></div>
+                        <div><span>Particle hits this exposure</span><strong id="env-particles">—</strong></div>
+                    </div>
+                    <h3 class="sub-head">Sensor budget at this pointing</h3>
+                    <div class="readings">
+                        <div><span>Plate scale</span><strong id="env-scale">—</strong></div>
+                        <div><span>Sky background</span><strong id="env-sky">—</strong></div>
+                        <div><span>Point-source limit (SNR 5)</span><strong id="env-limit">—</strong></div>
+                        <div><span>Galactic latitude</span><strong id="env-galactic">—</strong></div>
                     </div>
                     <p class="note" id="env-note">Limb clearance is measured from the boresight to the geometric horizon. Negative values put the boresight over Earth.</p>
+                    <p class="note" id="budget-note">Sky background combines zodiacal light and diffuse galactic light at the boresight. The limit assumes an optimally weighted Gaussian image with shot, dark and read noise.</p>
                 </div>
             </section>
 
             <section role="tabpanel" id="p-method" aria-labelledby="tab-method" hidden>
                 <div class="card-body prose">
                     <h3>Orbit and star field</h3>
-                    <p>SGP4 propagates the selected TLE, OMM or reference elements. The scene uses a spherical Earth, approximate precession from the SGP4 frame to J2000, analytic solar and lunar ephemerides, and observer-position parallax for the Moon. Earth occults stars and creates a time-varying umbra and penumbra. HYG v4.1 supplies Hipparcos identifiers, Johnson V magnitudes and proper motions for <span id="catalog-count">25,713</span> stars down to V = 7.5. Simulated rays include first-order annual and spacecraft aberration.</p>
+                    <p>SGP4 propagates the selected TLE, OMM or reference elements. The scene uses a spherical Earth, approximate precession from the SGP4 frame to J2000, analytic solar and lunar ephemerides, and observer-position parallax for the Moon. Earth occults stars and creates a time-varying umbra and penumbra. HYG v4.1 supplies Hipparcos identifiers, Johnson V magnitudes, B−V colors and proper motions for <span id="catalog-count">25,713</span> stars down to V = 7.5. A seeded, galactic-latitude-weighted population adds uncatalogued stars from V = 7.5 to 10, which the tracker has to reject. Simulated rays include first-order annual and spacecraft aberration.</p>
                     <h3>From photons to pixels</h3>
-                    <p>Stellar flux scales with aperture area, integration time and magnitude. An assumed visible passband and 45% combined transmission and quantum efficiency set the flux scale. Exposure subsamples capture slew and periodic jitter. The optical model includes a Gaussian point spread with off-axis broadening, radial distortion, vignetting, and empirical light scatter and ghosts. A 12,000-electron well and 96-count bias set the detector scale. Shot noise, fixed sensitivity variation, dark current, read noise, hot pixels, simplified blooming, and statistical particle hits alter the measured pixels.</p>
+                    <p>Stellar flux scales with aperture area, integration time and an instrument magnitude. Silicon detectors see red stars brighter than Johnson V does, so the instrument magnitude applies the Gaia G − V color relation to each star’s B−V. An assumed 8.8 × 10⁹ photons s⁻¹ m⁻² at magnitude zero and 45% combined transmission and quantum efficiency set the flux scale. Zodiacal light, shaped after the Leinert et al. (1998) tables, and diffuse galactic light set the sky background. Exposure subsamples capture slew, roll and periodic jitter. The optical model includes a pixel-integrated Gaussian point spread with off-axis broadening, radial distortion, vignetting, and empirical light scatter and ghosts. A 12,000-electron well and 96-count bias set the detector scale. Shot noise, fixed sensitivity variation, dark current, read noise, hot pixels and simplified blooming alter the measured pixels. Particle hits assume a 1 cm² detector behind about 4 mm of aluminum: galactic cosmic rays follow an L-shell rigidity cutoff, and AP8 solar-minimum protons above 30 MeV come from the IGRF 2025 field grid used by the Van Allen belt tool.</p>
                     <h3>From pixels to attitude</h3>
-                    <p>The tracker measures locally background-subtracted centroids, filters out peaks with poor shape, and converts pixel coordinates to calibrated camera rays. For blind acquisition it compares angular spacings against an indexed set of bright catalog pairs. It checks additional stars, rejects competing fits, and refines the rotation with a weighted least-squares fit to catalog directions. Tracking may reuse the previous frame’s solution. Simulation truth is used to report attitude error after the fit. The JSON export uses a scalar-first quaternion that rotates camera axes (right, down, forward) into the J2000-aligned inertial frame. Roll is positive clockwise from west toward south in the tangent plane.</p>
+                    <p>The tracker measures locally background-subtracted centroids, refines each with an iteratively Gaussian-weighted window, filters out peaks with poor shape, and converts pixel coordinates to calibrated camera rays. For blind acquisition it compares angular spacings against an indexed set of bright catalog pairs in instrument magnitude. It checks additional stars, rejects competing fits, and refines the rotation by iteratively reweighted least squares. Each centroid is weighted by its SNR, catalog stars with a bright neighbor are flagged as blends, and a Cauchy loss suppresses outliers. The normal equations give a 1σ cross-boresight and roll uncertainty, scaled by the residual variance. Tracking propagates the previous solution with the body rate estimated from the last two frames. Simulation truth is used to report attitude error after the fit. The JSON export uses a scalar-first quaternion that rotates camera axes (right, down, forward) into the J2000-aligned inertial frame. Roll is positive clockwise from west toward south in the tangent plane.</p>
                     <h3>Model limits</h3>
-                    <p>The default sensor is generic. Baffle rejection, limb brightness, surface glint, particle rate and the detector response are adjustable or illustrative approximations. A flight prediction needs measured point-source transmittance, detector calibration, material scattering, precise ephemerides and validation against hardware. Imported frames need the correct field of view, distortion and observation UTC. Inertial aberration correction also needs the observing orbit.</p>
-                    <p><a href="../space/data/stars.LICENSE.md">Catalog attribution and build</a> · <a href="https://aa.usno.navy.mil/faq/sun_approx">USNO solar coordinates</a> · <a href="https://ntrs.nasa.gov/api/citations/19890004071/downloads/19890004071.pdf">Lunar series reference</a> · <a href="https://celestrak.org/publications/AIAA/2006-6753/faq.php">SGP4 frames</a> · <a href="https://onlinelibrary.wiley.com/doi/10.1002/j.2161-4296.2004.tb00349.x">Star-pair indexing reference</a></p>
+                    <p>The default sensor is generic. Baffle rejection, limb brightness, surface glint, the faint-star population and the detector response are adjustable or illustrative approximations. The shutter is global, so rolling-shutter shear during fast slews is not modeled. A flight prediction needs measured point-source transmittance, detector calibration, material scattering, precise ephemerides and validation against hardware. Imported frames need the correct field of view, distortion and observation UTC. Inertial aberration correction also needs the observing orbit.</p>
+                    <p><a href="../space/data/stars.LICENSE.md">Catalog attribution and build</a> · <a href="https://aa.usno.navy.mil/faq/sun_approx">USNO solar coordinates</a> · <a href="https://ntrs.nasa.gov/api/citations/19890004071/downloads/19890004071.pdf">Lunar series reference</a> · <a href="https://celestrak.org/publications/AIAA/2006-6753/faq.php">SGP4 frames</a> · <a href="https://onlinelibrary.wiley.com/doi/10.1002/j.2161-4296.2004.tb00349.x">Star-pair indexing reference</a> · <a href="https://doi.org/10.1051/aas:1998105">Leinert et al. 1998, night-sky brightness</a> · <a href="https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html">Gaia G − V relation</a> · <a href="../van-allen/">Van Allen belt tool</a></p>
                 </div>
             </section>
         </section>

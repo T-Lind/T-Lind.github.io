@@ -82,13 +82,41 @@
         return unit([s * u, s * v, 1]);
     }
 
+    // Abramowitz and Stegun 7.1.26, absolute error below 1.5e-7.
+    function erf(x) {
+        const sign = x < 0 ? -1 : 1, a = Math.abs(x), t = 1 / (1 + 0.3275911 * a);
+        return sign * (1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a));
+    }
+
+    // Unfiltered silicon sees red stars brighter than Johnson V does. The Gaia DR2 G - V relation
+    // (Evans et al. 2018) stands in for a broad 400-1000 nm instrument passband.
+    function instrumentMag(v, bv) {
+        const c = clamp(Number.isFinite(bv) ? bv : 0.65, -0.5, 2.75);
+        return v - 0.0176 - 0.00686 * c - 0.1732 * c * c;
+    }
+
     function loadCatalog(rows) {
-        return rows.map(([hip, ra, dec, mag, pmra, pmdec, name]) => {
+        return rows.map(([hip, ra, dec, mag, pmra, pmdec, name, bv]) => {
             const a = ra * DEG, d = dec * DEG, v = direction(a, d);
             const east = [-Math.sin(a), Math.cos(a), 0];
             const motion = scale(add(scale(east, pmra), scale(cross(v, east), pmdec)), DEG / 3600000);
-            return { hip, mag, name, v, motion };
-        });
+            return { hip, mag, bv: bv ?? null, inst: instrumentMag(mag, bv ?? NaN), name, v, motion };
+        }).sort((a, b) => a.inst - b.inst || a.hip - b.hip);
+    }
+
+    // Rotation vector (axis times angle, inertial frame) that carries basis a onto basis b.
+    function rotationVector(a, b) {
+        const v = add(add(cross(a[0], b[0]), cross(a[1], b[1])), cross(a[2], b[2]));
+        const size = norm(v);
+        if (size < 1e-15) return [0, 0, 0];
+        return scale(v, Math.atan2(size, dot(a[0], b[0]) + dot(a[1], b[1]) + dot(a[2], b[2]) - 1) / size);
+    }
+
+    function spin(basis, vector) {
+        const size = norm(vector);
+        if (size < 1e-15) return basis;
+        const axis = scale(vector, 1 / size);
+        return basis.map(v => rotate(v, axis, size));
     }
 
     function catalogVector(star, years, beta = [0, 0, 0]) {
@@ -97,7 +125,7 @@
     }
 
     root.StarMath = { DEG, ARCSEC, J2000, days, clamp, wrap, dot, cross, scale, add, sub, norm, unit, angle,
-        direction, attitude, angles, toCamera, toSky, rotate, rotationError, quaternion, camera, project, ray,
-        loadCatalog, catalogVector };
+        direction, attitude, angles, toCamera, toSky, rotate, rotationError, rotationVector, spin, quaternion, camera,
+        project, ray, erf, instrumentMag, loadCatalog, catalogVector };
     if (typeof module !== 'undefined' && module.exports) module.exports = root.StarMath;
 })(typeof self !== 'undefined' ? self : globalThis);

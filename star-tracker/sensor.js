@@ -8,12 +8,23 @@
     const AU = 149597870.7;
     const FULL_WELL = 12000;
     const BIAS = 96;
+    // Detected electrons per second per square meter of entrance pupil from a magnitude-zero star:
+    // 8.8e9 photons over the assumed passband times 45% combined optical transmission and quantum efficiency.
+    const ZERO_POINT = 8.8e9 * 0.45;
+    // A 1 cm² active area behind roughly 4 mm of aluminum-equivalent shielding sets the particle hit rate.
+    const DETECTOR_AREA = 1;
+    const PROTON_THRESHOLD = 30;
     const sin = x => Math.sin(x * DEG);
     const cos = x => Math.cos(x * DEG);
+    const ECLIPTIC_POLE = direction(270 * DEG, 66.560708 * DEG);
+    const GALACTIC_POLE = direction(192.85948 * DEG, 27.12825 * DEG);
+    // Centered dipole axis near the 2025 IGRF geomagnetic north pole (80.8° N, 72.6° W), in Earth-fixed axes.
+    const DIPOLE = direction(-72.6 * DEG, 80.8 * DEG);
 
     const defaults = { width: 320, height: 240, fov: 24, aperture: 35, exposure: 90, psf: 0.9,
-        distortion: -0.12, readNoise: 3, baffle: 27, seed: 12345, ra: 83, dec: -4, roll: 18, slew: 0,
-        jitter: 14, mode: 'inertial', calibrated: true, aberration: true, noise: true, glare: true, glint: true, particles: true };
+        distortion: -0.12, readNoise: 3, baffle: 27, seed: 12345, ra: 83, dec: -4, roll: 18, slew: 0, rollRate: 0,
+        jitter: 14, mode: 'inertial', calibrated: true, aberration: true, noise: true, glare: true, glint: true,
+        particles: true, faint: true };
 
     // IAU 1976 mean-of-date precession. TEME nutation and its small equinox correction are omitted.
     function fromDate(v, t) {
@@ -74,9 +85,78 @@
         const moonPhase = (Math.sin(moonPhaseAngle) + (Math.PI - moonPhaseAngle) * Math.cos(moonPhaseAngle)) / Math.PI;
         const earthVelocity = scale(sub(sunPosition(days - 0.025), sunPosition(days + 0.025)), 1 / 4320);
         const beta = scale(add(earthVelocity, velocity), 1 / 299792.458);
+        const gmst = O.gmst(new Date(time));
+        const geo = O.geodetic(state.position, gmst);
+        const magneticLatitude = Math.asin(clamp(dot(direction(geo.lon * DEG, geo.lat * DEG), DIPOLE), -1, 1));
         return { pos, velocity, distance, nadir, sun, moon, sunLight, earthRadius, sunRadius, moonRadius, moonPhase,
             moonVisible: angle(nadir, moon) > earthRadius, sunlight: sunFraction(angle(nadir, sun), earthRadius, sunRadius),
-            beta, years: days / 365.25, gmst: O.gmst(new Date(time)) };
+            beta, years: days / 365.25, gmst, geo, dipoleL: distance / EARTH / Math.cos(magneticLatitude) ** 2 };
+    }
+
+    // Zodiacal light follows the shape of the Leinert et al. (1998) table and diffuse galactic light rises toward
+    // the Milky Way. Units are 1e-8 W m^-2 sr^-1 µm^-1 near 500 nm, where 77 is the ecliptic pole (V ≈ 23.3 mag/arcsec²).
+    function skyBrightness(boresight, sun) {
+        const ecliptic = Math.asin(clamp(dot(boresight, ECLIPTIC_POLE), -1, 1)) / DEG;
+        const flat = v => sub(v, scale(ECLIPTIC_POLE, dot(v, ECLIPTIC_POLE)));
+        const longitude = angle(flat(boresight), flat(sun)) / DEG;
+        const plane = longitude < 90 ? 259 / Math.sin(Math.max(15, longitude) * DEG) ** 2.3
+            : 180 + 79 * Math.cos((longitude - 90) * DEG) ** 2;
+        const falloff = b => 1 / (1 + (Math.abs(b) / 22) ** 1.8);
+        const zodiacal = 77 + (plane - 77) * (falloff(ecliptic) - falloff(90)) / (1 - falloff(90));
+        const galactic = Math.asin(clamp(dot(boresight, GALACTIC_POLE), -1, 1)) / DEG;
+        return { zodiacal, galactic: 30 + 150 * Math.exp(-Math.abs(galactic) / 10), galacticLatitude: galactic };
+    }
+
+    // Free-space cosmic rays (about 4 cm^-2 s^-1) are cut off by Störmer rigidity and shadowed by Earth.
+    function cosmicRays(scene, L) {
+        const cutoff = 14.9 / (L * L);
+        return 4 / (1 + (cutoff / 2.5) ** 1.4) * (1 + Math.cos(scene.earthRadius)) / 2;
+    }
+
+    // Stars between the catalog limit and V = 10 follow N(<V) ∝ 10^(0.45 V), normalized to the catalog count at
+    // V = 7.5 and concentrated toward the galactic plane. Each cube-map sky cell has a fixed seed, so a faint star
+    // keeps its sky position from frame to frame.
+    const FAINT = { limit: 10, cells: 32, count: 25700 * (10 ** (0.45 * 2.5) - 1), cache: new Map(), centers: null };
+    function face(f, a, b) {
+        return [[1, a, b], [-1, a, b], [a, 1, b], [a, -1, b], [a, b, 1], [a, b, -1]][f];
+    }
+    function faintCells() {
+        if (FAINT.centers) return FAINT.centers;
+        const n = FAINT.cells, size = 2 / n, centers = [];
+        for (let f = 0; f < 6; f++) {
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const a = -1 + (i + 0.5) * size, b = -1 + (j + 0.5) * size;
+                    centers.push({ id: (f * n + i) * n + j, f, a, b, v: unit(face(f, a, b)),
+                        solid: size * size / (1 + a * a + b * b) ** 1.5 });
+                }
+            }
+        }
+        return (FAINT.centers = centers);
+    }
+    function faintStars(cell) {
+        let stars = FAINT.cache.get(cell.id);
+        if (stars) return stars;
+        const rand = random(Math.imul(cell.id + 1, 0x2c1b3c6d) ^ 0x51ed27);
+        const latitude = Math.asin(clamp(dot(cell.v, GALACTIC_POLE), -1, 1));
+        const density = 0.5 + 2.4 * Math.exp(-Math.abs(latitude) / 0.21);
+        const count = shot(cell.solid * density * FAINT.count / (4 * Math.PI), rand);
+        const range = 10 ** (0.45 * (FAINT.limit - 7.5)) - 1, size = 2 / FAINT.cells;
+        stars = [];
+        for (let i = 0; i < count; i++) {
+            const v = unit(face(cell.f, cell.a + (rand() - 0.5) * size, cell.b + (rand() - 0.5) * size));
+            const mag = 7.5 + Math.log10(1 + rand() * range) / 0.45;
+            const bv = clamp(0.75 + 0.35 * normal(rand), -0.3, 2);
+            stars.push({ v, motion: [0, 0, 0], mag, inst: M.instrumentMag(mag, bv) });
+        }
+        if (FAINT.cache.size > 900) FAINT.cache.clear();
+        FAINT.cache.set(cell.id, stars);
+        return stars;
+    }
+    function faintField(boresight, radius) {
+        const cut = Math.cos(radius + 2.3 * DEG), stars = [];
+        for (const cell of faintCells()) if (dot(cell.v, boresight) > cut) stars.push(...faintStars(cell));
+        return stars;
     }
 
     function pointing(scene, s, elapsed) {
@@ -90,9 +170,15 @@
             // Interpret RA/Dec as offsets from local forward in the same right/down convention.
             const localOffset = M.attitude(-s.ra, -s.dec, s.roll);
             basis = localOffset.map(([z, west, north]) => M.toSky(local, [-west, -north, z]));
-        } else if (s.slew) {
-            const axis = basis[1];
-            basis = basis.map(v => rotate(v, axis, M.wrap(s.slew * elapsed) * DEG));
+        } else {
+            if (s.slew) {
+                const axis = basis[1];
+                basis = basis.map(v => rotate(v, axis, M.wrap(s.slew * elapsed) * DEG));
+            }
+            if (s.rollRate) {
+                const axis = basis[2];
+                basis = basis.map(v => rotate(v, axis, M.wrap(s.rollRate * elapsed) * DEG));
+            }
         }
         return basis;
     }
@@ -126,14 +212,30 @@
         return n;
     }
 
+    // Gaussian point spread integrated over each square pixel, so undersampled stars carry real pixel-phase bias.
+    const columns = new Float64Array(4096), rows = new Float64Array(4096);
     function splat(image, c, x, y, flux, sigma) {
-        const r = Math.ceil(sigma * 3.6);
-        const x0 = Math.max(0, Math.ceil(x - r)), x1 = Math.min(c.width - 1, Math.floor(x + r));
-        const y0 = Math.max(0, Math.ceil(y - r)), y1 = Math.min(c.height - 1, Math.floor(y + r));
-        const k = -0.5 / (sigma * sigma), level = flux / (2 * Math.PI * sigma * sigma);
+        const r = Math.ceil(sigma * 3.6 + 0.5);
+        const x0 = Math.max(0, Math.round(x) - r), x1 = Math.min(c.width - 1, Math.round(x) + r, x0 + 4095);
+        const y0 = Math.max(0, Math.round(y) - r), y1 = Math.min(c.height - 1, Math.round(y) + r, y0 + 4095);
+        if (x0 > x1 || y0 > y1) return;
+        const k = 1 / (sigma * Math.SQRT2);
+        let previous = M.erf((x0 - 0.5 - x) * k);
+        for (let i = x0; i <= x1; i++) {
+            const next = M.erf((i + 0.5 - x) * k);
+            columns[i - x0] = 0.5 * (next - previous);
+            previous = next;
+        }
+        previous = M.erf((y0 - 0.5 - y) * k);
         for (let j = y0; j <= y1; j++) {
-            const row = level * Math.exp((j - y) ** 2 * k);
-            for (let i = x0; i <= x1; i++) image[j * c.width + i] += row * Math.exp((i - x) ** 2 * k);
+            const next = M.erf((j + 0.5 - y) * k);
+            rows[j - y0] = 0.5 * flux * (next - previous);
+            previous = next;
+        }
+        for (let j = y0; j <= y1; j++) {
+            const row = rows[j - y0], offset = j * c.width;
+            if (row === 0) continue;
+            for (let i = x0; i <= x1; i++) image[offset + i] += row * columns[i - x0];
         }
     }
 
@@ -145,7 +247,7 @@
         return { sun, moon, nadir, sunDeg, moonDeg, limb };
     }
 
-    function background(image, c, scene, basis, view, s, elapsed) {
+    function background(image, c, scene, basis, view, s, elapsed, sky) {
         const exposure = s.exposure / 100;
         const aperture = (s.aperture / defaults.aperture) ** 2;
         const { sun, moon, nadir, sunDeg, moonDeg, limb } = view;
@@ -162,8 +264,7 @@
         const drift = scene.gmst;
         for (let y = 0; y < c.height; y++) {
             for (let x = 0; x < c.width; x++) {
-                // Subtracting the global pedestal happens in the detector, after photon statistics.
-                let level = 1.8 + sunGlare + moonGlare + earthGlare;
+                let level = sunGlare + moonGlare + earthGlare;
                 if (nearEarth || sunGlare > 0.4 || moonGlare > 0.4 || sunDisk || moonDisk) {
                     const r = M.ray(c, x, y);
                     const e = dot(nadir, r);
@@ -189,7 +290,7 @@
                     if (moonDisk && ms > moonCut && e < earthCut) level += 32000 * scene.moonPhase;
                 }
                 const u = (x - c.cx) / c.focal, v = (y - c.cy) / c.focal;
-                image[y * c.width + x] = level * exposure * aperture / (1 + u * u + v * v) ** 2;
+                image[y * c.width + x] = (level * exposure * aperture + sky) / (1 + u * u + v * v) ** 2;
             }
         }
         if (sunGlare > 24 && sun[2] > 0.55) {
@@ -208,7 +309,7 @@
         return glint;
     }
 
-    function detector(image, c, s, time) {
+    function detector(image, c, s, time, particleRate) {
         const frameSeed = Math.imul(Math.floor(time / Math.max(40, s.exposure)), 0x9e3779b1) ^ s.seed;
         const rand = random(frameSeed), fixed = random(s.seed);
         const exposure = s.exposure / 1000;
@@ -223,11 +324,20 @@
         let events = 0;
         if (s.particles) {
             const hits = random(frameSeed ^ 0xb1d4a8);
-            events = shot(exposure * 4 * image.length / 76800, hits);
+            events = Math.round(shot(exposure * particleRate * DETECTOR_AREA, hits));
+            // The simulated format spans the assumed active area, so each simulated pixel is `pitch` µm wide.
+            // An isotropic particle crosses a 10 µm sensitive layer at cos θ = √U and deposits about 80 e⁻/µm,
+            // times a heavy tail for slow protons and cosmic-ray nuclei.
+            const pitch = Math.sqrt(DETECTOR_AREA * 1e8 / image.length);
             for (let i = 0; i < events; i++) {
                 const x = hits() * c.width, y = hits() * c.height, a = hits() * 2 * Math.PI;
-                const length = 1 + hits() * 10, energy = 250 + hits() * 9000;
-                for (let j = 0; j <= length; j++) splat(image, c, x + j * Math.cos(a), y + j * Math.sin(a), energy, 0.45);
+                const cosine = Math.max(0.05, Math.sqrt(hits()));
+                const span = Math.min(40, 10 * Math.sqrt(1 - cosine * cosine) / cosine / pitch);
+                const charge = 800 / cosine * (1 + 6 * hits() ** 3), parts = Math.ceil(span) + 1;
+                for (let j = 0; j < parts; j++) {
+                    const t = parts > 1 ? j / (parts - 1) * span : 0;
+                    splat(image, c, x + t * Math.cos(a), y + t * Math.sin(a), charge / parts, 0.45);
+                }
             }
         }
         const pixels = new Uint16Array(image.length);
@@ -249,20 +359,45 @@
         return { pixels, events, saturated: saturated / image.length, mean: total / image.length };
     }
 
-    function render(stars, satrec, s, time, epoch) {
+    // Point-source magnitude at SNR 5 for an optimally weighted Gaussian image over a uniform background.
+    function limitingMag(zeroMag, sky, s) {
+        const variance = sky + (s.noise ? 1.2 * s.exposure / 1000 + s.readNoise ** 2 : 0);
+        const pixels = 4 * Math.PI * s.psf ** 2;
+        const flux = (25 + Math.sqrt(625 + 100 * pixels * variance)) / 2;
+        return -2.5 * Math.log10(flux / zeroMag);
+    }
+
+    function trueRate(scene, satrec, s, elapsed, time) {
+        const h = 0.05;
+        const at = dt => {
+            const local = s.mode === 'inertial' ? scene : environment(satrec, time + dt * 1000);
+            return pointing(local, s, elapsed + dt);
+        };
+        const before = at(-h), after = at(h);
+        return M.toCamera(after, scale(M.rotationVector(before, after), 1 / (2 * h)));
+    }
+
+    function render(stars, satrec, s, time, epoch, options = {}) {
         const exposure = s.exposure / 1000, elapsed = (time - epoch) / 1000;
         const scene = environment(satrec, time);
         const basis = jittered(pointing(scene, s, elapsed), s.jitter, elapsed);
         const camera = M.camera(s);
         const view = viewing(scene, basis);
         const image = new Float32Array(s.width * s.height);
-        const glint = background(image, camera, scene, basis, view, s, elapsed);
+        const radius = s.aperture / 2000; // Entrance pupil radius in meters.
+        const zeroMag = ZERO_POINT * Math.PI * radius ** 2 * exposure;
+        const brightness = skyBrightness(basis[2], scene.sun);
+        // Convert surface brightness to magnitude-zero stars per steradian, then to electrons in a central pixel.
+        const sky = zeroMag * (brightness.zodiacal + brightness.galactic) * 0.2755 / camera.focal ** 2;
+        const glint = background(image, camera, scene, basis, view, s, elapsed, sky);
         const sunCut = Math.cos(scene.sunRadius), moonCut = Math.cos(scene.moonRadius);
         const earthCut = Math.cos(scene.earthRadius);
-        const minZ = M.ray(camera, -6, -6)[2] - (Math.abs(s.slew) * exposure + 0.15) * DEG;
-        const radius = s.aperture / 2000; // Entrance pupil radius in meters.
-        const zeroMag = 8.8e9 * Math.PI * radius ** 2 * 0.45 * exposure;
-        const steps = clamp(Math.ceil(exposure * (Math.abs(s.slew) * DEG * camera.focal + s.jitter / M.ARCSEC * camera.focal * 75)), 3, 21);
+        const corner = M.ray(camera, -6, -6)[2];
+        const rollSweep = Math.abs(s.rollRate || 0) * Math.hypot(camera.cx, camera.cy);
+        const minZ = corner - ((Math.abs(s.slew) + Math.abs(s.rollRate || 0)) * exposure + 0.15 + s.jitter / 3600) * DEG;
+        // Subsample at least twice per pixel of smear and about six times per period of the fastest jitter term.
+        const smear = exposure * (Math.abs(s.slew) * DEG * camera.focal + rollSweep * DEG);
+        const steps = clamp(Math.ceil(Math.max(2 * smear, s.jitter > 0 ? exposure * 110 : 0)), 3, 31);
         const bases = Array.from({ length: steps }, (_, i) => {
             const dt = exposure * ((i + 0.5) / steps - 0.5);
             const phase = elapsed + dt;
@@ -271,11 +406,12 @@
         });
         let visible = 0;
         const beta = s.aberration ? scene.beta : undefined;
-        for (const star of stars) {
+        const faint = s.faint ? faintField(basis[2], Math.acos(clamp(minZ, -1, 1))) : [];
+        for (const star of stars.concat(faint)) {
             if (dot(basis[2], star.v) < minZ) continue;
             const v = M.catalogVector(star, scene.years, beta);
             if (dot(v, scene.nadir) > earthCut || dot(v, scene.moon) > moonCut || dot(v, scene.sun) > sunCut) continue;
-            const flux = zeroMag * 10 ** (-0.4 * star.mag) / steps;
+            const flux = zeroMag * 10 ** (-0.4 * star.inst) / steps;
             if (flux * steps < 1) continue;
             let onSensor = false;
             for (const at of bases) {
@@ -287,14 +423,25 @@
                 splat(image, camera, x, y, flux * r[2] ** 4, s.psf * (1 + 0.22 * edge ** 2));
                 onSensor ||= x >= 0 && y >= 0 && x < s.width && y < s.height;
             }
-            visible += Number(onSensor);
+            if (star.hip) visible += Number(onSensor);
         }
-        const { pixels, ...stats } = detector(image, camera, s, time);
-        return { pixels, basis, beta, stats: { ...stats, visible, glint, sunlight: scene.sunlight,
+        const radiation = options.radiation ? options.radiation(scene.geo) : null;
+        const L = radiation?.L ?? scene.dipoleL;
+        const trapped = radiation ? radiation.trapped : null;
+        const particleRate = cosmicRays(scene, Math.min(L, 20)) + (trapped || 0);
+        const { pixels, ...stats } = detector(image, camera, s, time, particleRate);
+        // A tracker measures the exposure-averaged attitude, so that is the truth its error is scored against.
+        const sum = index => unit(bases.reduce((total, at) => add(total, at[index]), [0, 0, 0]));
+        const forward = sum(2), right = unit(sub(sum(0), scale(forward, dot(sum(0), forward))));
+        const truth = [right, cross(forward, right), forward];
+        return { pixels, basis: truth, beta, stats: { ...stats, visible, glint, sunlight: scene.sunlight,
             altitude: scene.distance - EARTH, limb: view.limb, sun: view.sunDeg, moon: view.moonDeg,
-            moonVisible: scene.moonVisible, moonPhase: scene.moonPhase } };
+            moonVisible: scene.moonVisible, moonPhase: scene.moonPhase, sky: sky, skyBrightness: brightness,
+            limitMag: limitingMag(zeroMag, sky, s), plateScale: M.ARCSEC / camera.focal, geo: scene.geo, L,
+            trapped, particleRate, rate: trueRate(scene, satrec, s, elapsed, time).map(v => v / DEG) } };
     }
 
-    root.StarSensor = { defaults, environment, pointing, render, FULL_WELL, BIAS };
+    root.StarSensor = { defaults, environment, pointing, render, skyBrightness, cosmicRays, FULL_WELL, BIAS,
+        ZERO_POINT, DETECTOR_AREA, PROTON_THRESHOLD };
     if (typeof module !== 'undefined' && module.exports) module.exports = root.StarSensor;
 })(typeof self !== 'undefined' ? self : globalThis);

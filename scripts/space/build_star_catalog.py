@@ -22,7 +22,7 @@ def main():
             [
                 int(star["hip"]), round(15 * float(star["ra"]), 6), float(star["dec"]),
                 float(star["mag"]), float(star["pmra"] or 0), float(star["pmdec"] or 0),
-                star["proper"],
+                star["proper"], float(star["ci"]) if star["ci"] else None,
             ]
             for star in csv.DictReader(file) if star["hip"] and float(star["mag"]) <= 7.5
         ]
@@ -30,7 +30,7 @@ def main():
     catalog = {
         "source": "Astronexus HYG v4.1 (Hipparcos entries, V ≤ 7.5)",
         "epoch": 2000,
-        "fields": ["hip", "ra_deg", "dec_deg", "v_mag", "pm_ra_cos_dec_mas_yr", "pm_dec_mas_yr", "name"],
+        "fields": ["hip", "ra_deg", "dec_deg", "v_mag", "pm_ra_cos_dec_mas_yr", "pm_dec_mas_yr", "name", "b_v"],
         "stars": rows,
     }
     DESTINATION.write_text(json.dumps(catalog, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
