@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-11-19" />
+    <meta name="description" content="Design and test an optical star tracker in low Earth orbit. Simulate catalog stars, stray light, eclipse, glints and detector noise, then recover camera attitude from the sensor pixels." />
+    <title>Star Tracker Simulator | T-Lind</title>
+    <link rel="stylesheet" href="../space/space.css" />
+    <link rel="stylesheet" href="tracker.css" />
+</head>
+<body class="tool star-tracker">
+<header class="tool-head">
+    <div>
+        <div class="crumb"><a href="../space/">Space environment tools</a> / Optical navigation</div>
+        <h1>Star Tracker Simulator</h1>
+        <p>Design an optical sensor, fly it in low Earth orbit, and recover its pointing from the star field it actually sees.</p>
+    </div>
+    <a class="btn ghost jump-controls" href="#controls">Camera and orbit settings</a>
+</header>
+
+<div class="tool-body">
+    <aside class="tool-panel" id="controls" aria-label="Simulation and tracker controls">
+        <div class="tool-panel-inner">
+            <section class="sect" aria-labelledby="scenario-title">
+                <h2 id="scenario-title">Test scenario</h2>
+                <label class="fld"><span>Starting conditions</span>
+                    <select id="scenario" disabled>
+                        <option value="" disabled>Custom configuration</option>
+                        <option value="clear" selected>Clear sky · Orion</option>
+                        <option value="limb">Sunlit Earth limb</option>
+                        <option value="solar">Off-axis solar glare</option>
+                        <option value="moon">Moon in the field</option>
+                        <option value="glint">Specular glint</option>
+                        <option value="slew">Fast slew · long exposure</option>
+                    </select>
+                </label>
+                <p class="hint">Presets reset camera and sensor settings. They use your selected orbit.</p>
+            </section>
+
+            <section class="sect" aria-labelledby="orbit-title">
+                <h2 id="orbit-title">Spacecraft orbit</h2>
+                <div id="orbit-editor"></div>
+                <p class="hint">Use a low Earth orbit from 120 to 2,000 km. Set the observation UTC near your TLE epoch.</p>
+            </section>
+
+            <section class="sect" aria-labelledby="pointing-title">
+                <h2 id="pointing-title">Camera pointing</h2>
+                <div class="fld-grid">
+                    <label class="fld wide"><span>Pointing mode</span><select id="mode" data-setting>
+                        <option value="inertial">Inertial / slew</option>
+                        <option value="zenith">Orbit-relative · zenith</option>
+                        <option value="along">Orbit-relative · along-track</option>
+                    </select></label>
+                    <label class="fld"><span><span id="ra-label">Right ascension</span><em>°</em></span><input id="ra" data-setting type="number" min="-360" max="360" step="any" required /></label>
+                    <label class="fld"><span><span id="dec-label">Declination</span><em>°</em></span><input id="dec" data-setting type="number" min="-90" max="90" step="any" required /></label>
+                    <label class="fld"><span>Roll <em>°</em></span><input id="roll" data-setting type="number" min="-180" max="180" step="any" required /></label>
+                    <label class="fld" id="slew-field"><span>Sky slew <em>°/s</em></span><input id="slew" data-setting type="number" min="-5" max="5" step="0.05" required /></label>
+                    <label class="fld"><span>Jitter amplitude <em>arcsec</em></span><input id="jitter" data-setting type="number" min="0" max="600" step="1" required /></label>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="sensor-title">
+                <h2 id="sensor-title">Optics and detector</h2>
+                <div class="fld-grid">
+                    <label class="fld"><span>Horizontal field <em>°</em></span><input id="fov" data-setting type="number" min="10" max="36" step="0.5" required /></label>
+                    <label class="fld"><span>Aperture <em>mm</em></span><input id="aperture" data-setting type="number" min="8" max="90" step="1" required /></label>
+                    <label class="fld"><span>Exposure <em>ms</em></span><input id="exposure" data-setting type="number" min="1" max="1500" step="1" required /></label>
+                    <label class="fld"><span>Detector format</span><select id="format" data-setting><option value="320">320 × 240</option><option value="640">640 × 480</option></select></label>
+                    <label class="fld"><span>PSF σ <em>px</em></span><input id="psf" data-setting type="number" min="0.55" max="2.5" step="0.05" required /></label>
+                    <label class="fld"><span>Read noise <em>e⁻ RMS</em></span><input id="readNoise" data-setting type="number" min="0" max="25" step="0.5" required /></label>
+                    <label class="fld"><span>Radial distortion <em>k₁</em></span><input id="distortion" data-setting type="number" min="-0.55" max="0.55" step="0.01" required /></label>
+                    <label class="fld"><span>Baffle angle <em>°</em></span><input id="baffle" data-setting type="number" min="10" max="55" step="1" required /></label>
+                    <label class="fld"><span>Noise seed</span><input id="seed" data-setting type="number" min="0" max="4294967295" step="1" required /></label>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="effects-title">
+                <h2 id="effects-title">Environmental effects</h2>
+                <label class="check"><input id="glare" data-setting type="checkbox" /> Sun, Moon and Earth stray light</label>
+                <label class="check"><input id="glint" data-setting type="checkbox" /> Specular glint and ghost</label>
+                <label class="check"><input id="particles" data-setting type="checkbox" /> Particle hits</label>
+                <label class="check"><input id="noise" data-setting type="checkbox" /> Photon and detector noise</label>
+                <label class="check"><input id="aberration" data-setting type="checkbox" /> Stellar aberration correction</label>
+                <p class="hint">Aberration is present in simulated exposures. The correction tells the tracker to use the orbit and timestamp.</p>
+            </section>
+
+            <section class="sect" aria-labelledby="solver-title">
+                <h2 id="solver-title">Tracker configuration</h2>
+                <div class="fld-grid">
+                    <label class="fld"><span>Peak threshold <em>σ</em></span><input id="threshold" data-setting type="number" min="3" max="20" step="0.25" value="4.5" required /></label>
+                    <label class="fld"><span>Minimum matches</span><input id="minimum" data-setting type="number" min="5" max="12" step="1" value="5" required /></label>
+                </div>
+                <label class="check"><input id="calibrated" data-setting type="checkbox" /> Apply radial lens calibration</label>
+                <label class="check"><input id="blind" data-setting type="checkbox" /> Acquire independently every frame</label>
+            </section>
+        </div>
+    </aside>
+
+    <main class="tool-main" id="main">
+        <section class="card frame-card" aria-labelledby="frame-title">
+            <div class="frame-toolbar">
+                <div>
+                    <h2 id="frame-title">Camera focal plane</h2>
+                    <div class="frame-meta mono" id="frame-meta">Loading catalog and camera…</div>
+                </div>
+                <div class="row frame-actions">
+                    <label class="fld inline-field"><span>Display</span><select id="overlay" aria-label="Focal plane overlay"><option value="matches">Matches</option><option value="centroids">Centroids</option><option value="raw">Raw image</option></select></label>
+                    <label class="check"><input id="stretch" type="checkbox" checked /> Auto stretch</label>
+                </div>
+            </div>
+            <div class="frame-stage">
+                <div class="sensor-screen" id="sensor-screen">
+                    <canvas id="image" width="320" height="240" role="img" aria-label="Simulated monochrome camera image"></canvas>
+                    <canvas id="overlay-canvas" aria-hidden="true"></canvas>
+                </div>
+                <div class="frame-placeholder" id="placeholder">Loading star catalog…</div>
+            </div>
+            <div class="frame-toolbar frame-readout">
+                <span class="mono" id="frame-summary">—</span>
+                <span class="frame-legend" id="legend" hidden><i></i> Catalog match <i></i> Unmatched centroid</span>
+            </div>
+            <div class="clock-deck">
+                <div class="row clock-row">
+                    <div class="row playback">
+                        <button class="btn primary" id="play" type="button" aria-pressed="false" disabled>Play</button>
+                        <button class="btn ghost" id="step" type="button" disabled>+1 s</button>
+                        <select id="rate" aria-label="Simulation speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="60">60×</option><option value="300">300×</option></select>
+                    </div>
+                    <label class="fld inline-field"><span>Observation UTC</span><input type="datetime-local" id="when" min="1950-01-01T00:00" max="2100-01-01T00:00" step="1" required /></label>
+                </div>
+                <label class="fld timeline-field"><span>Orbit timeline <output id="elapsed">+00:00</output></span><input id="timeline" type="range" min="0" max="5550" step="1" value="0" disabled /></label>
+            </div>
+        </section>
+
+        <section class="card" aria-label="Tracker analysis">
+            <div class="tabstrip" id="tabs" role="tablist" aria-label="Tracker analysis views">
+                <button type="button" role="tab" id="tab-attitude" data-tab="attitude" aria-controls="p-attitude" aria-selected="true">Attitude solution</button>
+                <button type="button" role="tab" id="tab-environment" data-tab="environment" aria-controls="p-environment" aria-selected="false" tabindex="-1">Orbit and environment</button>
+                <button type="button" role="tab" id="tab-method" data-tab="method" aria-controls="p-method" aria-selected="false" tabindex="-1">Method and data</button>
+            </div>
+
+            <section role="tabpanel" id="p-attitude" aria-labelledby="tab-attitude">
+                <div class="card-body">
+                    <div class="row spread solution-head">
+                        <div><h2 id="lock">Awaiting exposure</h2><p class="note" id="solution-note">The tracker estimates camera orientation from detected points of light.</p></div>
+                        <button class="btn ghost" id="reacquire" type="button" disabled>Reacquire from pixels</button>
+                    </div>
+                    <div class="readings">
+                        <div><span>Right ascension</span><strong id="fit-ra">—</strong></div>
+                        <div><span>Declination</span><strong id="fit-dec">—</strong></div>
+                        <div><span>Roll</span><strong id="fit-roll">—</strong></div>
+                        <div><span>Attitude error</span><strong id="fit-error">—</strong></div>
+                    </div>
+                    <p class="note mono" id="fit-stats">—</p>
+                </div>
+                <details id="matches-detail">
+                    <summary>Matched stars and residuals</summary>
+                    <div class="table-wrap"><table class="data">
+                        <thead><tr><th>Star</th><th>Visual mag.</th><th>X (px)</th><th>Y (px)</th><th>Peak SNR</th><th>Residual (arcsec)</th></tr></thead>
+                        <tbody id="matches"></tbody>
+                    </table></div>
+                </details>
+                <div class="row frame-files">
+                    <button type="button" class="btn ghost" id="import-frame" disabled>Import PGM</button>
+                    <input type="file" id="file" accept=".pgm,image/x-portable-graymap" hidden />
+                    <button type="button" class="btn ghost" id="export-frame" disabled>Export raw PGM</button>
+                    <button type="button" class="btn ghost" id="export-result" disabled>Export solution JSON</button>
+                    <button type="button" class="btn" id="resume" hidden>Return to simulation</button>
+                </div>
+                <p class="note file-note" id="file-note">Use a binary PGM with the matching field of view and lens calibration. Image size is read from the file.</p>
+            </section>
+
+            <section role="tabpanel" id="p-environment" aria-labelledby="tab-environment" hidden>
+                <div class="card-body">
+                    <div class="readings">
+                        <div><span>Altitude</span><strong id="env-altitude">—</strong></div>
+                        <div><span>Earth limb clearance</span><strong id="env-limb">—</strong></div>
+                        <div><span>Sun separation</span><strong id="env-sun">—</strong></div>
+                        <div><span>Spacecraft illumination</span><strong id="env-light">—</strong></div>
+                        <div><span>Moon separation</span><strong id="env-moon">—</strong></div>
+                        <div><span>Specular glint</span><strong id="env-glint">—</strong></div>
+                        <div><span>Saturated pixels</span><strong id="env-saturated">—</strong></div>
+                        <div><span>Particle events</span><strong id="env-particles">—</strong></div>
+                    </div>
+                    <p class="note" id="env-note">Limb clearance is measured from the boresight to the geometric horizon. Negative values put the boresight over Earth.</p>
+                </div>
+            </section>
+
+            <section role="tabpanel" id="p-method" aria-labelledby="tab-method" hidden>
+                <div class="card-body prose">
+                    <h3>Orbit and star field</h3>
+                    <p>SGP4 propagates the selected TLE, OMM or reference elements. The scene uses a spherical Earth, approximate precession from the SGP4 frame to J2000, analytic solar and lunar ephemerides, and observer-position parallax for the Moon. Earth occults stars and creates a time-varying umbra and penumbra. HYG v4.1 supplies Hipparcos identifiers, Johnson V magnitudes and proper motions for <span id="catalog-count">25,713</span> stars down to V = 7.5. Simulated rays include first-order annual and spacecraft aberration.</p>
+                    <h3>From photons to pixels</h3>
+                    <p>Stellar flux scales with aperture area, integration time and magnitude. An assumed visible passband and 45% combined transmission and quantum efficiency set the flux scale. Exposure subsamples capture slew and periodic jitter. The optical model includes a Gaussian point spread with off-axis broadening, radial distortion, vignetting, and empirical light scatter and ghosts. A 12,000-electron well and 96-count bias set the detector scale. Shot noise, fixed sensitivity variation, dark current, read noise, hot pixels, simplified blooming, and statistical particle hits alter the measured pixels.</p>
+                    <h3>From pixels to attitude</h3>
+                    <p>The tracker measures locally background-subtracted centroids, filters out peaks with poor shape, and converts pixel coordinates to calibrated camera rays. For blind acquisition it compares angular spacings against an indexed set of bright catalog pairs. It checks additional stars, rejects competing fits, and refines the rotation with a weighted least-squares fit to catalog directions. Tracking may reuse the previous frame’s solution. Simulation truth is used to report attitude error after the fit. The JSON export uses a scalar-first quaternion that rotates camera axes (right, down, forward) into the J2000-aligned inertial frame. Roll is positive clockwise from west toward south in the tangent plane.</p>
+                    <h3>Model limits</h3>
+                    <p>The default sensor is generic. Baffle rejection, limb brightness, surface glint, particle rate and the detector response are adjustable or illustrative approximations. A flight prediction needs measured point-source transmittance, detector calibration, material scattering, precise ephemerides and validation against hardware. Imported frames need the correct field of view, distortion and observation UTC. Inertial aberration correction also needs the observing orbit.</p>
+                    <p><a href="../space/data/stars.LICENSE.md">Catalog attribution and build</a> · <a href="https://aa.usno.navy.mil/faq/sun_approx">USNO solar coordinates</a> · <a href="https://ntrs.nasa.gov/api/citations/19890004071/downloads/19890004071.pdf">Lunar series reference</a> · <a href="https://celestrak.org/publications/AIAA/2006-6753/faq.php">SGP4 frames</a> · <a href="https://onlinelibrary.wiley.com/doi/10.1002/j.2161-4296.2004.tb00349.x">Star-pair indexing reference</a></p>
+                </div>
+            </section>
+        </section>
+    </main>
+</div>
+<footer class="statusbar">
+    <span><span class="dot" id="dot"></span><span id="status" role="status">Loading HYG star catalog…</span></span>
+    <span class="grow"></span>
+    <span id="stamp"></span>
+</footer>
+<noscript><p class="card-body">Enable JavaScript to run the simulator and optical tracker in your browser.</p></noscript>
+<script src="../space/lib/satellite.min.js" defer></script>
+<script src="../space/lib/orbit.js" defer></script>
+<script src="../space/lib/plot.js" defer></script>
+<script src="../space/lib/ui.js" defer></script>
+<script src="math.js" defer></script>
+<script src="pgm.js" defer></script>
+<script src="app.js" defer></script>
+<script src="../bh-nav.js" defer></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-/* Shared page helpers and the orbit editor used by both space tools. */
+/* Shared page helpers and the orbit editor used by the space tools. */
 (function (root) {
     'use strict';
     const O = root.SpaceOrbit;
@@ -86,7 +86,7 @@
 
     /**
      * Orbit editor with three entry modes. Emits orbit sources (see SpaceOrbit.satrecFromSource).
-     * opts: { onChange(source), onMany(sets) (optional: offer "add all"), epoch: Date, idPrefix }
+     * opts: { onChange(source), onMany(sets) (optional: offer "add all"), epoch: Date, idPrefix, presets }
      */
     class OrbitEditor {
         constructor(el, opts = {}) {
@@ -101,7 +101,7 @@
             // preset
             this.preset = h('select', { id: id + 'preset', 'aria-label': 'Preset orbit' });
             const groups = {};
-            for (const p of O.PRESETS) { groups[p.group] = groups[p.group] || h('optgroup', { label: p.group }); groups[p.group].append(h('option', { value: p.id, text: p.name })); }
+            for (const p of opts.presets || O.PRESETS) { groups[p.group] = groups[p.group] || h('optgroup', { label: p.group }); groups[p.group].append(h('option', { value: p.id, text: p.name })); }
             Object.values(groups).forEach(g => this.preset.append(g));
             this.preset.addEventListener('change', () => this._fromPreset());
             this.panes.preset = h('div', { class: 'oe-pane', id: id + 'preset-pane', role: 'tabpanel' },

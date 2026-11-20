@@ -19,7 +19,7 @@ test('requested projects are discoverable by name, alias, and common typing mist
         ['ty', 'ty'], ['lightening detector', 'Lightning Detector'],
         ['ss.jl', 'SatelliteSim.jl (ss.jl)'], ['ssjl', 'SatelliteSim.jl (ss.jl)'],
         ['satellite sim', 'SatelliteSim.jl (ss.jl)'], ['accessro', 'Accessor'], ['29', 'Accessor'],
-        ['syngrafi', 'Syngrafi']
+        ['syngrafi', 'Syngrafi'], ['star simulator', 'Star Tracker Simulator | T-Lind'], ['optical navigation', 'Star Tracker Simulator | T-Lind']
     ]) assert.equal(top(query), title, query);
 });
 

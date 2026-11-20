@@ -13,3 +13,4 @@ These images depict the projects themselves. The existing older assets are retai
 | `accessor-demo.svg` | Illustrative SVG based on Accessor 0.18.0’s terminal layout and a verified `hello` exchange in isolated mock mode. The microphone was off and no tools or real agent account were used. This is a rendered demo, not a native terminal screenshot. |
 | `debris-visualizer.jpg` | Screenshot of this site's `debris/` tool showing the October 23, 2026 catalog snapshot, captured November 18, 2026. |
 | `van-allen-belts.jpg` | Screenshot of this site's `van-allen/` belt cross-section (AE8MAX electrons above 1 MeV) with its default ISS, GTO and GPS cases, captured November 18, 2026. |
+| `star-tracker.jpg` | Focal-plane screenshot from this site's `star-tracker/` simulator with a sunlit Earth limb, a simulated glint, and Hipparcos matches. |

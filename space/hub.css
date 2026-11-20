@@ -1,4 +1,4 @@
-/* Space tools hub: two large tool cards in the shared deep-space theme. */
+/* Space tools hub: tool cards in the shared deep-space theme. */
 .tool-cards, .tool-cards * { margin-top: 0; box-sizing: border-box; }
 .tool-cards { display: grid; grid-template-columns: 1fr; gap: 1.4rem; margin-bottom: 2.4rem; }
 .tool-card { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 6px; background: rgba(12,12,16,.9); }
