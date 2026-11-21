@@ -143,6 +143,7 @@ self.onmessage = async ({ data }) => {
         const imported = type === 'import';
         const sat = !imported || settings.aberration ? orbit(source) : null;
         if (data.reset || data.blind || imported) track = null;
+        self.postMessage({ type: 'progress', id, fraction: 0.08 });
         const image = imported ? { pixels: data.pixels } : S.render(catalog, sat, { ...settings, aberration: true }, time, epoch,
             { radiation: trappedProtons });
         const beta = settings.aberration && sat ? S.environment(sat, time).beta : undefined;
@@ -150,6 +151,7 @@ self.onmessage = async ({ data }) => {
         const dt = track ? (time - track.time) / 1000 : 0;
         const prior = track && Math.abs(dt) <= 60 ? (track.rate ? M.spin(track.basis, M.scale(track.rate, dt)) : track.basis) : null;
         const started = performance.now();
+        self.postMessage({ type: 'progress', id, fraction: 0.55 });
         const solution = T.solve(index, image.pixels, settings, {
             threshold: data.threshold, minMatches: data.minMatches, years: M.days(time) / 365.25, beta, prior
         });

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="Tiernan Lindauer" />
+    <meta name="dcterms.date" content="2026-11-21" />
+    <meta name="description" content="Simulate a satellite radio downlink from orbit to a ground station. Predict passes and link margin, then transmit an image through a sample-level channel with Doppler, rain and noise, and decode it with a CCSDS receiver." />
+    <title>RF Link Simulator | T-Lind</title>
+    <link rel="stylesheet" href="../space/space.css" />
+    <link rel="stylesheet" href="link.css" />
+</head>
+<body class="tool rf-link sim">
+<header class="tool-head">
+    <div>
+        <div class="crumb"><a href="../space/">Space environment tools</a> / Radio communications</div>
+        <h1>RF Link Simulator</h1>
+        <p>Design a satellite radio, fly it over a ground station, and decode the signal that actually arrives.</p>
+    </div>
+    <a class="btn ghost jump-controls" href="#controls">Radio and orbit settings</a>
+</header>
+
+<div class="tool-body">
+    <aside class="tool-panel" id="controls" aria-label="Link and receiver settings">
+        <div class="tool-panel-inner">
+            <section class="sect" aria-labelledby="scenario-title">
+                <h2 id="scenario-title">Test scenario</h2>
+                <label class="fld"><span>Starting conditions</span>
+                    <select id="scenario">
+                        <option value="" disabled>Custom configuration</option>
+                        <option value="uhf">UHF CubeSat telemetry · GMSK</option>
+                        <option value="sband" selected>S-band telemetry · QPSK</option>
+                        <option value="xband">X-band payload downlink · 8PSK</option>
+                        <option value="low">Low-elevation pass · S-band</option>
+                        <option value="rain">Heavy rain · X-band</option>
+                        <option value="stale">Stale orbit prediction · UHF beacon</option>
+                        <option value="nodoppler">No Doppler pre-correction · UHF beacon</option>
+                    </select>
+                </label>
+                <p class="hint">Scenarios reset the radio, channel and receiver. They keep your orbit and ground station.</p>
+            </section>
+
+            <section class="sect" aria-labelledby="orbit-title">
+                <h2 id="orbit-title">Spacecraft orbit</h2>
+                <div id="orbit-editor"></div>
+            </section>
+
+            <section class="sect" aria-labelledby="station-title">
+                <h2 id="station-title">Ground station</h2>
+                <div class="fld-grid">
+                    <label class="fld wide"><span>Site</span><select id="station" data-setting></select></label>
+                    <label class="fld"><span>Latitude <em>°</em></span><input id="lat" data-setting type="number" min="-90" max="90" step="any" required /></label>
+                    <label class="fld"><span>Longitude <em>°</em></span><input id="lon" data-setting type="number" min="-180" max="180" step="any" required /></label>
+                    <label class="fld"><span>Altitude <em>km</em></span><input id="alt" data-setting type="number" min="-0.5" max="6" step="0.01" required /></label>
+                    <label class="fld"><span>Elevation mask <em>°</em></span><input id="mask" data-setting type="number" min="0" max="45" step="0.5" required /></label>
+                    <label class="fld wide"><span>Pass search from (UTC)</span><input id="start" data-setting type="datetime-local" min="1950-01-01T00:00" max="2100-01-01T00:00" step="1" required /></label>
+                    <label class="fld"><span>Search length <em>days</em></span><input id="days" data-setting type="number" min="0.25" max="7" step="0.25" required /></label>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="tx-title">
+                <h2 id="tx-title">Spacecraft transmitter</h2>
+                <div class="fld-grid">
+                    <label class="fld"><span>Frequency <em>MHz</em></span><input id="freqMHz" data-setting type="number" min="100" max="12000" step="any" required /></label>
+                    <label class="fld"><span>RF power <em>W</em></span><input id="txPowerW" data-setting type="number" min="0.01" max="200" step="any" required /></label>
+                    <label class="fld"><span>Line and circuit loss <em>dB</em></span><input id="txLossDb" data-setting type="number" min="0" max="10" step="0.1" required /></label>
+                    <label class="fld wide"><span>Antenna</span><select id="scAnt" data-setting>
+                        <option value="omni">Omnidirectional (dipole or turnstile)</option>
+                        <option value="patch">Patch, facing nadir</option>
+                        <option value="isoflux">Isoflux, facing nadir</option>
+                        <option value="steered">Steered dish or horn</option>
+                    </select></label>
+                    <label class="fld"><span><span id="scGain-label">Peak gain</span> <em>dBi</em></span><input id="scGainDbi" data-setting type="number" min="-10" max="45" step="0.1" required /></label>
+                    <label class="fld" data-steered><span>Pointing error <em>°</em></span><input id="scPointDeg" data-setting type="number" min="0" max="20" step="0.05" required /></label>
+                    <label class="fld"><span>Oscillator offset <em>ppm</em></span><input id="oscPpm" data-setting type="number" min="-20" max="20" step="0.05" required /></label>
+                    <label class="fld"><span>Phase noise at 1 kHz <em>dBc/Hz</em></span><input id="phaseNoiseDbc" data-setting type="number" min="-130" max="-40" step="1" required /></label>
+                </div>
+            </section>
+
+            <section class="sect" aria-labelledby="wave-title">
+                <h2 id="wave-title">Waveform</h2>
+                <div class="fld-grid">
+                    <label class="fld"><span>Modulation</span><select id="modulation" data-setting>
+                        <option value="bpsk">BPSK</option><option value="qpsk">QPSK</option><option value="8psk">8PSK</option><option value="gmsk">GMSK (BT 0.5)</option>
+                    </select></label>
+                    <label class="fld"><span>Symbol rate <em>ksym/s</em></span><input id="symbolRateKsps" data-setting type="number" min="0.3" max="300000" step="any" required /></label>
+                    <label class="fld wide"><span>Channel coding (CCSDS)</span><select id="coding" data-setting>
+                        <option value="none">Uncoded</option>
+                        <option value="conv">Convolutional (7, ½)</option>
+                        <option value="rs">Reed–Solomon (255, 223), depth 5</option>
+                        <option value="concat">Reed–Solomon + convolutional</option>
+                    </select></label>
+                </div>
+                <p class="hint" id="rate-note">—</p>
+            </section>
+
+            <section class="sect" aria-labelledby="rx-title">
+                <h2 id="rx-title">Ground receiver</h2>
+                <div class="fld-grid">
+                    <label class="fld wide"><span>Antenna</span><select id="gsAnt" data-setting>
+                        <option value="yagi">Crossed Yagi</option>
+                        <option value="dish">Parabolic dish</option>
+                    </select></label>
+                    <label class="fld" data-yagi><span>Gain <em>dBi</em></span><input id="gsGainDbi" data-setting type="number" min="0" max="30" step="0.1" required /></label>
+                    <label class="fld" data-dish><span>Diameter <em>m</em></span><input id="gsDiameterM" data-setting type="number" min="0.3" max="70" step="0.1" required /></label>
+                    <label class="fld" data-dish><span>Aperture efficiency <em>%</em></span><input id="gsEffPct" data-setting type="number" min="20" max="85" step="1" required /></label>
+                    <label class="fld"><span>Tracking error <em>°</em></span><input id="gsPointDeg" data-setting type="number" min="0" max="20" step="0.01" required /></label>
+                    <label class="fld"><span>Polarization loss <em>dB</em></span><input id="polLossDb" data-setting type="number" min="0" max="20" step="0.1" required /></label>
+                    <label class="fld"><span>Loss before LNA <em>dB</em></span><input id="gsLineLossDb" data-setting type="number" min="0" max="6" step="0.05" required /></label>
+                    <label class="fld"><span>LNA noise figure <em>dB</em></span><input id="lnaNfDb" data-setting type="number" min="0.1" max="10" step="0.05" required /></label>
+                    <label class="fld"><span>Site radio noise</span><select id="noiseEnv" data-setting>
+                        <option value="quiet">Quiet rural</option><option value="rural">Rural</option><option value="residential">Residential</option><option value="city">City</option>
+                    </select></label>
+                    <label class="fld"><span>Rain rate <em>mm/h</em></span><input id="rainRate" data-setting type="number" min="0" max="150" step="1" required /></label>
+                    <label class="fld"><span>Implementation loss <em>dB</em></span><input id="implLossDb" data-setting type="number" min="0" max="6" step="0.1" required /></label>
+                </div>
+                <p class="hint">Implementation loss only affects the predicted margin. The simulated receiver has its own real losses.</p>
+            </section>
+
+            <section class="sect" aria-labelledby="track-title">
+                <h2 id="track-title">Receiver acquisition and tracking</h2>
+                <label class="check"><input id="precorrect" data-setting type="checkbox" /> Doppler pre-correction from predicted orbit</label>
+                <div class="fld-grid">
+                    <label class="fld" data-precorrect><span>Prediction error <em>km along-track</em></span><input id="predErrorKm" data-setting type="number" min="-500" max="500" step="1" required /></label>
+                    <label class="fld"><span>Acquisition search <em>± kHz</em></span><input id="searchKHz" data-setting type="number" min="0.1" max="2000" step="any" required /></label>
+                    <label class="fld" data-coherent><span>Carrier loop bandwidth <em>Hz</em></span><input id="loopHz" data-setting type="number" min="0.5" max="2000000" step="any" required /></label>
+                    <label class="fld"><span>Noise seed</span><input id="seed" data-setting type="number" min="0" max="4294967295" step="1" required /></label>
+                </div>
+            </section>
+        </div>
+    </aside>
+
+    <main class="tool-main" id="main">
+        <section class="card frame-card" aria-labelledby="rx-display-title">
+            <div class="frame-toolbar">
+                <div>
+                    <h2 id="rx-display-title">Ground station receiver</h2>
+                    <div class="frame-meta mono" id="frame-meta">Loading the payload image…</div>
+                    <div class="run-state" id="run-state" data-state="running" role="status"><i aria-hidden="true"></i><span id="run-text">Starting the receiver…</span></div>
+                </div>
+                <div class="row frame-actions">
+                    <label class="fld inline-field"><span>Image</span><select id="image-view" aria-label="Image view"><option value="received">Received</option><option value="sent">Transmitted</option><option value="errors">Pixel errors</option></select></label>
+                    <label class="check"><input id="show-failed" type="checkbox" checked /> Show frames that failed CRC</label>
+                </div>
+            </div>
+            <div class="rx-stage">
+                <div class="run-progress" id="run-progress" aria-hidden="true"><i></i></div>
+                <figure class="rx-panel">
+                    <figcaption><span id="iq-title">Constellation</span><span class="mono" id="iq-sub"></span></figcaption>
+                    <canvas id="iq" role="img" aria-label="Received symbol constellation after carrier and timing recovery"></canvas>
+                </figure>
+                <figure class="rx-panel">
+                    <figcaption><span>Spectrum after Doppler pre-correction</span><span class="mono" id="spec-sub"></span></figcaption>
+                    <canvas id="spectrum" role="img" aria-label="Power spectrum of the received samples"></canvas>
+                </figure>
+                <figure class="rx-panel image-panel">
+                    <figcaption><span>Downlinked image</span><span class="mono" id="img-sub"></span></figcaption>
+                    <div class="image-wrap"><canvas id="image" width="128" height="72" role="img" aria-label="Image reassembled from the received frames"></canvas></div>
+                    <canvas id="frames" aria-hidden="true"></canvas>
+                    <div class="frame-legend"><span class="key ok"><i></i> Clean</span><span class="key corrected"><i></i> Corrected</span><span class="key failed"><i></i> CRC failed</span><span class="key missed"><i></i> Not received</span></div>
+                </figure>
+                <div class="frame-placeholder" id="placeholder">Loading…</div>
+            </div>
+            <div class="frame-toolbar frame-readout"><span class="mono" id="frame-summary">—</span></div>
+            <div class="clock-deck">
+                <div class="row clock-row">
+                    <div class="row playback">
+                        <button class="btn" id="play" type="button" aria-pressed="false" disabled>Play</button>
+                        <button class="btn ghost" id="back" type="button" disabled>−10 s</button>
+                        <button class="btn ghost" id="step" type="button" disabled>+10 s</button>
+                        <select id="rate" aria-label="Playback speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="30">30×</option><option value="60">60×</option></select>
+                    </div>
+                    <label class="fld inline-field"><span>Transmission starts (UTC)</span><input type="datetime-local" id="when" min="1950-01-01T00:00" max="2100-01-01T00:00" step="1" required /></label>
+                </div>
+                <div class="timeline-field">
+                    <div class="timeline-head">
+                        <span id="timeline-label">Pass <select id="pass" aria-label="Selected pass"></select> <output id="elapsed">+00:00</output> <span class="period" id="period-text"></span></span>
+                        <select id="jump" aria-label="Jump to a point in the pass" disabled><option value="">Jump to pass point…</option></select>
+                    </div>
+                    <canvas id="pass-strip" title="Click to move to this point in the pass" aria-hidden="true"></canvas>
+                    <input id="timeline" type="range" min="0" max="600" step="1" value="0" aria-labelledby="timeline-label" disabled />
+                    <div class="strip-legend"><span class="key good"><i></i> Margin ≥ 3 dB</span><span class="key thin"><i></i> 0 to 3 dB</span><span class="key short"><i></i> Below 0 dB</span><span class="key el"><i></i> Elevation</span><span class="key burst"><i></i> This transmission</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card" aria-label="Link analysis">
+            <div class="tabstrip" id="tabs" role="tablist" aria-label="Link analysis views">
+                <button type="button" role="tab" id="tab-receiver" data-tab="receiver" aria-controls="p-receiver" aria-selected="true">Received data</button>
+                <button type="button" role="tab" id="tab-budget" data-tab="budget" aria-controls="p-budget" aria-selected="false" tabindex="-1">Link budget</button>
+                <button type="button" role="tab" id="tab-passes" data-tab="passes" aria-controls="p-passes" aria-selected="false" tabindex="-1">Passes</button>
+                <button type="button" role="tab" id="tab-method" data-tab="method" aria-controls="p-method" aria-selected="false" tabindex="-1">Method and data</button>
+            </div>
+
+            <section role="tabpanel" id="p-receiver" aria-labelledby="tab-receiver">
+                <div class="card-body">
+                    <div class="solution-head">
+                        <h2 id="lock">Awaiting transmission</h2>
+                        <p class="note" id="lock-note">The receiver acquires the carrier, recovers symbols, and decodes CCSDS frames.</p>
+                    </div>
+                    <div class="readings">
+                        <div><span>Frames received</span><strong id="rx-frames">—</strong><small id="rx-frames-sub"></small></div>
+                        <div><span>Channel bit error rate</span><strong id="rx-ber">—</strong><small id="rx-ber-sub"></small></div>
+                        <div><span>Bit errors after decoding</span><strong id="rx-dec">—</strong><small id="rx-dec-sub"></small></div>
+                        <div><span>Measured Es/N0</span><strong id="rx-esn0">—</strong><small id="rx-esn0-sub"></small></div>
+                    </div>
+                    <div class="readings">
+                        <div><span>Carrier acquisition</span><strong id="rx-acq">—</strong><small id="rx-acq-sub"></small></div>
+                        <div><span>Sync re-acquisitions</span><strong id="rx-lock">—</strong><small id="rx-lock-sub"></small></div>
+                        <div><span>Airtime</span><strong id="rx-air">—</strong><small id="rx-air-sub"></small></div>
+                        <div><span>Simulated samples</span><strong id="rx-samples">—</strong><small id="rx-samples-sub"></small></div>
+                    </div>
+                    <div class="plot-cell track-plot">
+                        <h3>Carrier tracking during the transmission <span class="sub" id="track-sub"></span></h3>
+                        <div id="plot-track"></div>
+                    </div>
+                </div>
+                <details id="frames-detail">
+                    <summary>Frame-by-frame results</summary>
+                    <div class="table-wrap"><table class="data">
+                        <thead><tr><th>Frame</th><th>Sent at <span class="units">s into transmission</span></th><th>Predicted Es/N0 <span class="units">dB</span></th><th>Channel bit errors</th><th>Bit errors after Viterbi</th><th>Reed–Solomon</th><th>Result</th></tr></thead>
+                        <tbody id="frame-rows"></tbody>
+                    </table></div>
+                </details>
+                <div class="row frame-files">
+                    <button type="button" class="btn ghost" id="export-iq" disabled>Export IQ (SigMF)</button>
+                    <button type="button" class="btn ghost" id="export-image" disabled>Save received image</button>
+                    <button type="button" class="btn ghost" id="export-frames" disabled>Export frame results CSV</button>
+                </div>
+                <p class="note file-note">The SigMF recording holds the first 262,144 complex samples after Doppler pre-correction, at four samples per symbol. GNU Radio, inspectrum and SigMF tools can open it.</p>
+            </section>
+
+            <section role="tabpanel" id="p-budget" aria-labelledby="tab-budget" hidden>
+                <div class="card-body">
+                    <div class="solution-head">
+                        <h2 id="margin-head">—</h2>
+                        <p class="note" id="margin-note">Link budget at the start of the transmission.</p>
+                    </div>
+                    <div class="readings">
+                        <div><span>Elevation</span><strong id="g-el">—</strong><small id="g-az"></small></div>
+                        <div><span>Slant range</span><strong id="g-range">—</strong><small id="g-delay"></small></div>
+                        <div><span>Doppler shift</span><strong id="g-doppler">—</strong><small id="g-rate"></small></div>
+                        <div><span>Off-nadir angle</span><strong id="g-nadir">—</strong><small id="g-alt"></small></div>
+                    </div>
+                    <div class="table-wrap budget-wrap"><table class="data budget">
+                        <thead><tr><th>Term</th><th>Value</th><th class="l">Notes</th></tr></thead>
+                        <tbody id="budget-rows"></tbody>
+                    </table></div>
+                </div>
+                <div class="row frame-files">
+                    <button type="button" class="btn ghost" id="export-budget">Export link budget CSV</button>
+                </div>
+            </section>
+
+            <section role="tabpanel" id="p-passes" aria-labelledby="tab-passes" hidden>
+                <div class="card-body">
+                    <div class="readings">
+                        <div><span>Passes found</span><strong id="ps-count">—</strong><small id="ps-count-sub"></small></div>
+                        <div><span>Contact with positive margin</span><strong id="ps-contact">—</strong><small id="ps-contact-sub"></small></div>
+                        <div><span>Data volume</span><strong id="ps-volume">—</strong><small id="ps-volume-sub"></small></div>
+                        <div><span>Longest gap</span><strong id="ps-gap">—</strong><small id="ps-gap-sub"></small></div>
+                    </div>
+                </div>
+                <div class="plots">
+                    <div class="plot-cell"><h3>Link margin over the selected pass <span class="sub" id="plot-margin-sub"></span></h3><div id="plot-margin"></div></div>
+                    <div class="plot-cell"><h3>Doppler shift over the selected pass <span class="sub" id="plot-doppler-sub"></span></h3><div id="plot-doppler"></div></div>
+                    <div class="plot-cell sky-cell"><h3>Sky track <span class="sub">azimuth and elevation from the station</span></h3><canvas id="sky" role="img" aria-label="Polar plot of the pass across the sky"></canvas></div>
+                </div>
+                <div class="table-wrap"><table class="data passes">
+                    <thead><tr><th>#</th><th>Rise (UTC)</th><th>Max elevation</th><th>Duration</th><th>Positive margin</th><th>Peak margin <span class="units">dB</span></th><th>Data volume</th></tr></thead>
+                    <tbody id="pass-rows"></tbody>
+                </table></div>
+                <div class="row frame-files">
+                    <button type="button" class="btn ghost" id="export-passes">Export passes CSV</button>
+                </div>
+            </section>
+
+            <section role="tabpanel" id="p-method" aria-labelledby="tab-method" hidden>
+                <div class="card-body prose">
+                    <h3>Geometry</h3>
+                    <p>SGP4 propagates the selected TLE, OMM or reference elements in the TEME frame. The ground station sits on the WGS-84 ellipsoid and rotates with Greenwich mean sidereal time; polar motion is ignored. Range rate comes from the relative velocity, including Earth rotation at the station. Passes are found on a coarse time grid, with rise and set refined by bisection and maximum elevation by golden-section search. Body-fixed spacecraft antennas are assumed to face nadir.</p>
+                    <h3>Link budget</h3>
+                    <p>Free-space loss uses the slant range. Clear-air absorption is a zenith value of about 0.04–0.07 dB between UHF and X band, scaled by the Kasten–Young air mass. Rain attenuation follows the simplified ITU-R P.618 slant-path method with ITU-R P.838-3 coefficients for circular polarization. The rain height falls with latitude after ITU-R P.839. Antenna noise adds a cold-sky galactic background scaled from 408 MHz, sky emission from the absorbing atmosphere and rain at 275 K, ITU-R P.372 median man-made noise for the chosen site type, and a fixed ground spillover (10 K for a dish, 40 K for a Yagi). System temperature is referred to the LNA input. Spacecraft antennas use a cosine-power patch pattern, an isoflux pattern shaped to equalize slant range to 5° elevation, a constant-gain omnidirectional pattern, or a steered beam with a Gaussian pointing loss. Ground antennas use the same pointing-loss rule with a beamwidth of 70 λ/D for a dish.</p>
+                    <p>Eb is the energy per transfer-frame bit, so sync-marker and coding overhead count against the link. The required Eb/N0 is the level at which this tool's own receiver loses 1% of frames on a static channel, measured by <code>scripts/space/calibrate_rf_thresholds.cjs</code>. Margin subtracts that requirement and the implementation loss you enter.</p>
+                    <h3>Transmitter and channel</h3>
+                    <p>The payload is a 128 × 72 color image split into CCSDS-style transfer frames of 1,115 bytes, each with a frame counter and a CRC-16 frame error control field. Frames are Reed–Solomon (255, 223) encoded at interleaving depth 5 with the CCSDS field and generator (conventional basis, without the dual-basis transform), randomized with the CCSDS pseudo-random sequence, prefixed with the 0x1ACFFC1D attached sync marker, and convolutionally encoded with the CCSDS (7, ½) code. One idle frame leads and one trails the image. PSK symbols use root-raised-cosine pulses with roll-off 0.35; GMSK uses BT 0.5 and modulation index 0.5.</p>
+                    <p>The channel is generated at four samples per symbol. Every sample is delayed by the one-way propagation time R(t)/c, interpolated from SGP4 ranges and range rates. Carrier Doppler, Doppler rate and the matching stretch of the symbol clock all come from that delay. The receiver's own orbit prediction, optionally offset along track, is subtracted as Doppler pre-correction. The spacecraft oscillator adds a fixed frequency offset and Wiener phase noise whose level at 1 kHz offset you set. Gaussian noise follows the link budget's Es/N0, updated along the transmission as range, elevation and antenna gain change. Signals that the pre-correction leaves outside the receiver's sample bandwidth are not received.</p>
+                    <h3>Receiver</h3>
+                    <p>PSK: the matched-filter output is hard-limited and raised to the M-th power, which turns the modulated carrier into a spectral line. Up to 24 FFTs of 8,192 points are averaged, and only the acquisition range you set is searched. The symbol clock leaves weaker lines at ±Rs/M on either side of the carrier, so the receiver picks the line that has both neighbors. The detection threshold allows one false acquisition in about 1,000 attempts. Feed-forward estimates from the first 1,024 symbols set the starting sample phase and carrier phase. A Gardner detector with cubic interpolation then tracks symbol timing, starting four times wider and narrowing after 1,500 symbols. A second-order decision-directed loop tracks the carrier at the bandwidth you set; its frequency integrator waits 400 symbols for timing to settle, which avoids false locks at low SNR. Moment-based (M2M4) estimates give Es/N0 and scale the soft decisions. GMSK: the receiver finds the signal's spectral centroid, then uses a non-coherent limiter–discriminator with one-symbol integration and Gardner timing. Soft decisions are clipped to limit the effect of discriminator clicks. This detector costs several decibels against coherent detection, and the convolutional code helps it less than Reed–Solomon does.</p>
+                    <p>The decoder tries every carrier-phase rotation and symbol-pair alignment, keeps the one that finds the sync marker, then runs soft-decision Viterbi decoding, frame synchronization, derandomization, Reed–Solomon decoding and the CRC check. Like a hardware frame synchronizer, it reads through one or two missed sync markers (a flywheel) and lets Reed–Solomon and the CRC judge those frames. After three misses in a row it counts a re-acquisition and searches again. Frames that pass the CRC are placed by their frame counter. The simulation knows what was sent, so it reports true bit errors before and after decoding, compared with theory for an ideal coherent receiver at the predicted Es/N0. The GMSK comparison is the coherent MSK bound.</p>
+                    <h3>Model limits</h3>
+                    <p>This is a screening and teaching tool. Atmospheric and rain models are simplified, and the rain rate is applied as a steady value rather than an exceedance statistic. Ionospheric scintillation, Faraday rotation, multipath, interference, amplifier nonlinearity and adaptive coding are not modeled. Antenna patterns are idealized and ignore spacecraft attitude other than nadir pointing. Each run simulates one image transmission starting at the selected time, not a continuous pass. Thresholds come from 200-frame simulations in 0.25 dB steps and carry about ±0.5 dB of statistical uncertainty; in theory BPSK and QPSK are identical. Coded 8PSK is limited by blind carrier acquisition and tracking near 7.5 dB Es/N0 rather than by the code, so adding Reed–Solomon gains it little. Real high-order PSK modems insert pilot symbols to avoid this.</p>
+                    <p><a href="https://public.ccsds.org/Publications/BlueBooks.aspx">CCSDS Blue Books</a> (131.0-B, TM synchronization and channel coding) · <a href="https://public.ccsds.org/Publications/GreenBooks.aspx">CCSDS Green Books</a> (130.1-G, coding rationale) · <a href="https://www.itu.int/rec/R-REC-P.618">ITU-R P.618</a> · <a href="https://www.itu.int/rec/R-REC-P.838">ITU-R P.838</a> · <a href="https://www.itu.int/rec/R-REC-P.372">ITU-R P.372</a> · F. M. Gardner, “A BPSK/QPSK timing-error detector for sampled receivers,” <i>IEEE Trans. Communications</i>, 1986 · <a href="https://sigmf.org/">SigMF</a> · <a href="https://celestrak.org/publications/AIAA/2006-6753/faq.php">SGP4 frames</a></p>
+                </div>
+            </section>
+        </section>
+    </main>
+</div>
+<footer class="statusbar">
+    <span><span class="dot" id="dot"></span><span id="status" role="status">Starting…</span></span>
+    <span class="grow"></span>
+    <span id="stamp"></span>
+</footer>
+<noscript><p class="card-body">Enable JavaScript to run the link simulation in your browser.</p></noscript>
+<script src="../space/lib/satellite.min.js" defer></script>
+<script src="../space/lib/orbit.js" defer></script>
+<script src="../space/lib/plot.js" defer></script>
+<script src="../space/lib/ui.js" defer></script>
+<script src="dsp.js" defer></script>
+<script src="geometry.js" defer></script>
+<script src="budget.js" defer></script>
+<script src="app.js" defer></script>
+<script src="../bh-nav.js" defer></script>
+</body>
+</html>

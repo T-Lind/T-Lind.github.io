@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../space/space.css" />
     <link rel="stylesheet" href="tracker.css" />
 </head>
-<body class="tool star-tracker">
+<body class="tool star-tracker sim">
 <header class="tool-head">
     <div>
         <div class="crumb"><a href="../space/">Space environment tools</a> / Optical navigation</div>
@@ -102,10 +102,6 @@
                 <label class="check"><input id="blind" data-setting type="checkbox" /> Acquire independently every frame</label>
             </section>
 
-            <section class="sect run-sect" aria-label="Run the simulation">
-                <button class="btn primary simulate" type="button" disabled>Simulate frame</button>
-                <p class="hint">Renders the detector image and solves it with the settings above.</p>
-            </section>
         </div>
     </aside>
 
@@ -115,6 +111,7 @@
                 <div>
                     <h2 id="frame-title">Camera focal plane</h2>
                     <div class="frame-meta mono" id="frame-meta">Loading catalog and camera…</div>
+                    <div class="run-state" id="run-state" data-state="idle" role="status"><i aria-hidden="true"></i><span id="run-text">Loading the star catalog…</span></div>
                 </div>
                 <div class="row frame-actions">
                     <label class="fld inline-field"><span>Display</span><select id="overlay" aria-label="Focal plane overlay"><option value="matches">Matches</option><option value="residuals">Residuals ×100</option><option value="centroids">Centroids</option><option value="raw">Raw image</option></select></label>
@@ -122,6 +119,7 @@
                 </div>
             </div>
             <div class="frame-stage">
+                <div class="run-progress" id="run-progress" aria-hidden="true"><i></i></div>
                 <div class="sensor-screen" id="sensor-screen">
                     <canvas id="image" width="320" height="240" role="img" aria-label="Simulated monochrome camera image"></canvas>
                     <canvas id="overlay-canvas" aria-hidden="true"></canvas>
@@ -132,11 +130,6 @@
                 <span class="mono" id="frame-summary">—</span>
                 <span class="mono pixel-readout" id="pixel-readout" hidden></span>
                 <span class="frame-legend" id="legend" hidden><span class="key match"><i></i> Trusted match</span><span class="key unmatched"><i></i> Unmatched centroid</span><span class="key weak"><i></i> Down-weighted</span></span>
-            </div>
-            <div class="run-bar">
-                <button class="btn primary simulate" id="simulate" type="button" disabled>Simulate frame</button>
-                <label class="check"><input id="autorun" type="checkbox" checked /> Re-run on every change</label>
-                <span class="run-state" id="run-state" data-state="idle" role="status"><i aria-hidden="true"></i><span id="run-text">Loading the star catalog…</span></span>
             </div>
             <div class="clock-deck">
                 <div class="row clock-row">

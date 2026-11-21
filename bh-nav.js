@@ -6,7 +6,7 @@
  var items = [
   ['', 'Home'],
   ['projects/', 'Projects', ['accessor', 'chess-3d', 'games', 'intellistream', 'kalman', 'lightning-detector', 'lindauerai', 'lofall', 'opendraft', 'orbits', 'photolib', 'research', 'satellite-sim', 'syngrafi', 'ty', 'wormhole']],
-  ['space/', 'Tools', ['debris', 'van-allen']],
+  ['space/', 'Tools', ['debris', 'van-allen', 'star-tracker', 'rf-link']],
   ['lit/', 'Lit', ['essays', 'motivation', 'reading']],
   ['profile/', 'Profile'],
   ['search/', 'Search']
