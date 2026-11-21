@@ -10,7 +10,7 @@ function plain(html) {
         return entities[entity] || ' ';
     }).replace(/\s+/g, ' ').trim();
 }
-const projectSections = new Set(['opendraft', 'ty', 'lightning-detector', 'accessor', 'satellite-sim', 'syngrafi', 'photolib', 'chess-3d', 'lofall', 'intellistream', 'wormhole', 'lindauerai', 'kalman', 'space', 'debris', 'van-allen', 'star-tracker']);
+const projectSections = new Set(['opendraft', 'ty', 'lightning-detector', 'accessor', 'satellite-sim', 'syngrafi', 'photolib', 'chess-3d', 'lofall', 'intellistream', 'wormhole', 'lindauerai', 'kalman', 'space', 'debris', 'van-allen', 'star-tracker', 'rf-link']);
 const aliases = {
     opendraft: ['open draft', 'writing workshop'], ty: ['tiny terminal agent', 'ollama', 'local AI agent', 'LLM'],
     'lightning-detector': ['lightning detector', 'AS3935', 'ESP32'], accessor: ['29', 'twenty nine', 'voice agent'],
@@ -18,7 +18,8 @@ const aliases = {
     photolib: ['photo library', 'photos'], 'chess-3d': ['3d chess'], lofall: ['4d platformer', 'tesseract'],
     space: ['space tools', 'space environment tools'], debris: ['space debris', 'orbital debris', 'TLE', 'satellite catalog', 'conjunction', 'Gabbard'],
     'van-allen': ['Van Allen belts', 'radiation belts', 'trapped radiation', 'AE8', 'AP8', 'SAA', 'total ionizing dose'],
-    'star-tracker': ['star tracker', 'star simulator', 'star field', 'optical navigation', 'attitude determination', 'LEO', 'Hipparcos']
+    'star-tracker': ['star tracker', 'star simulator', 'star field', 'optical navigation', 'attitude determination', 'LEO', 'Hipparcos'],
+    'rf-link': ['RF link', 'radio link', 'link budget', 'comms simulator', 'communications', 'downlink', 'ground station', 'Doppler', 'CCSDS', 'SDR', 'SigMF', 'GMSK', 'QPSK']
 };
 const files = ['index.html'];
 // Only public static pages, never node_modules, app sources, or environment files.
