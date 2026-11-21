@@ -25,11 +25,11 @@
     let worker, ready = false, busy = null, next = null, last = null, imported = null;
     let revision = 0, serial = 0, playing = false, playStamp = 0, lastDispatch = 0;
     let savedInertial = null;
-    // Every displayed frame keeps a snapshot of the inputs it ran with, so the page can say whether it is current.
-    let runs = 0, pendingReset = false, profile = null, profileKey = '', jumps = [];
-    let autoRun = true;
-    try { autoRun = localStorage.getItem('star-tracker-autorun') !== 'off'; } catch { /* storage unavailable */ }
-    el('autorun').checked = autoRun;
+    // Every displayed frame keeps a snapshot of the inputs it ran with, for the solution export.
+    let runs = 0, profile = null, profileKey = '', jumps = [], progress = 0;
+    // lastRun remembers the value each field last ran with, so the blur after a typed edit does not run twice.
+    const lastRun = new Map();
+    const valueOf = input => input.type === 'checkbox' ? input.checked : input.value;
     const clock = seconds => {
         const total = Math.max(0, Math.round(seconds));
         return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
@@ -96,6 +96,7 @@
         el('blind').checked = false;
         savedInertial = null;
         updateMode();
+        lastRun.clear();
     }
 
     function cameraSettings() {
@@ -111,27 +112,14 @@
         return settings;
     }
 
+    // Every edit re-runs the frame. A newer request replaces any queued one, so only the latest settings render.
     function request(args = {}) {
         revision++;
-        next = args;
-        pendingReset = false;
+        next = next ? { ...args, reset: !!(args.reset || next.reset) } : args;
         dispatch();
         refreshRun();
     }
-
-    // Edits run immediately with auto-run on; otherwise they wait for Simulate frame.
-    function edited(args = {}) {
-        if (autoRun || !last) request(args);
-        else {
-            pendingReset ||= !!args.reset;
-            refreshRun();
-        }
-    }
-
-    function simulate() {
-        play(false);
-        request({ reset: pendingReset });
-    }
+    const edited = request;
 
     function snapshot() {
         return { settings: cameraSettings(), threshold: el('threshold').valueAsNumber, minimum: el('minimum').valueAsNumber,
@@ -147,48 +135,25 @@
         return span.textContent.trim();
     }
 
-    function differences(before, now) {
-        const changed = new Set();
-        for (const key of Object.keys(now.settings)) {
-            if (Object.is(before.settings[key], now.settings[key])) continue;
-            changed.add(key === 'width' || key === 'height' ? 'Detector format' : labelOf(el(key)));
-        }
-        for (const key of ['threshold', 'minimum', 'blind']) if (!Object.is(before[key], now[key])) changed.add(labelOf(el(key)));
-        if (before.time !== now.time) changed.add('Observation time');
-        if (before.source !== now.source) changed.add('Orbit');
-        return [...changed];
-    }
-
+    // The status line only appears when the frame on screen is not the current one: while a frame
+    // renders, or when an invalid field blocks the next run.
     function refreshRun() {
         const invalid = inputs.find(input => !input.disabled && !input.validity.valid);
-        let state = 'idle', message = 'No frame yet.';
-        if (!ready) message = 'Loading the star catalog…';
-        else if (last && playing) {
-            state = 'current';
-            message = `Playing · showing frame ${last.run}`;
-        } else if (busy) {
-            state = 'running';
-            message = busy.preset ? 'Preparing the scenario…' : `Running frame ${runs + 1}…`;
-        } else if (invalid) {
-            state = 'invalid';
-            message = `Fix ${labelOf(invalid)} to simulate.`;
-        } else if (last) {
-            const changes = differences(last.snapshot, snapshot());
-            if (changes.length) {
-                state = 'stale';
-                const names = changes.length > 3 ? changes.slice(0, 3).join(', ') + ` and ${changes.length - 3} more` : changes.join(', ');
-                message = `Frame ${last.run} is out of date. Changed: ${names}.` + (autoRun ? '' : ' Press Simulate frame.');
-            } else {
-                state = 'current';
-                message = `Frame ${last.run} matches the current settings.`;
-            }
-        }
+        let state = 'current', message = '';
+        if (!ready) { state = 'running'; message = 'Loading the star catalog…'; }
+        else if (invalid) { state = 'invalid'; message = `Fix ${labelOf(invalid)} to update the frame.`; }
+        else if (busy && !playing) { state = 'running'; message = busy.preset ? 'Preparing the scenario…' : `Rendering frame ${runs + 1}…`; }
         el('run-state').dataset.state = state;
+        el('run-state').hidden = state === 'current';
         text('run-text', message);
-        for (const button of document.querySelectorAll('.simulate')) {
-            button.disabled = !ready || !!invalid;
-            button.toggleAttribute('data-stale', state === 'stale');
-        }
+        setProgress(busy && !playing ? Math.max(0.04, progress) : null);
+    }
+
+    // Thin bar along the top of the focal plane. CSS delays it, so frames that finish quickly never show it.
+    function setProgress(fraction) {
+        const bar = el('run-progress');
+        bar.toggleAttribute('data-active', fraction !== null);
+        if (fraction !== null) bar.style.setProperty('--progress', (fraction * 100).toFixed(1) + '%');
     }
 
     function requestProfile() {
@@ -274,6 +239,7 @@
         lastDispatch = performance.now();
         const ran = snapshot();
         busy = { id, revision, snapshot: ran };
+        progress = 0;
         const message = {
             type: imported ? 'import' : 'render', id, source, time: Math.round(time), epoch, settings: ran.settings,
             threshold: +el('threshold').value, minMatches: +el('minimum').value, blind: args.blind || el('blind').checked, reset: args.reset
@@ -486,6 +452,10 @@
             }
             return;
         }
+        if (data.type === 'progress') {
+            if (busy && busy.id === data.id) { progress = data.fraction; refreshRun(); }
+            return;
+        }
         if (data.type === 'error' && data.id == null) {
             fail(data.message);
             return;
@@ -551,30 +521,31 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    for (const input of inputs) {
-        input.addEventListener('change', () => {
-            el('scenario').value = '';
-            if (input.id === 'mode') {
-                if (input.value === 'inertial') {
-                    [el('ra').value, el('dec').value] = savedInertial || [83, -4];
-                } else if (!savedInertial) {
-                    savedInertial = [el('ra').value, el('dec').value];
-                    el('ra').value = el('dec').value = 0;
-                }
-                if (input.value === 'inertial') savedInertial = null;
-                updateMode();
+    // Typing in a number field re-runs after a short pause; other controls re-run as soon as they change.
+    const typed = U.debounce(input => { if (input.validity.valid && lastRun.get(input) !== valueOf(input)) changed(input); }, 450);
+    function changed(input) {
+        lastRun.set(input, valueOf(input));
+        el('scenario').value = '';
+        if (input.id === 'mode') {
+            if (input.value === 'inertial') {
+                [el('ra').value, el('dec').value] = savedInertial || [83, -4];
+            } else if (!savedInertial) {
+                savedInertial = [el('ra').value, el('dec').value];
+                el('ra').value = el('dec').value = 0;
             }
-            edited({ reset: true });
-        });
-        input.addEventListener('input', refreshRun);
+            if (input.value === 'inertial') savedInertial = null;
+            updateMode();
+            lastRun.clear();
+        }
+        edited({ reset: true });
     }
-    for (const button of document.querySelectorAll('.simulate')) button.addEventListener('click', simulate);
-    el('autorun').addEventListener('change', () => {
-        autoRun = el('autorun').checked;
-        try { localStorage.setItem('star-tracker-autorun', autoRun ? 'on' : 'off'); } catch { /* storage unavailable */ }
-        if (autoRun && last && el('run-state').dataset.state === 'stale') request({ reset: true });
-        refreshRun();
-    });
+    for (const input of inputs) {
+        input.addEventListener('change', () => { if (lastRun.get(input) !== valueOf(input)) changed(input); });
+        input.addEventListener('input', () => {
+            refreshRun();
+            if (input.type === 'number') typed(input);
+        });
+    }
     function moveTo(seconds) {
         play(false);
         time = epoch + 1000 * Math.round(Math.min(period, Math.max(0, seconds)));
