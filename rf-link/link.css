@@ -53,6 +53,11 @@
 .globe-legend .fp-good i { background: linear-gradient(90deg, rgb(38, 120, 82), rgb(150, 245, 210)); border-radius: 2px; width: 1.4rem; }
 .globe-legend .fp-thin i { background: rgba(242, 189, 97, .8); }
 .globe-legend .fp-short i { background: rgba(240, 107, 107, .6); }
+.globe-legend .wx-cloud i { background: rgba(235, 240, 247, .5); }
+.globe-legend .wx-light i { background: rgb(148, 204, 255); }
+.globe-legend .wx-mod i { background: rgb(64, 143, 255); }
+.globe-legend .wx-heavy i { background: rgb(255, 184, 56); }
+.globe-legend .wx-violent i { background: rgb(242, 69, 148); }
 .globe-legend .gt i, .globe-legend .pass i, .globe-legend .ring i, .globe-legend .los i { border-radius: 0; height: 2px; width: .9rem; }
 .globe-legend .gt i { background: rgba(191, 209, 242, .6); }
 .globe-legend .pass i { background: #83e4b6; }

@@ -4,6 +4,7 @@
 (function (root) {
     'use strict';
     const D = root.RFDsp || (typeof require === 'function' ? require('./dsp.js') : null);
+    const W = root.RFWeather || (typeof require === 'function' ? require('./weather.js') : null);
     const DEG = Math.PI / 180, RE = 6378.137, BOLTZ = -228.6, T0 = 290;
     const C = 299792.458;
 
@@ -13,10 +14,10 @@
      * statistical uncertainty (BPSK and QPSK are identical in theory). Coded 8PSK is limited by blind carrier
      * acquisition and tracking near 7.5 dB Es/N0, so Reed–Solomon adds little to it. */
     const REQUIRED_EBN0 = {
-        bpsk: { none: 11.75, conv: 4.25, rs: 6.25, concat: 2.75 },
-        qpsk: { none: 10.5, conv: 4.5, rs: 6.25, concat: 2.5 },
-        '8psk': { none: 14.5, conv: 6.5, rs: 9.5, concat: 6.75 },
-        gmsk: { none: 16, conv: 11.25, rs: 10.75, concat: 9 }
+        bpsk: { none: 10.75, conv: 5, rs: 6.25, concat: 2.5 },
+        qpsk: { none: 10.25, conv: 4.75, rs: 6.25, concat: 2.5 },
+        '8psk': { none: 13.75, conv: 6.25, rs: 9.25, concat: 6.5 },
+        gmsk: { none: 16.25, conv: 11.25, rs: 10.75, concat: 9.5 }
     };
 
     /* ITU-R P.838-3 rain coefficients (horizontal and vertical) at 1–12 GHz. */
@@ -49,12 +50,76 @@
         if (!(rate > 0) || elDeg <= 0) return 0;
         const { k, alpha } = rainCoefficients(fGHz);
         const gamma = k * rate ** alpha;
-        const hr = (Math.abs(lat) <= 23 ? 5 : Math.max(0, 5 - 0.075 * (Math.abs(lat) - 23))) + 0.36;
+        const hr = rainHeight(lat);
         if (hr <= hs) return 0;
-        const s = Math.sin(Math.max(elDeg, 0.5) * DEG);
-        const Ls = elDeg >= 5 ? (hr - hs) / s : 2 * (hr - hs) / (Math.sqrt(s * s + 2 * (hr - hs) / 8500) + s);
+        const Ls = slantInRain(elDeg, hr, hs);
         const Lg = Ls * Math.cos(elDeg * DEG), L0 = 35 * Math.exp(-0.015 * rate);
         return gamma * Ls / (1 + Lg / L0);
+    }
+    /** Rain height (km) after ITU-R P.839: about 5 km in the tropics, falling toward the poles. */
+    function rainHeight(lat) { return (Math.abs(lat) <= 23 ? 5 : Math.max(0, 5 - 0.075 * (Math.abs(lat) - 23))) + 0.36; }
+    /** Slant path length (km) below the rain height, with Earth curvature at low elevation (ITU-R P.618). */
+    function slantInRain(elDeg, hr, hs) {
+        const s = Math.sin(Math.max(elDeg, 0.5) * DEG);
+        return elDeg >= 5 ? (hr - hs) / s : 2 * (hr - hs) / (Math.sqrt(s * s + 2 * (hr - hs) / 8500) + s);
+    }
+
+    /** Cloud liquid-water specific attenuation (dB/km per g/m³) at 0 °C, ITU-R P.840 double-Debye model. */
+    function cloudK(fGHz) {
+        const th = 300 / 273.15, e0 = 77.66 + 103.3 * (th - 1), e1 = 0.0671 * e0, e2 = 3.52;
+        const fp = 20.20 - 146 * (th - 1) + 316 * (th - 1) ** 2, fs = 39.8 * fp, f = fGHz;
+        const e2i = f * (e0 - e1) / (fp * (1 + (f / fp) ** 2)) + f * (e1 - e2) / (fs * (1 + (f / fs) ** 2));
+        const e1r = (e0 - e1) / (1 + (f / fp) ** 2) + (e1 - e2) / (1 + (f / fs) ** 2) + e2;
+        const eta = (2 + e1r) / e2i;
+        return 0.819 * f / (e2i * (1 + eta * eta));
+    }
+    /** Cloud attenuation (dB) for columnar liquid water L (kg/m²) along the slant path. */
+    function cloudLoss(fGHz, L, elDeg) {
+        if (!(L > 0) || elDeg <= 0) return 0;
+        const e = Math.max(0, elDeg), airmass = 1 / (Math.sin(e * DEG) + 0.50572 * (e + 6.07995) ** -1.6364);
+        return L * cloudK(fGHz) * airmass;
+    }
+
+    /**
+     * Tropospheric scintillation standard deviation (dB), ITU-R P.618 §2.4.1. nwet is the wet refractivity
+     * (ppm) and dEff the effective antenna diameter (m). Elevation is clamped to the method's 4° lower limit.
+     */
+    function scintSigma(fGHz, elDeg, nwet, dEff) {
+        const th = Math.max(4, elDeg) * DEG, sn = Math.sin(th);
+        const sRef = 3.6e-3 + 1e-4 * nwet;
+        const L = 2000 / (Math.sqrt(sn * sn + 2.35e-4) + sn);
+        const x = 1.22 * dEff * dEff * (fGHz / L);
+        const g2 = 3.86 * (x * x + 1) ** (11 / 12) * Math.sin(11 / 6 * Math.atan(1 / x)) - 7.08 * x ** (5 / 6);
+        const g = g2 > 0 ? Math.sqrt(g2) : 0;
+        return sRef * fGHz ** (7 / 12) * g / sn ** 1.2;
+    }
+
+    /**
+     * Rain and cloud on the path for the selected weather model. Simulated weather integrates rain
+     * attenuation through the cells the slant path crosses below the rain height, sampled at six points
+     * along its ground projection, instead of applying the statistical path-reduction factor.
+     */
+    function atmosphere(r, geo, station, time) {
+        const fGHz = r.freqMHz / 1000, lat = station.lat, nwet = W.climateNwet(lat);
+        const none = { rain: 0, cloud: 0, rainRate: 0, rainPeak: 0, cloudL: 0, nwet, source: r.weather || 'clear' };
+        if (!r.weather || r.weather === 'clear' || !(geo.el > 0)) return none;
+        if (r.weather === 'fixed') {
+            return { rain: rainLoss(fGHz, r.rainRate, geo.el, lat, station.alt), cloud: cloudLoss(fGHz, r.cloudL, geo.el),
+                rainRate: r.rainRate, rainPeak: r.rainRate, cloudL: r.cloudL, nwet: nwet + 12 * r.cloudL, source: 'fixed' };
+        }
+        if (time === undefined || station.lon === undefined || geo.az === undefined) return none;
+        const field = W.fieldFor(r), hr = rainHeight(lat), here = field.sample(lat, station.lon, time);
+        const Ls = hr > station.alt ? slantInRain(geo.el, hr, station.alt) : 0, Lg = Ls * Math.cos(geo.el * DEG);
+        const { k, alpha } = rainCoefficients(fGHz), N = 6;
+        let rain = 0, peak = here.rain, cloudSum = here.cloud;
+        for (let i = 0; i < N; i++) {
+            const [la, lo] = W.travel(lat, station.lon, geo.az, Lg * (i + 0.5) / N);
+            const s = field.sample(la, lo, time);
+            if (s.rain > 0) rain += k * s.rain ** alpha * Ls / N;
+            peak = Math.max(peak, s.rain); cloudSum += s.cloud;
+        }
+        const cloudL = cloudSum / (N + 1);
+        return { rain, cloud: cloudLoss(fGHz, cloudL, geo.el), rainRate: here.rain, rainPeak: peak, cloudL, nwet: nwet + 12 * cloudL, source: 'sim' };
     }
 
     /** Clear-air gaseous absorption (dB): zenith value scaled by the Kasten–Young air mass. */
@@ -130,28 +195,32 @@
      * Full budget at one instant. geo: { el, range, rangeRate, offNadir, altitude } from RFGeometry.look.
      * station: { lat, alt }. Returns every term in dB unless noted.
      */
-    function compute(r, geo, station) {
+    function compute(r, geo, station, time) {
         const f = r.freqMHz * 1e6, fGHz = r.freqMHz / 1000, lambda = C * 1e3 / f;
         const sc = spacecraftGain(r, geo);
         const txDbw = 10 * Math.log10(r.txPowerW);
         const eirp = txDbw - r.txLossDb + sc.gain - sc.pointing;
         const fspl = 20 * Math.log10(4 * Math.PI * geo.range * 1e3 / lambda);
         const gas = gasLoss(fGHz, geo.el);
-        const rain = rainLoss(fGHz, r.rainRate, geo.el, station.lat, station.alt);
+        const atm = atmosphere(r, geo, station, time), rain = atm.rain, cloud = atm.cloud;
         const gs = groundGain(r, lambda);
-        const atten = 10 ** (-(gas + rain) / 10);
+        // Rain and cloud absorb, so they also emit: they raise the sky noise toward the 275 K medium.
+        const atten = 10 ** (-(gas + rain + cloud) / 10);
         const skyK = (2.7 + galacticK(r.freqMHz)) * atten + 275 * (1 - atten);
         const manK = manMadeK(r.freqMHz, r.noiseEnv);
         const antK = skyK + manK + gs.spill;
         const L = 10 ** (r.gsLineLossDb / 10), lnaK = T0 * (10 ** (r.lnaNfDb / 10) - 1);
         const sysK = antK / L + T0 * (1 - 1 / L) + lnaK;
         const gt = gs.gain - r.gsLineLossDb - 10 * Math.log10(sysK);
-        const cn0 = eirp - fspl - gas - rain - r.polLossDb - gs.pointing + gt - BOLTZ;
+        const cn0 = eirp - fspl - gas - rain - cloud - r.polLossDb - gs.pointing + gt - BOLTZ;
+        const dEff = r.gsAnt === 'dish' ? Math.sqrt(r.gsEff) * r.gsDiameterM : lambda / Math.PI * Math.sqrt(10 ** (r.gsGainDbi / 10));
+        const scint = geo.el > 0 ? scintSigma(fGHz, geo.el, atm.nwet, dEff) : 0;
         const rs = r.symbolRateKsps * 1e3, rb = infoRate(r);
         const ebn0 = cn0 - 10 * Math.log10(rb), esn0 = cn0 - 10 * Math.log10(rs);
         const req = required(r);
         return {
-            txDbw, eirp, scGain: sc.gain, scTheta: sc.theta, scPointing: sc.pointing, fspl, gas, rain, pol: r.polLossDb,
+            txDbw, eirp, scGain: sc.gain, scTheta: sc.theta, scPointing: sc.pointing, fspl, gas, rain, cloud, pol: r.polLossDb,
+            rainRate: atm.rainRate, rainPeak: atm.rainPeak, cloudL: atm.cloudL, nwet: atm.nwet, weather: atm.source, scint,
             gsGain: gs.gain, gsBeamwidth: gs.beamwidth, gsPointing: gs.pointing, skyK, manK, spillK: gs.spill, antK, lnaK, sysK, gt,
             cn0, rb, rs, ebn0, esn0, required: req, impl: r.implLossDb, margin: ebn0 - req - r.implLossDb,
             doppler: -f * geo.rangeRate / C, delayMs: geo.range / C * 1e3, lambda
@@ -161,7 +230,7 @@
     /** Linewidth (Hz) of a Wiener phase-noise process with the given level at 1 kHz offset. */
     function linewidth(dbcAt1k) { return Math.PI * 1e6 * 10 ** (dbcAt1k / 10); }
 
-    const api = { REQUIRED_EBN0, NOISE_ENV, SC_ANTENNAS, compute, infoRate, required, rainLoss, gasLoss, rainCoefficients, manMadeK, galacticK, linewidth, spacecraftGain, groundGain, C };
+    const api = { REQUIRED_EBN0, NOISE_ENV, SC_ANTENNAS, compute, infoRate, required, rainLoss, gasLoss, cloudLoss, cloudK, scintSigma, atmosphere, rainHeight, rainCoefficients, manMadeK, galacticK, linewidth, spacecraftGain, groundGain, C };
     root.RFBudget = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);

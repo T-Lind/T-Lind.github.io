@@ -26,7 +26,10 @@
 
     /* ---------------- utilities ---------------- */
     function rng(seed) {
-        let a = (seed >>> 0) || 1;
+        // Scramble the seed first (SplitMix32): nearby seeds otherwise give correlated, poorly mixed first draws.
+        let z = (seed >>> 0) + 0x9E3779B9 | 0;
+        z = Math.imul(z ^ (z >>> 16), 0x85EBCA6B); z = Math.imul(z ^ (z >>> 13), 0xC2B2AE35); z ^= z >>> 16;
+        let a = (z >>> 0) || 1;
         const next = () => {
             a = a + 0x6D2B79F5 | 0;
             let t = Math.imul(a ^ a >>> 15, 1 | a);
@@ -566,9 +569,8 @@
             const c = i + nfft;
             return Math.max(prefix[c - 3] - prefix[c - 48], prefix[c + 49] - prefix[c + 4]) / 45;
         };
-        // The M-th power also has weaker lines at ±Rs (±Rs/M after dividing by M) from the symbol clock.
-        // Those sit beside the carrier line, so the carrier is the bin that collects its own level plus
-        // both neighbours; a symbol-clock line only has the carrier on one side.
+        // The M-th power also has lines at ±Rs (±Rs/M after dividing by M) from the symbol clock, beside the
+        // carrier line. With short bursts a sideline can be the tallest single line.
         const ratio = new Float64Array(nfft);
         for (let i = 0; i < nfft; i++) ratio[i] = p[i] / local(i);
         const d = nfft / SPS;
@@ -578,7 +580,9 @@
             const f = (i < nfft / 2 ? i : i - nfft) * Fs / nfft / M;
             if (Math.abs(f) > limit) continue;
             count++;
-            const score = ratio[i] + near(i - d) + near(i + d);
+            // The carrier is the line with sidelines on both sides, so the weaker neighbour counts: a sideline
+            // has the carrier on one side but only a much weaker second-order line on the other.
+            const score = ratio[i] + 2 * Math.min(near(i - d), near(i + d));
             if (score > bestScore) { bestScore = score; best = ratio[i]; bestI = i; }
         }
         // Parabolic peak refinement.
@@ -588,7 +592,11 @@
         // Each bin is a mean of B exponential variables (Gamma, shape B). Pick the level that noise alone
         // exceeds in fewer than 1 in 1,000 acquisitions across all searched bins.
         const threshold = gammaThreshold(blocks, 1e-3 / Math.max(1, count));
-        return { found: best > threshold, hz: bin * Fs / nfft / M, metric: best, threshold };
+        const hz = bin * Fs / nfft / M, step = Rs / M;
+        // Sampled at the symbol rate, an offset of k·Rs/M is indistinguishable from the carrier (each symbol
+        // turns by one constellation step), so the neighbours are kept as fallbacks for frame sync to decide.
+        const alternates = [hz - step, hz + step].filter(f => Math.abs(f) <= limit);
+        return { found: best > threshold, hz, metric: best, threshold, alternates };
     }
 
     /** x such that P(mean of k unit exponentials > x) = p. */
@@ -933,10 +941,34 @@
         const finish = (rx, found, n0) => summarise(base, o, stream, rx, found, n0, rxs, Date.now() - t0);
         if (!acq.found) return finish(null, [], 1);
         mix(iq, acq.hz, Fs);
+        if (o.modulation !== 'gmsk') {
+            // Try the acquired line first; if no frame synchronizes, retune to its ±Rs/M neighbours, as a
+            // modem does when frame sync times out after acquisition.
+            let tuned = acq.hz, result = null;
+            for (const hz of [acq.hz, ...(acq.alternates || [])]) {
+                if (hz !== tuned) { mix(iq, hz - tuned, Fs); tuned = hz; }
+                onProgress(hz === acq.hz ? 0.5 : 0.6, hz === acq.hz ? 'Tracking' : 'Retuning');
+                const track = [];
+                const y = filterComplex(iq, MF_TAPS);
+                const rx = demodPSK(y, o, track);
+                const settled = track.slice(Math.min(track.length - 1, 8));
+                const es = settled.length ? settled.reduce((a, b) => a + b.esn0, 0) / settled.length : 1;
+                const n0 = 1 / Math.max(0.05, es);
+                onProgress(0.75, 'Decoding');
+                const found = decodeFrames(rx, o, n0);
+                if (!result || found.length > result.found.length) result = { rx, found, n0, track, hz };
+                if (found.length) break;
+            }
+            base.acquisition.hz = result.hz;
+            base.acquisition.retuned = result.hz !== acq.hz;
+            base.track = result.track;
+            onProgress(0.97, 'Assembling');
+            return finish(result.rx, result.found, result.n0);
+        }
         onProgress(0.5, 'Tracking');
         const track = [];
         let rx, n0 = 1;
-        if (o.modulation === 'gmsk') {
+        {
             const lp = lowpassTaps(0.65 / SPS, 33);
             const x = filterComplex(iq, lp);
             const d = demodGMSK(x, o, track);
@@ -944,12 +976,6 @@
             let v = 0; for (let k = 0; k < d.count; k++) v += (Math.abs(d.soft[k]) - mean) ** 2;
             v /= Math.max(1, d.count);
             rx = { soft: d.soft, count: d.count, llrScale: 2 * mean / Math.max(1e-9, v), integ: d.integ, clip: o.softClip ?? 0.6 };   // clipping tames discriminator "clicks"
-        } else {
-            const y = filterComplex(iq, MF_TAPS);
-            rx = demodPSK(y, o, track);
-            const settled = track.slice(Math.min(track.length - 1, 8));
-            const es = settled.length ? settled.reduce((a, b) => a + b.esn0, 0) / settled.length : 1;
-            n0 = 1 / Math.max(0.05, es);
         }
         base.track = track;
         onProgress(0.75, 'Decoding');

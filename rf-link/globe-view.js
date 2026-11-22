@@ -89,7 +89,7 @@
             const st = s.station, stPos = G.ecef(st.lat, st.lon, st.alt);
             const look = G.look(s.satrec, st, date);
             const visible = look && look.el >= 0;
-            const budget = look ? B.compute(s.radio, look, st) : null;
+            const budget = look ? B.compute(s.radio, look, st, s.time) : null;
             // Ground points from which the spacecraft is above the mask: the station's reach at this altitude.
             const mask = s.mask * DEG, reach = Math.acos(Math.min(1, RE * Math.cos(mask) / R)) - mask;
             const tracks = [
@@ -106,7 +106,8 @@
             this.globe.setTracks(tracks);
 
             // Margin footprint on a polar grid around the sub-spacecraft point.
-            if (s.footprint) this.footprint(s, sat, R, alt, nadir);
+            if (s.overlay === 'margin') this.footprint(s, sat, R, alt, nadir);
+            else if (s.overlay === 'weather') this.weather(s, R, nadir, stPos);
             else this.globe.setPoints(new Float32Array(0), new Float32Array(0));
 
             let inView = 0;
@@ -126,7 +127,8 @@
         footprint(s, sat, R, alt, nadir) {
             const horizon = Math.acos(RE / R), rings = 34, stepAng = horizon / rings;
             const pos = [], col = [];
-            const clear = { ...s.radio, rainRate: 0 };
+            // Simulated weather applies everywhere; a fixed rain rate belongs to your station only.
+            const wx = s.radio.weather === 'fixed' ? { ...s.radio, weather: 'clear' } : s.radio;
             const ref = Math.abs(nadir[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
             const u = unit(cross(nadir, ref)), v = cross(nadir, u);
             const c = [0, 0, 0, 0];
@@ -139,13 +141,47 @@
                     const el = Math.asin((rho[0] * p[0] + rho[1] * p[1] + rho[2] * p[2]) / range) / DEG;
                     if (el < s.mask) continue;
                     const offNadir = Math.acos(Math.max(-1, Math.min(1, (rho[0] * sat[0] + rho[1] * sat[1] + rho[2] * sat[2]) / (range * R)))) / DEG;
-                    const lat = Math.asin(p[2]) / DEG;
-                    const m = B.compute(clear, { el, range, rangeRate: 0, offNadir, altitude: alt }, { lat, alt: 0 }).margin;
+                    const lat = Math.asin(p[2]) / DEG, lon = Math.atan2(p[1], p[0]) / DEG;
+                    const east = unit([-p[1], p[0], 0]), north = cross(p, east);
+                    let az = Math.atan2(rho[0] * east[0] + rho[1] * east[1], rho[0] * north[0] + rho[1] * north[1] + rho[2] * north[2]) / DEG;
+                    if (az < 0) az += 360;
+                    const m = B.compute(wx, { el, az, range, rangeRate: 0, offNadir, altitude: alt }, { lat, lon, alt: 0 }, s.time).margin;
                     marginColor(m, c, 0);
                     if (!c[3]) continue;
                     pos.push(...scale(p, RE * 1.001)); col.push(...c);
                 }
             }
+            this.globe.pointSize = Math.max(3, Math.min(9, 2.2 / this.globe.cam.dist * 9));
+            this.globe.setPoints(new Float32Array(pos), new Float32Array(col));
+        }
+
+        /** Simulated cloud and rain in radar-style colours: a coarse cap under the spacecraft, finer near the station. */
+        weather(s, R, nadir, stPos) {
+            if (s.radio.weather !== 'sim') { this.globe.setPoints(new Float32Array(0), new Float32Array(0)); return; }
+            const field = root.RFWeather.fieldFor(s.radio), pos = [], col = [];
+            const add = (p, k) => {
+                const lat = Math.asin(p[2]) / DEG, lon = Math.atan2(p[1], p[0]) / DEG, w = field.sample(lat, lon, s.time);
+                let c = null;
+                if (w.rain >= 50) c = [0.95, 0.27, 0.58, 0.9];
+                else if (w.rain >= 10) c = [1, 0.72, 0.22, 0.85];
+                else if (w.rain >= 2.5) c = [0.25, 0.56, 1, 0.75];
+                else if (w.rain >= 0.1) c = [0.58, 0.8, 1, 0.6];
+                else if (w.cloud >= 0.08) c = [0.92, 0.94, 0.97, Math.min(0.42, 0.12 + 0.22 * w.cloud)];
+                if (c) { pos.push(...scale(p, RE * k)); col.push(...c); }
+            };
+            const cap = (center, radius, rings, k) => {
+                const ref = Math.abs(center[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0], u = unit(cross(center, ref)), v = cross(center, u), step = radius / rings;
+                add(center, k);
+                for (let i = 1; i <= rings; i++) {
+                    const d = i * step, n = Math.max(6, Math.round(2 * Math.PI * Math.sin(d) / step));
+                    for (let j = 0; j < n; j++) {
+                        const a = (j + (i % 2) * 0.5) / n * 2 * Math.PI;
+                        add([0, 1, 2].map(q => Math.cos(d) * center[q] + Math.sin(d) * (Math.cos(a) * u[q] + Math.sin(a) * v[q])), k);
+                    }
+                }
+            };
+            cap(nadir, Math.min(80 * DEG, Math.acos(RE / R) + 12 * DEG), 46, 1.006);
+            cap(unit(stPos), 1.6 * DEG, 28, 1.007);
             this.globe.pointSize = Math.max(3, Math.min(9, 2.2 / this.globe.cam.dist * 9));
             this.globe.setPoints(new Float32Array(pos), new Float32Array(col));
         }

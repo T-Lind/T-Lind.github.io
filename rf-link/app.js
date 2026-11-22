@@ -13,19 +13,19 @@
         uhf: { freqMHz: 437.5, txPowerW: 1, txLossDb: 1, scAnt: 'omni', scGainDbi: 0, scPointDeg: 0, oscPpm: 1, phaseNoiseDbc: -85,
             modulation: 'gmsk', symbolRateKsps: 9.6, coding: 'rs',
             gsAnt: 'yagi', gsGainDbi: 14, gsDiameterM: 3, gsEffPct: 55, gsPointDeg: 2, polLossDb: 3, gsLineLossDb: 0.5, lnaNfDb: 0.8,
-            noiseEnv: 'residential', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 3, loopHz: 100 },
+            noiseEnv: 'residential', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 3, loopHz: 100 },
         sband: { freqMHz: 2245, txPowerW: 2, txLossDb: 1, scAnt: 'patch', scGainDbi: 6, scPointDeg: 0, oscPpm: 1, phaseNoiseDbc: -90,
             modulation: 'qpsk', symbolRateKsps: 2000, coding: 'concat',
             gsAnt: 'dish', gsGainDbi: 14, gsDiameterM: 3.7, gsEffPct: 55, gsPointDeg: 0.1, polLossDb: 0.5, gsLineLossDb: 0.2, lnaNfDb: 0.6,
-            noiseEnv: 'quiet', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 20, loopHz: 2000 },
+            noiseEnv: 'quiet', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 20, loopHz: 2000 },
         xband: { freqMHz: 8212.5, txPowerW: 5, txLossDb: 1.5, scAnt: 'isoflux', scGainDbi: 6, scPointDeg: 0, oscPpm: 0.5, phaseNoiseDbc: -95,
             modulation: '8psk', symbolRateKsps: 75000, coding: 'concat',
             gsAnt: 'dish', gsGainDbi: 14, gsDiameterM: 5.4, gsEffPct: 60, gsPointDeg: 0.03, polLossDb: 0.3, gsLineLossDb: 0.1, lnaNfDb: 0.5,
-            noiseEnv: 'quiet', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 100, loopHz: 50000 },
+            noiseEnv: 'quiet', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 100, loopHz: 50000 },
         beacon: { freqMHz: 437.5, txPowerW: 1, txLossDb: 1, scAnt: 'omni', scGainDbi: 0, scPointDeg: 0, oscPpm: 0.5, phaseNoiseDbc: -90,
             modulation: 'bpsk', symbolRateKsps: 4.8, coding: 'conv',
             gsAnt: 'yagi', gsGainDbi: 14, gsDiameterM: 3, gsEffPct: 55, gsPointDeg: 2, polLossDb: 3, gsLineLossDb: 0.5, lnaNfDb: 0.8,
-            noiseEnv: 'rural', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 1, loopHz: 30 }
+            noiseEnv: 'rural', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 1, loopHz: 30 }
     };
     // `at` places the transmission in the pass: centred on closest approach, early in the pass, or at an elevation.
     const SCENARIOS = {
@@ -33,7 +33,8 @@
         sband: { radio: 'sband', at: 'tca' },
         xband: { radio: 'xband', at: 'tca' },
         low: { radio: 'sband', at: { el: 6 } },
-        rain: { radio: 'xband', set: { rainRate: 45 }, at: { el: 20 } },
+        // Tropical rain reaches about 5 km, against about 1 km at Svalbard, so the storm scenario moves to Singapore.
+        rain: { radio: 'xband', set: { storminess: 'stormy', wxStorm: true }, at: 'tca', station: 'singapore' },
         stale: { radio: 'beacon', set: { predErrorKm: 120 }, at: 'tca' },
         nodoppler: { radio: 'beacon', set: { precorrect: false }, at: { el: 15 } }
     };
@@ -105,6 +106,12 @@
             r[key] = input.type === 'checkbox' ? input.checked : input.type === 'number' ? input.valueAsNumber : input.value;
         }
         r.gsEff = r.gsEffPct / 100;
+        // The steered storm sits 18 km from the station toward where the selected pass sets.
+        const p = passes[passIndex], st = station();
+        if (r.wxStorm && r.weather === 'sim' && p && satrec) {
+            const set = G.look(satrec, st, p.los);
+            r.wxTarget = { lat: st.lat, lon: st.lon, t: p.tca.getTime(), az: set ? Math.round(set.az) : 0, offsetKm: 18 };
+        } else r.wxTarget = null;
         return r;
     }
     function setRadio(values) {
@@ -123,6 +130,8 @@
         show('[data-dish]', el('gsAnt').value === 'dish');
         show('[data-precorrect]', el('precorrect').checked);
         show('[data-coherent]', el('modulation').value !== 'gmsk');
+        show('[data-wx-sim]', el('weather').value === 'sim');
+        show('[data-wx-fixed]', el('weather').value === 'fixed');
         text('scGain-label', { omni: 'Gain', isoflux: 'Edge-of-coverage gain', patch: 'Peak gain', steered: 'Peak gain' }[el('scAnt').value]);
     }
     function invalidInput() { return inputs.find(input => !input.disabled && !input.validity.valid); }
@@ -158,9 +167,9 @@
             const step = Math.max(5, p.duration / 80);
             let positive = 0, peak = -Infinity, volume = 0;
             for (let s = 0; s <= p.duration; s += step) {
-                const geo = G.look(satrec, st, new Date(p.aos.getTime() + s * 1000));
+                const at = p.aos.getTime() + s * 1000, geo = G.look(satrec, st, new Date(at));
                 if (!geo || geo.el < 0) continue;
-                const b = B.compute(r, geo, st);
+                const b = B.compute(r, geo, st, at);
                 peak = Math.max(peak, b.margin);
                 if (b.margin >= 0) { positive += step; volume += b.rb * step / 8; }
             }
@@ -189,7 +198,8 @@
     function recomputeProfileBudget() {
         const r = radio(), st = station();
         if (invalidInput()) return;
-        for (const s of profile) { const b = B.compute(r, s, st); s.margin = b.margin; s.doppler = b.doppler; s.ebn0 = b.ebn0; }
+        const p = passes[passIndex], t0 = p ? p.aos.getTime() : time;
+        for (const s of profile) { const b = B.compute(r, s, st, t0 + s.t * 1000); s.margin = b.margin; s.doppler = b.doppler; s.ebn0 = b.ebn0; s.rain = b.rain; }
     }
 
     function placeTime(p, at) {
@@ -674,7 +684,7 @@
         text('rx-esn0', gm ? '—' : db(st.esn0Measured, 2));
         text('rx-esn0-sub', gm ? `Predicted ${db(st.esn0Predicted, 2)}` : `Predicted ${db(st.esn0Predicted, 2)} · M2M4 estimate`);
         text('rx-acq', acq.found ? hz(acq.hz) : 'Not found');
-        text('rx-acq-sub', `Truth ${hz(acq.truthHz)} · search ±${hz(acq.searchHz).replace('+', '')}`);
+        text('rx-acq-sub', `Truth ${hz(acq.truthHz)} · search ±${hz(acq.searchHz).replace('+', '')}${acq.retuned ? ' · retuned after frame sync failed' : ''}`);
         // Each re-acquisition means the receiver lost frame sync (a cycle or symbol slip) and searched again.
         const locks = last.track.slice(2).map(b => b.lock);
         text('rx-lock', acq.found ? String(st.resyncs) : '—');
@@ -706,6 +716,19 @@
         if (!satrec) return null;
         return G.look(satrec, station(), new Date(time));
     }
+    function rainNote(b, r) {
+        if (b.weather === 'clear') return 'Clear sky';
+        if (b.weather === 'fixed') return r.rainRate ? `${r.rainRate} mm/h, fixed` : 'No rain';
+        if (b.rainPeak < 0.1) return 'No rain on the path';
+        return `${b.rainRate.toFixed(1)} mm/h at the station, up to ${b.rainPeak.toFixed(1)} mm/h along the path`;
+    }
+    function weatherNote(b, r, st) {
+        if (r.weather === 'clear') return 'Clear sky: no rain or cloud on the path.';
+        if (r.weather === 'fixed') return `Fixed weather at ${st.name}: ${r.rainRate} mm/h of rain and ${r.cloudL} kg/m² of cloud, on every pass.`;
+        const w = window.RFWeather, wind = w.wind(st.lat);
+        const from = wind.u >= 0 ? 'west' : 'east';
+        return `Now at ${st.name}: ${w.describeRain(b.rainRate)}${b.rainRate >= 0.1 ? ` (${b.rainRate.toFixed(1)} mm/h)` : ''}, cloud ${b.cloudL.toFixed(2)} kg/m², wind from the ${from} at about ${Math.abs(wind.u).toFixed(0)} m/s. Simulated, not a forecast.`;
+    }
     function budgetRows(b, r, geo) {
         const gsNote = r.gsAnt === 'dish' ? `${r.gsDiameterM} m dish, ${r.gsEffPct}% efficient, beamwidth ${b.gsBeamwidth.toFixed(2)}°` : `Yagi, beamwidth ${b.gsBeamwidth.toFixed(0)}°`;
         return [
@@ -716,7 +739,8 @@
             ['EIRP', b.eirp, 'dBW', '', 'total'],
             ['Free-space path loss', -b.fspl, 'dB', `${Math.round(geo.range).toLocaleString()} km at ${(r.freqMHz).toLocaleString()} MHz`],
             ['Atmospheric gases', -b.gas, 'dB', `${geo.el.toFixed(1)}° elevation`],
-            ['Rain', -b.rain, 'dB', r.rainRate ? `${r.rainRate} mm/h` : 'No rain'],
+            ['Rain', -b.rain, 'dB', rainNote(b, r)],
+            ['Cloud liquid water', -b.cloud, 'dB', b.cloudL > 0.005 ? `${b.cloudL.toFixed(2)} kg/m² along the path` : 'No cloud'],
             ['Polarization loss', -b.pol, 'dB', ''],
             ['Ground tracking loss', -b.gsPointing, 'dB', `${r.gsPointDeg}° error`],
             ['Ground antenna gain', b.gsGain, 'dBi', gsNote, 'part'],
@@ -736,12 +760,13 @@
         const geo = geometryNow(), r = radio();
         currentBudget = null;
         if (!geo || invalidInput()) return;
-        const st = station(), b = B.compute(r, geo, st);
+        const st = station(), b = B.compute(r, geo, st, time);
         currentBudget = { b, r, geo };
         const head = el('margin-head');
         head.textContent = geo.el < 0 ? 'Spacecraft below the horizon' : `Link margin ${signedDb(b.margin)}`;
         head.dataset.lock = geo.el < 0 || b.margin < 0 ? 'no' : b.margin < 3 ? 'part' : 'yes';
-        text('margin-note', `At ${U.utc(new Date(time), true)}, the start of the transmission. Margin is Eb/N0 minus the required ${b.required.toFixed(2)} dB and ${b.impl.toFixed(1)} dB implementation loss.`);
+        text('margin-note', `At ${U.utc(new Date(time), true)}, the start of the transmission. Margin is Eb/N0 minus the required ${b.required.toFixed(2)} dB and ${b.impl.toFixed(1)} dB implementation loss. Tropospheric scintillation adds ±${b.scint.toFixed(2)} dB (1σ) of fast fading on top.`);
+        text('wx-note', weatherNote(b, r, st));
         text('g-el', geo.el.toFixed(1) + '°'); text('g-az', 'Azimuth ' + geo.az.toFixed(1) + '°');
         text('g-range', Math.round(geo.range).toLocaleString() + ' km'); text('g-delay', 'One-way delay ' + b.delayMs.toFixed(2) + ' ms');
         text('g-doppler', hz(b.doppler)); text('g-rate', 'Rate ' + hz(-r.freqMHz * 1e6 * G.rangeAccel(satrec, st, new Date(time)) / B.C) + '/s');
@@ -873,6 +898,11 @@
         const sc = SCENARIOS[name];
         if (!sc) return;
         setRadio({ ...RADIOS[sc.radio], ...(sc.set || {}) });
+        const site = sc.station && G.STATIONS.find(s => s.id === sc.station);
+        if (site) {
+            el('station').value = site.id; el('lat').value = site.lat; el('lon').value = site.lon; el('alt').value = site.alt;
+            if (globeView) globeView.center(site.lat, site.lon);
+        }
         el('seed').value = 1;
         play(false);
         computePasses();
@@ -1053,7 +1083,7 @@
         const st = station(), pass = passes[passIndex];
         const sum = globeView.update({
             satrec, time, station: st, stations: G.STATIONS, radio: radio(), mask: el('mask').valueAsNumber, pass,
-            period: O.elementsOf(satrec).period, footprint: el('g-footprint').checked, lit: el('g-light').checked,
+            period: O.elementsOf(satrec).period, overlay: el('g-overlay').value, lit: el('g-light').checked,
             name: source.name || 'Spacecraft', trackKey: JSON.stringify(source) + '|' + (pass ? pass.aos.getTime() : '')
         });
         if (!sum) return;
@@ -1071,7 +1101,17 @@
         new ResizeObserver(() => globeView.globe.draw()).observe(el('globe'));
         scheduleGlobe();
     }
-    for (const id of ['g-footprint', 'g-light']) el(id).addEventListener('change', scheduleGlobe);
+    function overlayLegend() {
+        const o = el('g-overlay').value;
+        for (const k of document.querySelectorAll('[data-legend]')) k.hidden = k.dataset.legend !== o;
+        el('globe-note').hidden = o === 'none';
+        text('globe-note', o === 'weather'
+            ? 'Simulated cloud and rain in radar-style colors: finer near the station, coarser under the rest of the spacecraft footprint. Small storm cores can fall between grid points far from the station. Drag to rotate; scroll or pinch to zoom.'
+            : 'The footprint is the margin a ground station with your receiver would have at each point under the spacecraft right now, in the current weather. It shows the spacecraft antenna pattern, the longer slant range toward the horizon, and fades under rain. Drag to rotate; scroll or pinch to zoom.');
+    }
+    el('g-overlay').addEventListener('change', () => { overlayLegend(); scheduleGlobe(); });
+    overlayLegend();
+    el('g-light').addEventListener('change', scheduleGlobe);
     el('g-center').addEventListener('click', () => { const st = station(); if (globeView) { globeView.follow = false; el('g-follow').setAttribute('aria-pressed', 'false'); globeView.center(st.lat, st.lon); } });
     el('g-follow').addEventListener('click', () => {
         if (!globeView) return;
