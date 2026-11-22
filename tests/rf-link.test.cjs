@@ -122,3 +122,33 @@ test('worker: a real UHF pass decodes, and a stale orbit prediction defeats a na
     const stale = run({ ...radio, predErrorKm: 120 });
     assert(!stale.acquisition.found && Math.abs(stale.acquisition.truthHz) > 1000);
 });
+
+test('payloads: orbit-driven telemetry follows eclipses, and files are classified and size-limited', () => {
+    const P = require('../rf-link/payloads.js');
+    // Sun direction: near the March equinox the Sun sits close to +x; at the June solstice declination is ~23.4°.
+    const march = G.sunDirection(new Date(Date.UTC(2026, 2, 20, 12)));
+    assert(march[0] > 0.999, `equinox sun ${march}`);
+    const june = G.sunDirection(new Date(Date.UTC(2026, 5, 21, 12)));
+    assert(Math.abs(Math.asin(june[2]) * 180 / Math.PI - 23.44) < 0.1);
+    assert.equal(G.sunlit([7000, 0, 0], [1, 0, 0]), true);
+    assert.equal(G.sunlit([-7000, 0, 0], [1, 0, 0]), false);
+    assert.equal(G.sunlit([-7000, 7000, 0], [1, 0, 0]), true);
+
+    const t = P.telemetry(sso, Date.UTC(2026, 10, 21, 8, 46));
+    assert.equal(t.kind, 'text');
+    assert(t.bytes.length < P.LIMIT);
+    const rows = new TextDecoder().decode(t.bytes).trim().split('\n').filter(l => !l.startsWith('#')).slice(1).map(l => l.split(','));
+    const lit = rows.map(r => r[4] === '1');
+    assert(lit.includes(true) && lit.includes(false), 'one orbit of telemetry should include sunlight and eclipse');
+    // Batteries charge in sunlight and discharge in eclipse; panels are hotter in sunlight.
+    const soc = rows.map(r => +r[8]), panel = rows.map(r => +r[10]);
+    const lastDark = lit.lastIndexOf(false);
+    assert(soc[lastDark] < soc[lit.indexOf(false) - 1], 'charge falls through eclipse');
+    assert(panel[lastDark] < panel[rows.length - 1]);
+
+    assert.equal(P.classify(new TextEncoder().encode('time,value\n1,2\n')).kind, 'text');
+    assert.equal(P.classify(Uint8Array.from([0xFF, 0xD8, 0xFF, 0xE0, 0, 16, 74, 70, 73, 70, 0, 1, 1])).mime, 'image/jpeg');
+    assert.equal(P.classify(Uint8Array.from({ length: 300 }, (_, i) => (i * 97) & 255)).kind, 'file');
+    assert.throws(() => P.fromBytes(new Uint8Array(P.LIMIT + 1), 'big.bin'), /kB/);
+    assert.throws(() => P.fromBytes(new Uint8Array(0), 'empty.bin'), /empty/);
+});

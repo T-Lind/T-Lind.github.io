@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="Tiernan Lindauer" />
     <meta name="dcterms.date" content="2026-11-21" />
-    <meta name="description" content="Simulate a satellite radio downlink from orbit to a ground station. Predict passes and link margin, then transmit an image through a sample-level channel with Doppler, rain and noise, and decode it with a CCSDS receiver." />
+    <meta name="description" content="Simulate a satellite radio downlink from orbit to a ground station. Predict passes and link margin, map the margin footprint on a globe, then send images, telemetry or your own file through a sample-level channel and decode it with a CCSDS receiver." />
     <title>RF Link Simulator | T-Lind</title>
     <link rel="stylesheet" href="../space/space.css" />
     <link rel="stylesheet" href="link.css" />
@@ -94,6 +94,22 @@
                 <p class="hint" id="rate-note">—</p>
             </section>
 
+            <section class="sect" aria-labelledby="payload-title">
+                <h2 id="payload-title">Payload</h2>
+                <label class="fld"><span>Data to send</span><select id="payload">
+                    <option value="earth">Earth camera image · 128 × 72 color</option>
+                    <option value="stars">Star tracker frame · 160 × 120 grayscale</option>
+                    <option value="telemetry">Housekeeping telemetry · CSV</option>
+                    <option value="file">Your own file…</option>
+                </select></label>
+                <div class="row file-row" id="file-row" hidden>
+                    <button type="button" class="btn ghost" id="pick-file">Choose file…</button>
+                    <input type="file" id="payload-file" hidden />
+                    <span class="mono file-name" id="file-name">No file chosen</span>
+                </div>
+                <p class="hint" id="payload-note">—</p>
+            </section>
+
             <section class="sect" aria-labelledby="rx-title">
                 <h2 id="rx-title">Ground receiver</h2>
                 <div class="fld-grid">
@@ -139,7 +155,7 @@
                     <div class="run-state" id="run-state" data-state="running" role="status"><i aria-hidden="true"></i><span id="run-text">Starting the receiver…</span></div>
                 </div>
                 <div class="row frame-actions">
-                    <label class="fld inline-field"><span>Image</span><select id="image-view" aria-label="Image view"><option value="received">Received</option><option value="sent">Transmitted</option><option value="errors">Pixel errors</option></select></label>
+                    <label class="fld inline-field"><span>Data</span><select id="image-view" aria-label="Data view"><option value="received">Received</option><option value="sent">Transmitted</option><option value="errors">Errors highlighted</option></select></label>
                     <label class="check"><input id="show-failed" type="checkbox" checked /> Show frames that failed CRC</label>
                 </div>
             </div>
@@ -154,8 +170,13 @@
                     <canvas id="spectrum" role="img" aria-label="Power spectrum of the received samples"></canvas>
                 </figure>
                 <figure class="rx-panel image-panel">
-                    <figcaption><span>Downlinked image</span><span class="mono" id="img-sub"></span></figcaption>
-                    <div class="image-wrap"><canvas id="image" width="128" height="72" role="img" aria-label="Image reassembled from the received frames"></canvas></div>
+                    <figcaption><span id="data-title">Downlinked image</span><span class="mono" id="img-sub"></span></figcaption>
+                    <div class="image-wrap" id="image-wrap"><canvas id="image" width="128" height="72" role="img" aria-label="Image reassembled from the received frames"></canvas></div>
+                    <pre class="data-text" id="data-text" tabindex="0" aria-label="Received text" hidden></pre>
+                    <div class="data-file" id="data-file" hidden>
+                        <div class="file-preview" id="file-preview"><img id="file-image" alt="Received file decoded as an image" hidden /><span id="file-image-note"></span></div>
+                        <pre class="data-hex" id="data-hex" tabindex="0" aria-label="Received bytes in hexadecimal"></pre>
+                    </div>
                     <canvas id="frames" aria-hidden="true"></canvas>
                     <div class="frame-legend"><span class="key ok"><i></i> Clean</span><span class="key corrected"><i></i> Corrected</span><span class="key failed"><i></i> CRC failed</span><span class="key missed"><i></i> Not received</span></div>
                 </figure>
@@ -182,6 +203,31 @@
                     <div class="strip-legend"><span class="key good"><i></i> Margin ≥ 3 dB</span><span class="key thin"><i></i> 0 to 3 dB</span><span class="key short"><i></i> Below 0 dB</span><span class="key el"><i></i> Elevation</span><span class="key burst"><i></i> This transmission</span></div>
                 </div>
             </div>
+        </section>
+
+        <section class="card globe-card" aria-labelledby="globe-title">
+            <div class="frame-toolbar">
+                <div>
+                    <h2 id="globe-title">Pass geometry</h2>
+                    <div class="frame-meta mono" id="globe-meta">Loading coastlines…</div>
+                </div>
+                <div class="row frame-actions">
+                    <label class="check"><input id="g-footprint" type="checkbox" checked /> Margin footprint</label>
+                    <label class="check"><input id="g-light" type="checkbox" checked /> Day and night</label>
+                    <button type="button" class="btn ghost small" id="g-center">Center on station</button>
+                    <button type="button" class="btn ghost small" id="g-follow" aria-pressed="false">Follow spacecraft</button>
+                </div>
+            </div>
+            <div class="globe-stage">
+                <canvas id="globe" role="img" aria-label="Globe with the spacecraft, its ground track, the ground stations and the link margin footprint"></canvas>
+                <div class="globe-tags" id="globe-tags" aria-hidden="true"></div>
+                <div class="frame-placeholder" id="globe-placeholder" hidden></div>
+            </div>
+            <div class="globe-legend">
+                <span class="key fp-good"><i></i> Margin 3 to 27+ dB</span><span class="key fp-thin"><i></i> 0 to 3 dB</span><span class="key fp-short"><i></i> −6 to 0 dB</span>
+                <span class="key gt"><i></i> Ground track</span><span class="key pass"><i></i> Selected pass</span><span class="key ring"><i></i> Station reach at this altitude</span><span class="key los"><i></i> Line of sight</span>
+            </div>
+            <p class="note globe-note">The footprint is the margin a ground station with your receiver would have at each point under the spacecraft right now, in clear sky. It shows the spacecraft antenna pattern and the longer slant range toward the horizon. Drag to rotate; scroll or pinch to zoom.</p>
         </section>
 
         <section class="card" aria-label="Link analysis">
@@ -224,7 +270,7 @@
                 </details>
                 <div class="row frame-files">
                     <button type="button" class="btn ghost" id="export-iq" disabled>Export IQ (SigMF)</button>
-                    <button type="button" class="btn ghost" id="export-image" disabled>Save received image</button>
+                    <button type="button" class="btn ghost" id="export-image" disabled>Save received data</button>
                     <button type="button" class="btn ghost" id="export-frames" disabled>Export frame results CSV</button>
                 </div>
                 <p class="note file-note">The SigMF recording holds the first 262,144 complex samples after Doppler pre-correction, at four samples per symbol. GNU Radio, inspectrum and SigMF tools can open it.</p>
@@ -283,11 +329,13 @@
                     <p>Free-space loss uses the slant range. Clear-air absorption is a zenith value of about 0.04–0.07 dB between UHF and X band, scaled by the Kasten–Young air mass. Rain attenuation follows the simplified ITU-R P.618 slant-path method with ITU-R P.838-3 coefficients for circular polarization. The rain height falls with latitude after ITU-R P.839. Antenna noise adds a cold-sky galactic background scaled from 408 MHz, sky emission from the absorbing atmosphere and rain at 275 K, ITU-R P.372 median man-made noise for the chosen site type, and a fixed ground spillover (10 K for a dish, 40 K for a Yagi). System temperature is referred to the LNA input. Spacecraft antennas use a cosine-power patch pattern, an isoflux pattern shaped to equalize slant range to 5° elevation, a constant-gain omnidirectional pattern, or a steered beam with a Gaussian pointing loss. Ground antennas use the same pointing-loss rule with a beamwidth of 70 λ/D for a dish.</p>
                     <p>Eb is the energy per transfer-frame bit, so sync-marker and coding overhead count against the link. The required Eb/N0 is the level at which this tool's own receiver loses 1% of frames on a static channel, measured by <code>scripts/space/calibrate_rf_thresholds.cjs</code>. Margin subtracts that requirement and the implementation loss you enter.</p>
                     <h3>Transmitter and channel</h3>
-                    <p>The payload is a 128 × 72 color image split into CCSDS-style transfer frames of 1,115 bytes, each with a frame counter and a CRC-16 frame error control field. Frames are Reed–Solomon (255, 223) encoded at interleaving depth 5 with the CCSDS field and generator (conventional basis, without the dual-basis transform), randomized with the CCSDS pseudo-random sequence, prefixed with the 0x1ACFFC1D attached sync marker, and convolutionally encoded with the CCSDS (7, ½) code. One idle frame leads and one trails the image. PSK symbols use root-raised-cosine pulses with roll-off 0.35; GMSK uses BT 0.5 and modulation index 0.5.</p>
+                    <p>The payload is a 128 × 72 color camera image, a 160 × 120 grayscale star tracker frame, a housekeeping telemetry log, or a file you choose (up to 48 kB; it stays in your browser). The telemetry is synthetic but follows the selected orbit: SGP4 gives position, a cylindrical Earth shadow gives eclipses, and simple battery and thermal models respond to them over the orbit before the pass. The payload is split into CCSDS-style transfer frames of 1,115 bytes, each with a frame counter and a CRC-16 frame error control field. Frames are Reed–Solomon (255, 223) encoded at interleaving depth 5 with the CCSDS field and generator (conventional basis, without the dual-basis transform), randomized with the CCSDS pseudo-random sequence, prefixed with the 0x1ACFFC1D attached sync marker, and convolutionally encoded with the CCSDS (7, ½) code. Two idle frames lead the payload for receiver pull-in, and one trails it to flush the Viterbi decoder. PSK symbols use root-raised-cosine pulses with roll-off 0.35; GMSK uses BT 0.5 and modulation index 0.5.</p>
                     <p>The channel is generated at four samples per symbol. Every sample is delayed by the one-way propagation time R(t)/c, interpolated from SGP4 ranges and range rates. Carrier Doppler, Doppler rate and the matching stretch of the symbol clock all come from that delay. The receiver's own orbit prediction, optionally offset along track, is subtracted as Doppler pre-correction. The spacecraft oscillator adds a fixed frequency offset and Wiener phase noise whose level at 1 kHz offset you set. Gaussian noise follows the link budget's Es/N0, updated along the transmission as range, elevation and antenna gain change. Signals that the pre-correction leaves outside the receiver's sample bandwidth are not received.</p>
                     <h3>Receiver</h3>
                     <p>PSK: the matched-filter output is hard-limited and raised to the M-th power, which turns the modulated carrier into a spectral line. Up to 24 FFTs of 8,192 points are averaged, and only the acquisition range you set is searched. The symbol clock leaves weaker lines at ±Rs/M on either side of the carrier, so the receiver picks the line that has both neighbors. The detection threshold allows one false acquisition in about 1,000 attempts. Feed-forward estimates from the first 1,024 symbols set the starting sample phase and carrier phase. A Gardner detector with cubic interpolation then tracks symbol timing, starting four times wider and narrowing after 1,500 symbols. A second-order decision-directed loop tracks the carrier at the bandwidth you set; its frequency integrator waits 400 symbols for timing to settle, which avoids false locks at low SNR. Moment-based (M2M4) estimates give Es/N0 and scale the soft decisions. GMSK: the receiver finds the signal's spectral centroid, then uses a non-coherent limiter–discriminator with one-symbol integration and Gardner timing. Soft decisions are clipped to limit the effect of discriminator clicks. This detector costs several decibels against coherent detection, and the convolutional code helps it less than Reed–Solomon does.</p>
                     <p>The decoder tries every carrier-phase rotation and symbol-pair alignment, keeps the one that finds the sync marker, then runs soft-decision Viterbi decoding, frame synchronization, derandomization, Reed–Solomon decoding and the CRC check. Like a hardware frame synchronizer, it reads through one or two missed sync markers (a flywheel) and lets Reed–Solomon and the CRC judge those frames. After three misses in a row it counts a re-acquisition and searches again. Frames that pass the CRC are placed by their frame counter. The simulation knows what was sent, so it reports true bit errors before and after decoding, compared with theory for an ideal coherent receiver at the predicted Es/N0. The GMSK comparison is the coherent MSK bound.</p>
+                    <h3>Pass geometry globe</h3>
+                    <p>The globe is drawn in the Earth-fixed frame with the same SGP4 propagation. It shows the ground track for half an orbit either side of the current time, the selected pass, the spacecraft's horizon circle, and the station's reach: the ground area over which the spacecraft, at its current altitude, is above the elevation mask. The margin footprint evaluates the full link budget, including the spacecraft antenna pattern, for a hypothetical station with your receiver at each point of a grid under the spacecraft, in clear sky. Day and night shading uses a low-precision solar ephemeris.</p>
                     <h3>Model limits</h3>
                     <p>This is a screening and teaching tool. Atmospheric and rain models are simplified, and the rain rate is applied as a steady value rather than an exceedance statistic. Ionospheric scintillation, Faraday rotation, multipath, interference, amplifier nonlinearity and adaptive coding are not modeled. Antenna patterns are idealized and ignore spacecraft attitude other than nadir pointing. Each run simulates one image transmission starting at the selected time, not a continuous pass. Thresholds come from 200-frame simulations in 0.25 dB steps and carry about ±0.5 dB of statistical uncertainty; in theory BPSK and QPSK are identical. Coded 8PSK is limited by blind carrier acquisition and tracking near 7.5 dB Es/N0 rather than by the code, so adding Reed–Solomon gains it little. Real high-order PSK modems insert pilot symbols to avoid this.</p>
                     <p><a href="https://public.ccsds.org/Publications/BlueBooks.aspx">CCSDS Blue Books</a> (131.0-B, TM synchronization and channel coding) · <a href="https://public.ccsds.org/Publications/GreenBooks.aspx">CCSDS Green Books</a> (130.1-G, coding rationale) · <a href="https://www.itu.int/rec/R-REC-P.618">ITU-R P.618</a> · <a href="https://www.itu.int/rec/R-REC-P.838">ITU-R P.838</a> · <a href="https://www.itu.int/rec/R-REC-P.372">ITU-R P.372</a> · F. M. Gardner, “A BPSK/QPSK timing-error detector for sampled receivers,” <i>IEEE Trans. Communications</i>, 1986 · <a href="https://sigmf.org/">SigMF</a> · <a href="https://celestrak.org/publications/AIAA/2006-6753/faq.php">SGP4 frames</a></p>
@@ -309,6 +357,9 @@
 <script src="dsp.js" defer></script>
 <script src="geometry.js" defer></script>
 <script src="budget.js" defer></script>
+<script src="payloads.js" defer></script>
+<script src="../debris/globe.js" defer></script>
+<script src="globe-view.js" defer></script>
 <script src="app.js" defer></script>
 <script src="../bh-nav.js" defer></script>
 </body>

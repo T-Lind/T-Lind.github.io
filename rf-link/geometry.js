@@ -111,7 +111,29 @@
         return out;
     }
 
-    const api = { STATIONS, ecef, look, rangeAccel, passes, profile, OMEGA_E };
+    /** Unit vector toward the Sun in an Earth-centred inertial frame (USNO low-precision formula, ~0.01°). */
+    function sunDirection(date) {
+        const d = date.getTime() / 86400000 + 2440587.5 - 2451545.0;
+        const g = (357.529 + 0.98560028 * d) * DEG, q = 280.459 + 0.98564736 * d;
+        const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * DEG, e = (23.439 - 0.00000036 * d) * DEG;
+        return [Math.cos(L), Math.cos(e) * Math.sin(L), Math.sin(e) * Math.sin(L)];
+    }
+
+    /** Rotate an inertial (TEME) vector into the Earth-fixed frame at sidereal angle g. */
+    function toFixed(v, g) {
+        const c = Math.cos(g), s = Math.sin(g);
+        return [v[0] * c + v[1] * s, -v[0] * s + v[1] * c, v[2]];
+    }
+
+    /** True when a position (km, inertial) is in sunlight, using a cylindrical Earth shadow. */
+    function sunlit(r, sun) {
+        const along = r[0] * sun[0] + r[1] * sun[1] + r[2] * sun[2];
+        if (along >= 0) return true;
+        const px = r[0] - along * sun[0], py = r[1] - along * sun[1], pz = r[2] - along * sun[2];
+        return Math.hypot(px, py, pz) > 6378.137;
+    }
+
+    const api = { STATIONS, ecef, look, rangeAccel, passes, profile, sunDirection, toFixed, sunlit, OMEGA_E };
     root.RFGeometry = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);
