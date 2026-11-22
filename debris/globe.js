@@ -170,7 +170,8 @@
                 const pos = new Float32Array(this.markers.flatMap(m => m.pos.map(v => v / RE))), col = new Float32Array(this.markers.flatMap(m => m.color));
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.mBuf); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.DYNAMIC_DRAW); gl.vertexAttribPointer(P.loc.aPos, 3, gl.FLOAT, false, 0, 0);
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.mcBuf); gl.bufferData(gl.ARRAY_BUFFER, col, gl.DYNAMIC_DRAW); gl.vertexAttribPointer(P.loc.aCol, 4, gl.FLOAT, false, 0, 0);
-                gl.uniform1f(P.loc.uSize, 9 * this.dpr); gl.disable(gl.DEPTH_TEST);
+                // Markers draw over the Earth unless markersDepth is set (then the far side hides them).
+                gl.uniform1f(P.loc.uSize, 9 * this.dpr); if (!this.markersDepth) gl.disable(gl.DEPTH_TEST);
                 gl.drawArrays(gl.POINTS, 0, this.markers.length); gl.enable(gl.DEPTH_TEST);
             }
             gl.disable(gl.BLEND);

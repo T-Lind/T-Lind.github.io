@@ -122,3 +122,65 @@ test('worker: a real UHF pass decodes, and a stale orbit prediction defeats a na
     const stale = run({ ...radio, predErrorKm: 120 });
     assert(!stale.acquisition.found && Math.abs(stale.acquisition.truthHz) > 1000);
 });
+
+test('payloads: orbit-driven telemetry follows eclipses, and files are classified and size-limited', () => {
+    const P = require('../rf-link/payloads.js');
+    // Sun direction: near the March equinox the Sun sits close to +x; at the June solstice declination is ~23.4°.
+    const march = G.sunDirection(new Date(Date.UTC(2026, 2, 20, 12)));
+    assert(march[0] > 0.999, `equinox sun ${march}`);
+    const june = G.sunDirection(new Date(Date.UTC(2026, 5, 21, 12)));
+    assert(Math.abs(Math.asin(june[2]) * 180 / Math.PI - 23.44) < 0.1);
+    assert.equal(G.sunlit([7000, 0, 0], [1, 0, 0]), true);
+    assert.equal(G.sunlit([-7000, 0, 0], [1, 0, 0]), false);
+    assert.equal(G.sunlit([-7000, 7000, 0], [1, 0, 0]), true);
+
+    const t = P.telemetry(sso, Date.UTC(2026, 10, 21, 8, 46));
+    assert.equal(t.kind, 'text');
+    assert(t.bytes.length < P.LIMIT);
+    const rows = new TextDecoder().decode(t.bytes).trim().split('\n').filter(l => !l.startsWith('#')).slice(1).map(l => l.split(','));
+    const lit = rows.map(r => r[4] === '1');
+    assert(lit.includes(true) && lit.includes(false), 'one orbit of telemetry should include sunlight and eclipse');
+    // Batteries charge in sunlight and discharge in eclipse; panels are hotter in sunlight.
+    const soc = rows.map(r => +r[8]), panel = rows.map(r => +r[10]);
+    const lastDark = lit.lastIndexOf(false);
+    assert(soc[lastDark] < soc[lit.indexOf(false) - 1], 'charge falls through eclipse');
+    assert(panel[lastDark] < panel[rows.length - 1]);
+
+    assert.equal(P.classify(new TextEncoder().encode('time,value\n1,2\n')).kind, 'text');
+    assert.equal(P.classify(Uint8Array.from([0xFF, 0xD8, 0xFF, 0xE0, 0, 16, 74, 70, 73, 70, 0, 1, 1])).mime, 'image/jpeg');
+    assert.equal(P.classify(Uint8Array.from({ length: 300 }, (_, i) => (i * 97) & 255)).kind, 'file');
+    assert.throws(() => P.fromBytes(new Uint8Array(P.LIMIT + 1), 'big.bin'), /kB/);
+    assert.throws(() => P.fromBytes(new Uint8Array(0), 'empty.bin'), /empty/);
+});
+
+test('weather: deterministic field, path-integrated rain, cloud and scintillation models', () => {
+    const W = require('../rf-link/weather.js');
+    const t = Date.UTC(2026, 10, 21, 9);
+    const a = new W.Field({ seed: 3 }), b = new W.Field({ seed: 3 }), c = new W.Field({ seed: 4 });
+    const pts = Array.from({ length: 400 }, (_, i) => [((i * 37) % 160) - 80, ((i * 91) % 360) - 180]);
+    assert.deepEqual(pts.map(([la, lo]) => a.sample(la, lo, t)), pts.map(([la, lo]) => b.sample(la, lo, t)));
+    assert.notDeepEqual(pts.map(([la, lo]) => a.sample(la, lo, t)), pts.map(([la, lo]) => c.sample(la, lo, t)));
+    // Typical storminess: a plausible share of the globe has rain and cloud.
+    let raining = 0, cloudy = 0, n = 0;
+    for (let la = -78; la <= 78; la += 3) for (let lo = -180; lo < 180; lo += 3) { const s = a.sample(la, lo, t), w = Math.cos(la * Math.PI / 180); n += w; if (s.rain > 0.1) raining += w; if (s.cloud > 0.1) cloudy += w; }
+    assert(raining / n > 0.04 && raining / n < 0.2, `raining ${raining / n}`);
+    assert(cloudy / n > 0.35 && cloudy / n < 0.85, `cloudy ${cloudy / n}`);
+
+    // In a uniform field, path integration reduces to specific attenuation times the slant length in rain.
+    const radio = { freqMHz: 8200, weather: 'sim', storminess: 'typical', wxSeed: 99, wxTarget: null };
+    const field = W.fieldFor(radio);
+    field.sample = () => ({ rain: 20, cloud: 1 });
+    const st = { lat: 1.35, lon: 103.82, alt: 0.05 }, geo = { el: 30, az: 120 };
+    const atm = B.atmosphere(radio, geo, st, t);
+    const { k, alpha } = B.rainCoefficients(8.2), hr = B.rainHeight(st.lat);
+    assert(Math.abs(atm.rain - k * 20 ** alpha * (hr - st.alt) / Math.sin(30 * Math.PI / 180)) < 1e-9);
+    assert(Math.abs(atm.cloud - B.cloudLoss(8.2, 1, 30)) < 1e-12);
+    // P.840 cloud coefficient near 0.09 dB/km per g/m³ at 10 GHz; scintillation grows toward the horizon.
+    assert(Math.abs(B.cloudK(10) - 0.0926) < 0.003);
+    assert(B.scintSigma(8.2, 5, 50, 4.2) > B.scintSigma(8.2, 30, 50, 4.2));
+
+    // A storm steered over a tropical station attenuates an X-band path several dB at its peak.
+    const storm = { freqMHz: 8212.5, weather: 'sim', storminess: 'typical', wxSeed: 5, wxTarget: { lat: st.lat, lon: st.lon, t } };
+    assert(B.atmosphere(storm, { el: 60, az: 0 }, st, t).rain > 4);
+    assert(B.atmosphere({ ...storm, wxTarget: null, storminess: 'calm' }, { el: 60, az: 0 }, st, t).rain < B.atmosphere(storm, { el: 60, az: 0 }, st, t).rain);
+});

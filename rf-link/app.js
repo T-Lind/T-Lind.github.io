@@ -5,7 +5,7 @@
     const PU = window.SpacePlotUtil;
     const el = id => document.getElementById(id);
     const text = (id, value) => { const e = el(id); if (e.textContent !== value) e.textContent = value; };
-    const IMAGE_W = 128, IMAGE_H = 72;
+    const P = window.RFPayloads;
     const initialTime = Date.UTC(2026, 10, 21);
 
     /* ---------------- radios and scenarios ---------------- */
@@ -13,19 +13,19 @@
         uhf: { freqMHz: 437.5, txPowerW: 1, txLossDb: 1, scAnt: 'omni', scGainDbi: 0, scPointDeg: 0, oscPpm: 1, phaseNoiseDbc: -85,
             modulation: 'gmsk', symbolRateKsps: 9.6, coding: 'rs',
             gsAnt: 'yagi', gsGainDbi: 14, gsDiameterM: 3, gsEffPct: 55, gsPointDeg: 2, polLossDb: 3, gsLineLossDb: 0.5, lnaNfDb: 0.8,
-            noiseEnv: 'residential', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 3, loopHz: 100 },
+            noiseEnv: 'residential', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 3, loopHz: 100 },
         sband: { freqMHz: 2245, txPowerW: 2, txLossDb: 1, scAnt: 'patch', scGainDbi: 6, scPointDeg: 0, oscPpm: 1, phaseNoiseDbc: -90,
             modulation: 'qpsk', symbolRateKsps: 2000, coding: 'concat',
             gsAnt: 'dish', gsGainDbi: 14, gsDiameterM: 3.7, gsEffPct: 55, gsPointDeg: 0.1, polLossDb: 0.5, gsLineLossDb: 0.2, lnaNfDb: 0.6,
-            noiseEnv: 'quiet', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 20, loopHz: 2000 },
+            noiseEnv: 'quiet', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 20, loopHz: 2000 },
         xband: { freqMHz: 8212.5, txPowerW: 5, txLossDb: 1.5, scAnt: 'isoflux', scGainDbi: 6, scPointDeg: 0, oscPpm: 0.5, phaseNoiseDbc: -95,
             modulation: '8psk', symbolRateKsps: 75000, coding: 'concat',
             gsAnt: 'dish', gsGainDbi: 14, gsDiameterM: 5.4, gsEffPct: 60, gsPointDeg: 0.03, polLossDb: 0.3, gsLineLossDb: 0.1, lnaNfDb: 0.5,
-            noiseEnv: 'quiet', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 100, loopHz: 50000 },
+            noiseEnv: 'quiet', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 100, loopHz: 50000 },
         beacon: { freqMHz: 437.5, txPowerW: 1, txLossDb: 1, scAnt: 'omni', scGainDbi: 0, scPointDeg: 0, oscPpm: 0.5, phaseNoiseDbc: -90,
             modulation: 'bpsk', symbolRateKsps: 4.8, coding: 'conv',
             gsAnt: 'yagi', gsGainDbi: 14, gsDiameterM: 3, gsEffPct: 55, gsPointDeg: 2, polLossDb: 3, gsLineLossDb: 0.5, lnaNfDb: 0.8,
-            noiseEnv: 'rural', rainRate: 0, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 1, loopHz: 30 }
+            noiseEnv: 'rural', rainRate: 0, cloudL: 0.5, weather: 'sim', storminess: 'typical', wxSeed: 7, wxStorm: false, implLossDb: 1, precorrect: true, predErrorKm: 0, searchKHz: 1, loopHz: 30 }
     };
     // `at` places the transmission in the pass: centred on closest approach, early in the pass, or at an elevation.
     const SCENARIOS = {
@@ -33,7 +33,8 @@
         sband: { radio: 'sband', at: 'tca' },
         xband: { radio: 'xband', at: 'tca' },
         low: { radio: 'sband', at: { el: 6 } },
-        rain: { radio: 'xband', set: { rainRate: 45 }, at: { el: 20 } },
+        // Tropical rain reaches about 5 km, against about 1 km at Svalbard, so the storm scenario moves to Singapore.
+        rain: { radio: 'xband', set: { storminess: 'stormy', wxStorm: true }, at: 'tca', station: 'singapore' },
         stale: { radio: 'beacon', set: { predErrorKm: 120 }, at: 'tca' },
         nodoppler: { radio: 'beacon', set: { precorrect: false }, at: { el: 15 } }
     };
@@ -45,7 +46,8 @@
     const handoff = U.readOrbitLink(location.hash);
     if (handoff) { source = handoff.source; time = searchStart = handoff.time; }
     let satrec = null, passes = [], passIndex = -1, profile = [], passStats = [], jumps = [];
-    let worker = null, workerReady = false, payload = null, sentImage = null;
+    let worker = null, workerReady = false, payloadNow = null, userFile = null, globeView = null, globeQueued = false;
+    const payloadCache = {};
     let busy = null, next = null, last = null, revision = 0, serial = 0, runs = 0, progress = 0;
     let playing = false, playStamp = 0, lastDispatch = 0;
     const inputs = [...document.querySelectorAll('[data-setting]')];
@@ -104,6 +106,12 @@
             r[key] = input.type === 'checkbox' ? input.checked : input.type === 'number' ? input.valueAsNumber : input.value;
         }
         r.gsEff = r.gsEffPct / 100;
+        // The steered storm sits 18 km from the station toward where the selected pass sets.
+        const p = passes[passIndex], st = station();
+        if (r.wxStorm && r.weather === 'sim' && p && satrec) {
+            const set = G.look(satrec, st, p.los);
+            r.wxTarget = { lat: st.lat, lon: st.lon, t: p.tca.getTime(), az: set ? Math.round(set.az) : 0, offsetKm: 18 };
+        } else r.wxTarget = null;
         return r;
     }
     function setRadio(values) {
@@ -122,6 +130,8 @@
         show('[data-dish]', el('gsAnt').value === 'dish');
         show('[data-precorrect]', el('precorrect').checked);
         show('[data-coherent]', el('modulation').value !== 'gmsk');
+        show('[data-wx-sim]', el('weather').value === 'sim');
+        show('[data-wx-fixed]', el('weather').value === 'fixed');
         text('scGain-label', { omni: 'Gain', isoflux: 'Edge-of-coverage gain', patch: 'Peak gain', steered: 'Peak gain' }[el('scAnt').value]);
     }
     function invalidInput() { return inputs.find(input => !input.disabled && !input.validity.valid); }
@@ -136,7 +146,7 @@
 
     /* ---------------- passes and the budget along them ---------------- */
     function airtime(r = radio()) {
-        return D.plan({ modulation: r.modulation, coding: r.coding, symbolRate: r.symbolRateKsps * 1e3, payloadBytes: IMAGE_W * IMAGE_H * 3 }).seconds;
+        return D.plan({ modulation: r.modulation, coding: r.coding, symbolRate: r.symbolRateKsps * 1e3, payloadBytes: payloadNow ? payloadNow.bytes.length : 27648 }).seconds;
     }
 
     function computePasses() {
@@ -157,9 +167,9 @@
             const step = Math.max(5, p.duration / 80);
             let positive = 0, peak = -Infinity, volume = 0;
             for (let s = 0; s <= p.duration; s += step) {
-                const geo = G.look(satrec, st, new Date(p.aos.getTime() + s * 1000));
+                const at = p.aos.getTime() + s * 1000, geo = G.look(satrec, st, new Date(at));
                 if (!geo || geo.el < 0) continue;
-                const b = B.compute(r, geo, st);
+                const b = B.compute(r, geo, st, at);
                 peak = Math.max(peak, b.margin);
                 if (b.margin >= 0) { positive += step; volume += b.rb * step / 8; }
             }
@@ -182,12 +192,14 @@
         buildJumps();
         renderPassTable();
         drawSky();
+        if (el('payload').value === 'telemetry' && satrec && worker) setPayload(telemetryPayload());
     }
 
     function recomputeProfileBudget() {
         const r = radio(), st = station();
         if (invalidInput()) return;
-        for (const s of profile) { const b = B.compute(r, s, st); s.margin = b.margin; s.doppler = b.doppler; s.ebn0 = b.ebn0; }
+        const p = passes[passIndex], t0 = p ? p.aos.getTime() : time;
+        for (const s of profile) { const b = B.compute(r, s, st, t0 + s.t * 1000); s.margin = b.margin; s.doppler = b.doppler; s.ebn0 = b.ebn0; s.rain = b.rain; }
     }
 
     function placeTime(p, at) {
@@ -249,6 +261,7 @@
         renderBudget();
         drawSky();
         refreshRun();
+        scheduleGlobe();
     }
 
     function marginColor(m) { return !Number.isFinite(m) ? '#151a24' : m >= 3 ? '#1f4a33' : m >= 0 ? '#4d4220' : '#4a1f22'; }
@@ -300,12 +313,12 @@
     }
 
     function dispatch() {
-        if (!workerReady || busy || !next) return;
+        if (!workerReady || busy || !next || !payloadNow) return;
         if (invalidInput() || passIndex < 0 || !passes.length) { next = null; refreshRun(); return; }
         next = null;
         const id = ++serial;
         const run = snapshot();
-        busy = { id, revision, snapshot: run };
+        busy = { id, revision, snapshot: run, payload: payloadNow };
         progress = 0;
         lastDispatch = performance.now();
         worker.postMessage({ type: 'capture', id, ...run });
@@ -316,7 +329,7 @@
     function refreshRun() {
         const invalid = invalidInput();
         let state = 'current', message = '';
-        if (!workerReady) { state = 'running'; message = 'Loading the payload image…'; }
+        if (!workerReady) { state = 'running'; message = 'Loading the payload…'; }
         else if (invalid) { state = 'invalid'; message = `Fix ${labelOf(invalid)} to update the transmission.`; }
         else if (!passes.length) { state = 'invalid'; message = 'No passes above the elevation mask. Change the orbit, site, mask or search window.'; }
         else if (busy && !playing) { state = 'running'; message = `Simulating transmission ${runs + 1}${busy.stage ? ' · ' + busy.stage.toLowerCase() : ''}…`; }
@@ -374,7 +387,7 @@
             return;
         }
         if (!busy || busy.id !== data.id) return;
-        const current = busy.revision === revision, ran = busy.snapshot;
+        const current = busy.revision === revision, ran = busy.snapshot, sentWith = busy.payload;
         busy = null;
         if (!current) { if (!next) next = {}; dispatch(); refreshRun(); return; }
         if (data.type === 'error') {
@@ -384,7 +397,7 @@
             refreshRun();
             return;
         }
-        last = { ...data.result, run: ++runs, snapshot: ran, time: data.time };
+        last = { ...data.result, run: ++runs, snapshot: ran, time: data.time, payload: sentWith };
         el('placeholder').hidden = true;
         render();
         const c = last.counts, n = c.ok + c.corrected + c.failed + c.missed;
@@ -398,7 +411,7 @@
         text('frame-meta', `Transmission ${last.run} · ${mod.label} ${(r.symbolRateKsps >= 1000 ? (r.symbolRateKsps / 1000).toFixed(r.symbolRateKsps >= 1e4 ? 1 : 3) + ' Msym/s' : r.symbolRateKsps.toFixed(r.symbolRateKsps < 10 ? 2 : 1) + ' ksym/s')} · ${D.CODING[r.coding].label} · ${U.utc(new Date(last.time), true)}`);
         drawConstellation();
         drawSpectrum();
-        drawImage();
+        drawData();
         drawFrameStrip();
         renderReceiver();
         for (const id of ['export-iq', 'export-image', 'export-frames']) el(id).disabled = false;
@@ -519,41 +532,117 @@
         text('spec-sub', `carrier ${hz(carrier)} · 15 dB/div`);
     }
 
-    function frameRange(i) {
-        const per = D.PAYLOAD_BYTES;
-        return [Math.floor(i * per / 3), Math.ceil(Math.min(IMAGE_W * IMAGE_H * 3, (i + 1) * per) / 3)];
+    /* ---------------- received data views ---------------- */
+    // A frame hidden from the views: never received, or failed its CRC while failed frames are hidden.
+    function hiddenFrame(i) {
+        const st = last.status[i];
+        return st === 'missed' || (st === 'failed' && !el('show-failed').checked);
+    }
+    const frameOf = byte => Math.floor(byte / D.PAYLOAD_BYTES);
+
+    function drawData() {
+        if (!last || !last.payload) return;
+        const p = last.payload, kind = p.kind, sent = p.bytes, rx = last.image, view = el('image-view').value;
+        el('image-wrap').hidden = kind !== 'image';
+        el('data-text').hidden = kind !== 'text';
+        el('data-file').hidden = kind !== 'file';
+        text('data-title', { image: 'Downlinked image', text: 'Downlinked text', file: 'Downlinked file' }[kind]);
+        let wrong = 0;
+        for (let i = 0; i < sent.length; i++) if (rx[i] !== sent[i] && !hiddenFrame(frameOf(i))) wrong++;
+        if (kind === 'image') drawImageData(p, rx, view);
+        else if (kind === 'text') drawText(p, rx, view);
+        else drawFile(p, rx, view);
+        const missing = last.status.filter(s => s === 'missed').length;
+        text('img-sub', view === 'sent' ? `${p.name} · ${bytes(sent.length)}`
+            : `${wrong.toLocaleString()} wrong byte${wrong === 1 ? '' : 's'}${missing ? ` · ${missing} frame${missing === 1 ? '' : 's'} missing` : ''}`);
     }
 
-    function drawImage() {
-        const canvas = el('image'), c = canvas.getContext('2d');
-        if (!last || !sentImage) return;
-        const view = el('image-view').value, showFailed = el('show-failed').checked;
-        const img = c.createImageData(IMAGE_W, IMAGE_H), d = img.data, rx = last.image;
-        const hidden = new Uint8Array(IMAGE_W * IMAGE_H);
-        last.status.forEach((s, i) => {
-            if (s === 'missed' || (s === 'failed' && !showFailed)) { const [a, b] = frameRange(i); hidden.fill(1, a, Math.min(b, hidden.length)); }
-        });
-        let wrong = 0;
-        for (let p = 0; p < IMAGE_W * IMAGE_H; p++) {
-            const o = 4 * p;
-            const diff = rx[3 * p] !== sentImage[3 * p] || rx[3 * p + 1] !== sentImage[3 * p + 1] || rx[3 * p + 2] !== sentImage[3 * p + 2];
-            if (diff && !hidden[p]) wrong++;
-            if (view !== 'sent' && hidden[p]) {
-                const x = p % IMAGE_W, y = Math.floor(p / IMAGE_W), checker = ((x >> 2) + (y >> 2)) & 1 ? 34 : 22;
-                d[o] = d[o + 1] = checker; d[o + 2] = checker + 6; d[o + 3] = 255;
+    function drawImageData(p, rx, view) {
+        const canvas = el('image'), { width, height, channels } = p, sent = p.bytes;
+        if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+        canvas.style.aspectRatio = width + ' / ' + height;
+        const c = canvas.getContext('2d'), img = c.createImageData(width, height), d = img.data;
+        for (let px = 0; px < width * height; px++) {
+            const o = 4 * px, b = channels * px;
+            d[o + 3] = 255;
+            if (view !== 'sent' && hiddenFrame(frameOf(b))) {
+                const x = px % width, y = Math.floor(px / width), checker = ((x >> 2) + (y >> 2)) & 1 ? 34 : 22;
+                d[o] = d[o + 1] = checker; d[o + 2] = checker + 6;
                 continue;
             }
+            let diff = false;
+            for (let k = 0; k < channels; k++) diff ||= rx[b + k] !== sent[b + k];
+            const src = view === 'sent' ? sent : rx;
+            const val = k => src[b + (channels === 1 ? 0 : k)];
             if (view === 'errors') {
-                const g = 0.3 * (sentImage[3 * p] + sentImage[3 * p + 1] + sentImage[3 * p + 2]) / 3;
-                if (diff) { d[o] = 255; d[o + 1] = 80; d[o + 2] = 80; } else { d[o] = d[o + 1] = d[o + 2] = g; }
-            } else {
-                const src = view === 'sent' ? sentImage : rx;
-                d[o] = src[3 * p]; d[o + 1] = src[3 * p + 1]; d[o + 2] = src[3 * p + 2];
-            }
-            d[o + 3] = 255;
+                const g = 0.3 * (channels === 1 ? sent[b] : (sent[b] + sent[b + 1] + sent[b + 2]) / 3);
+                if (diff) { d[o] = 255; d[o + 1] = 80; d[o + 2] = 80; } else d[o] = d[o + 1] = d[o + 2] = g;
+            } else { d[o] = val(0); d[o + 1] = val(1); d[o + 2] = val(2); }
         }
         c.putImageData(img, 0, 0);
-        text('img-sub', view === 'sent' ? `${IMAGE_W} × ${IMAGE_H} · ${bytes(IMAGE_W * IMAGE_H * 3)}` : `${wrong.toLocaleString()} wrong pixels shown`);
+    }
+
+    // Runs of text with a class each, merged so a long payload stays a handful of DOM nodes.
+    function renderRuns(pre, runs) {
+        const nodes = [];
+        let cls = null, buf = '';
+        const flush = () => { if (!buf) return; nodes.push(cls ? U.h('span', { class: cls, text: buf }) : document.createTextNode(buf)); buf = ''; };
+        for (const [t, k] of runs) { if (k !== cls) { flush(); cls = k; } buf += t; }
+        flush();
+        pre.replaceChildren(...nodes);
+    }
+    function charAt(bytes, i) {
+        const b = bytes[i];
+        if (b === 10) return ['\n', 1];
+        if (b === 9) return ['    ', 1];
+        if (b >= 32 && b < 127) return [String.fromCharCode(b), 1];
+        const len = b >= 0xF0 && b < 0xF5 ? 4 : b >= 0xE0 ? 3 : b >= 0xC2 && b < 0xE0 ? 2 : 0;
+        if (len) { try { return [new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(i, i + len)), len]; } catch (err) { /* damaged sequence */ } }
+        return ['·', 1];
+    }
+    function drawText(p, rx, view) {
+        const sent = p.bytes, src = view === 'sent' ? sent : rx, runs = [];
+        for (let i = 0; i < sent.length;) {
+            const f = frameOf(i);
+            if (view !== 'sent' && hiddenFrame(f)) {
+                const end = Math.min(sent.length, (f + 1) * D.PAYLOAD_BYTES);
+                runs.push([`\n⟨frame ${f + 1} ${last.status[f] === 'missed' ? 'not received' : 'failed its CRC'}: ${(end - i).toLocaleString()} bytes⟩\n`, 'gap']);
+                i = end;
+                continue;
+            }
+            const [ch, n] = charAt(src, i);
+            let bad = false;
+            for (let k = 0; k < n; k++) bad ||= rx[i + k] !== sent[i + k];
+            runs.push([ch, view !== 'sent' && bad ? 'err' : view === 'errors' ? 'dim' : null]);
+            i += n;
+        }
+        renderRuns(el('data-text'), runs);
+    }
+
+    let fileUrl = null;
+    function drawFile(p, rx, view) {
+        const sent = p.bytes, src = view === 'sent' ? sent : rx, limit = Math.min(sent.length, 4096), runs = [];
+        const hex = b => b.toString(16).padStart(2, '0');
+        for (let line = 0; line < limit; line += 8) {
+            runs.push([line.toString(16).padStart(6, '0') + '  ', 'dim']);
+            let ascii = '';
+            for (let i = line; i < line + 8; i++) {
+                if (i >= limit) { runs.push(['   ', null]); continue; }
+                const gone = view !== 'sent' && hiddenFrame(frameOf(i)), bad = view !== 'sent' && rx[i] !== sent[i];
+                runs.push([(gone ? '··' : hex(src[i])) + ' ', gone ? 'gap' : bad ? 'err' : null]);
+                ascii += gone ? ' ' : src[i] >= 32 && src[i] < 127 ? String.fromCharCode(src[i]) : '.';
+            }
+            runs.push([' ' + ascii + '\n', 'dim']);
+        }
+        if (limit < sent.length) runs.push([`\nShowing the first ${limit.toLocaleString()} of ${sent.length.toLocaleString()} bytes. Save the received file to see the rest.`, 'dim']);
+        renderRuns(el('data-hex'), runs);
+        const imgEl = el('file-image');
+        if (fileUrl) { URL.revokeObjectURL(fileUrl); fileUrl = null; }
+        if (!p.image) { imgEl.hidden = true; text('file-image-note', `${p.mime === 'application/octet-stream' ? 'Binary file' : p.mime} · ${bytes(sent.length)}`); return; }
+        fileUrl = URL.createObjectURL(new Blob([src], { type: p.mime }));
+        imgEl.onload = () => { imgEl.hidden = false; text('file-image-note', view === 'sent' ? 'Original file, decoded by your browser.' : 'The received bytes, decoded by your browser.'); };
+        imgEl.onerror = () => { imgEl.hidden = true; text('file-image-note', 'The received bytes no longer decode as an image. Compressed formats rarely survive bit errors.'); };
+        imgEl.src = fileUrl;
     }
 
     const STATUS_COLOR = { ok: '#83e4b6', corrected: '#8fb7ff', failed: '#f08a8a', missed: '#3a3f4b' };
@@ -576,10 +665,10 @@
                 : outside ? `The carrier was ${hz(acq.truthHz)} from the receiver's tuning, outside the ±${hz(acq.searchHz).replace('+', '')} search range.`
                     : `The carrier was inside the search range but too weak to detect (detection statistic ${acq.metric.toFixed(1)}, threshold ${(acq.threshold || 6).toFixed(1)}).`);
         } else if (got === n) {
-            lock.textContent = 'Image received intact'; lock.dataset.lock = 'yes';
+            lock.textContent = 'Data received intact'; lock.dataset.lock = 'yes';
             text('lock-note', c.corrected ? `Reed–Solomon corrected ${st.corrected.toLocaleString()} byte errors in ${c.corrected} of ${n} frames. Every frame passed its CRC.` : `All ${n} frames passed their CRC without correction.`);
         } else {
-            lock.textContent = got ? 'Image partly received' : 'No frames decoded'; lock.dataset.lock = got ? 'part' : 'no';
+            lock.textContent = got ? 'Data partly received' : 'No frames decoded'; lock.dataset.lock = got ? 'part' : 'no';
             const parts = [];
             if (c.failed) parts.push(`${c.failed} failed the CRC`);
             if (c.missed) parts.push(`${c.missed} never synchronized`);
@@ -595,7 +684,7 @@
         text('rx-esn0', gm ? '—' : db(st.esn0Measured, 2));
         text('rx-esn0-sub', gm ? `Predicted ${db(st.esn0Predicted, 2)}` : `Predicted ${db(st.esn0Predicted, 2)} · M2M4 estimate`);
         text('rx-acq', acq.found ? hz(acq.hz) : 'Not found');
-        text('rx-acq-sub', `Truth ${hz(acq.truthHz)} · search ±${hz(acq.searchHz).replace('+', '')}`);
+        text('rx-acq-sub', `Truth ${hz(acq.truthHz)} · search ±${hz(acq.searchHz).replace('+', '')}${acq.retuned ? ' · retuned after frame sync failed' : ''}`);
         // Each re-acquisition means the receiver lost frame sync (a cycle or symbol slip) and searched again.
         const locks = last.track.slice(2).map(b => b.lock);
         text('rx-lock', acq.found ? String(st.resyncs) : '—');
@@ -606,7 +695,7 @@
         text('rx-samples-sub', `Simulated in ${(st.computeMs / 1000).toFixed(2)} s`);
         const okFrames = got === n && acq.found;
         text('frame-summary', !acq.found ? 'Carrier not acquired · no frames decoded'
-            : `${got}/${n} frames · channel BER ${sci(st.chanBer)} (${gm ? 'MSK bound' : 'theory'} ${sci(st.theoryBer)}) · ${c.corrected ? c.corrected + ' corrected by Reed–Solomon · ' : ''}${okFrames ? 'image intact' : 'image damaged'}`);
+            : `${got}/${n} frames · channel BER ${sci(st.chanBer)} (${gm ? 'MSK bound' : 'theory'} ${sci(st.theoryBer)}) · ${c.corrected ? c.corrected + ' corrected by Reed–Solomon · ' : ''}${okFrames ? 'data intact' : 'data damaged'}`);
         // Frame table.
         const rows = last.frames.filter(f => !f.idle).map(f => U.h('tr', {},
             U.h('td', { text: String(f.index + 1) }), U.h('td', { text: f.time.toFixed(f.time < 1 ? 4 : 2) }), U.h('td', { text: f.esn0.toFixed(1) }),
@@ -627,6 +716,19 @@
         if (!satrec) return null;
         return G.look(satrec, station(), new Date(time));
     }
+    function rainNote(b, r) {
+        if (b.weather === 'clear') return 'Clear sky';
+        if (b.weather === 'fixed') return r.rainRate ? `${r.rainRate} mm/h, fixed` : 'No rain';
+        if (b.rainPeak < 0.1) return 'No rain on the path';
+        return `${b.rainRate.toFixed(1)} mm/h at the station, up to ${b.rainPeak.toFixed(1)} mm/h along the path`;
+    }
+    function weatherNote(b, r, st) {
+        if (r.weather === 'clear') return 'Clear sky: no rain or cloud on the path.';
+        if (r.weather === 'fixed') return `Fixed weather at ${st.name}: ${r.rainRate} mm/h of rain and ${r.cloudL} kg/m² of cloud, on every pass.`;
+        const w = window.RFWeather, wind = w.wind(st.lat);
+        const from = wind.u >= 0 ? 'west' : 'east';
+        return `Now at ${st.name}: ${w.describeRain(b.rainRate)}${b.rainRate >= 0.1 ? ` (${b.rainRate.toFixed(1)} mm/h)` : ''}, cloud ${b.cloudL.toFixed(2)} kg/m², wind from the ${from} at about ${Math.abs(wind.u).toFixed(0)} m/s. Simulated, not a forecast.`;
+    }
     function budgetRows(b, r, geo) {
         const gsNote = r.gsAnt === 'dish' ? `${r.gsDiameterM} m dish, ${r.gsEffPct}% efficient, beamwidth ${b.gsBeamwidth.toFixed(2)}°` : `Yagi, beamwidth ${b.gsBeamwidth.toFixed(0)}°`;
         return [
@@ -637,7 +739,8 @@
             ['EIRP', b.eirp, 'dBW', '', 'total'],
             ['Free-space path loss', -b.fspl, 'dB', `${Math.round(geo.range).toLocaleString()} km at ${(r.freqMHz).toLocaleString()} MHz`],
             ['Atmospheric gases', -b.gas, 'dB', `${geo.el.toFixed(1)}° elevation`],
-            ['Rain', -b.rain, 'dB', r.rainRate ? `${r.rainRate} mm/h` : 'No rain'],
+            ['Rain', -b.rain, 'dB', rainNote(b, r)],
+            ['Cloud liquid water', -b.cloud, 'dB', b.cloudL > 0.005 ? `${b.cloudL.toFixed(2)} kg/m² along the path` : 'No cloud'],
             ['Polarization loss', -b.pol, 'dB', ''],
             ['Ground tracking loss', -b.gsPointing, 'dB', `${r.gsPointDeg}° error`],
             ['Ground antenna gain', b.gsGain, 'dBi', gsNote, 'part'],
@@ -657,12 +760,13 @@
         const geo = geometryNow(), r = radio();
         currentBudget = null;
         if (!geo || invalidInput()) return;
-        const st = station(), b = B.compute(r, geo, st);
+        const st = station(), b = B.compute(r, geo, st, time);
         currentBudget = { b, r, geo };
         const head = el('margin-head');
         head.textContent = geo.el < 0 ? 'Spacecraft below the horizon' : `Link margin ${signedDb(b.margin)}`;
         head.dataset.lock = geo.el < 0 || b.margin < 0 ? 'no' : b.margin < 3 ? 'part' : 'yes';
-        text('margin-note', `At ${U.utc(new Date(time), true)}, the start of the transmission. Margin is Eb/N0 minus the required ${b.required.toFixed(2)} dB and ${b.impl.toFixed(1)} dB implementation loss.`);
+        text('margin-note', `At ${U.utc(new Date(time), true)}, the start of the transmission. Margin is Eb/N0 minus the required ${b.required.toFixed(2)} dB and ${b.impl.toFixed(1)} dB implementation loss. Tropospheric scintillation adds ±${b.scint.toFixed(2)} dB (1σ) of fast fading on top.`);
+        text('wx-note', weatherNote(b, r, st));
         text('g-el', geo.el.toFixed(1) + '°'); text('g-az', 'Azimuth ' + geo.az.toFixed(1) + '°');
         text('g-range', Math.round(geo.range).toLocaleString() + ' km'); text('g-delay', 'One-way delay ' + b.delayMs.toFixed(2) + ' ms');
         text('g-doppler', hz(b.doppler)); text('g-rate', 'Rate ' + hz(-r.freqMHz * 1e6 * G.rangeAccel(satrec, st, new Date(time)) / B.C) + '/s');
@@ -670,7 +774,12 @@
         el('budget-rows').replaceChildren(...budgetRows(b, r, geo).map(([name, value, unit, note, kind]) => U.h('tr', { class: kind || '' },
             U.h('td', { text: kind === 'part' ? '↳ ' + name : name }), U.h('td', { class: 'strong', text: `${value < 0 ? '−' : kind && kind !== 'part' ? '' : '+'}${Math.abs(value).toFixed(2)} ${unit}` }), U.h('td', { class: 'l note-cell', text: note }))));
         const air = airtime(r);
-        text('rate-note', `Information rate ${bitrate(b.rb)} · image airtime ${duration(air)} · needs Eb/N0 ≥ ${b.required.toFixed(2)} dB`);
+        text('rate-note', `Information rate ${bitrate(b.rb)} · needs Eb/N0 ≥ ${b.required.toFixed(2)} dB`);
+        if (payloadNow) {
+            const plan = D.plan({ modulation: r.modulation, coding: r.coding, symbolRate: r.symbolRateKsps * 1e3, payloadBytes: payloadNow.bytes.length });
+            el('payload-note').classList.remove('bad-text');
+            text('payload-note', `${payloadNow.label} · ${bytes(payloadNow.bytes.length)} in ${plan.imageFrames} frames · airtime ${duration(air)}`);
+        }
     }
 
     /* ---------------- passes tab ---------------- */
@@ -743,6 +852,7 @@
         if (input.id === 'station') {
             const preset = G.STATIONS.find(s => s.id === el('station').value);
             if (preset) { el('lat').value = preset.lat; el('lon').value = preset.lon; el('alt').value = preset.alt; }
+            if (globeView) globeView.center(el('lat').valueAsNumber, el('lon').valueAsNumber);
         } else if (['lat', 'lon', 'alt'].includes(input.id)) el('station').value = 'custom';
         if (input.id === 'start') { const d = U.fromLocalInput(el('start').value); if (d) searchStart = d.getTime(); }
         reorbit();
@@ -788,6 +898,11 @@
         const sc = SCENARIOS[name];
         if (!sc) return;
         setRadio({ ...RADIOS[sc.radio], ...(sc.set || {}) });
+        const site = sc.station && G.STATIONS.find(s => s.id === sc.station);
+        if (site) {
+            el('station').value = site.id; el('lat').value = site.lat; el('lon').value = site.lon; el('alt').value = site.alt;
+            if (globeView) globeView.center(site.lat, site.lon);
+        }
         el('seed').value = 1;
         play(false);
         computePasses();
@@ -837,8 +952,8 @@
         updateClock();
         request();
     });
-    el('image-view').addEventListener('change', drawImage);
-    el('show-failed').addEventListener('change', drawImage);
+    el('image-view').addEventListener('change', drawData);
+    el('show-failed').addEventListener('change', drawData);
     U.tabs(el('tabs'), name => {
         if (name === 'passes') { renderPassPlots(); drawSky(); }
         if (name === 'receiver' && last) renderReceiver();
@@ -882,7 +997,12 @@
         const data = new Uint8Array(last.exportIq.buffer, last.exportIq.byteOffset, last.exportIq.byteLength);
         save(base + '.sigmf', tar([{ name: `${base}/${base}.sigmf-meta`, data: new TextEncoder().encode(JSON.stringify(meta, null, 2)) }, { name: `${base}/${base}.sigmf-data`, data }]));
     });
-    el('export-image').addEventListener('click', () => { if (last) PU.download('rf-link-received.png', el('image').toDataURL('image/png')); });
+    el('export-image').addEventListener('click', () => {
+        if (!last) return;
+        const p = last.payload;
+        if (p.kind === 'image') PU.download('received-' + p.name.replace(/\.[a-z]+$/, '') + '.png', el('image').toDataURL('image/png'));
+        else save('received-' + p.name, new Blob([last.image], { type: p.mime || 'application/octet-stream' }));
+    });
     el('export-frames').addEventListener('click', () => {
         if (!last) return;
         save('rf-link-frames.csv', new Blob([csv([['frame', 'sent_s', 'predicted_esn0_db', 'channel_bit_errors', 'channel_bits', 'decoded_bit_errors', 'rs_bytes_corrected', 'result'],
@@ -916,35 +1036,97 @@
     const first = handoff ? (passContaining(time) >= 0 ? passContaining(time) : bestPass()) : bestPass();
     if (first >= 0) selectPass(first, handoff && passContaining(time) >= 0 ? undefined : SCENARIOS.sband.at);
     updateClock();
-    status('Loading the payload image…', 'busy');
+    status('Loading the payload…', 'busy');
 
-    function loadPayload() {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = IMAGE_W; canvas.height = IMAGE_H;
-                const c = canvas.getContext('2d');
-                c.imageSmoothingQuality = 'high';
-                c.drawImage(img, 0, 0, IMAGE_W, IMAGE_H);
-                const px = c.getImageData(0, 0, IMAGE_W, IMAGE_H).data, rgb = new Uint8Array(IMAGE_W * IMAGE_H * 3);
-                for (let i = 0; i < IMAGE_W * IMAGE_H; i++) { rgb[3 * i] = px[4 * i]; rgb[3 * i + 1] = px[4 * i + 1]; rgb[3 * i + 2] = px[4 * i + 2]; }
-                resolve(rgb);
-            };
-            img.onerror = () => reject(new Error('Could not load the payload image.'));
-            img.src = '../public/projects/debris-visualizer.jpg';
-        });
+    /* ---------------- payloads ---------------- */
+    function telemetryPayload() {
+        const p = passes[passIndex];
+        return P.telemetry(satrec, p ? p.aos.getTime() : time);
     }
+    function setPayload(p) {
+        payloadNow = p;
+        if (worker) { const copy = p.bytes.slice(); worker.postMessage({ type: 'payload', buffer: copy.buffer }, [copy.buffer]); }
+        renderBudget();
+        drawStrip();
+    }
+    async function choosePayload() {
+        const id = el('payload').value;
+        el('file-row').hidden = id !== 'file';
+        try {
+            if (id === 'file') { if (userFile) setPayload(userFile); else text('payload-note', `Choose any file up to ${P.LIMIT / 1024} kB. It never leaves your browser.`); return; }
+            if (id === 'telemetry') { if (satrec) setPayload(telemetryPayload()); return; }
+            setPayload(payloadCache[id] || (payloadCache[id] = await P.image(P.PRESETS[id])));
+        } catch (err) { status(err.message, 'err'); text('payload-note', err.message); }
+    }
+    el('payload').addEventListener('change', choosePayload);
+    el('pick-file').addEventListener('click', () => el('payload-file').click());
+    el('payload-file').addEventListener('change', async () => {
+        const file = el('payload-file').files[0];
+        el('payload-file').value = '';
+        if (!file) return;
+        try {
+            if (file.size > P.LIMIT) throw new Error(`Files up to ${P.LIMIT / 1024} kB fit in one simulated transmission; this one is ${(file.size / 1024).toFixed(1)} kB.`);
+            userFile = P.fromBytes(new Uint8Array(await file.arrayBuffer()), file.name);
+            text('file-name', file.name);
+            if (el('payload').value === 'file') setPayload(userFile);
+        } catch (err) { status(err.message, 'err'); text('payload-note', err.message); el('payload-note').classList.add('bad-text'); }
+    });
+
+    /* ---------------- globe ---------------- */
+    function scheduleGlobe() {
+        if (!globeView || globeQueued) return;
+        globeQueued = true;
+        requestAnimationFrame(() => { globeQueued = false; drawGlobe(); });
+    }
+    function drawGlobe() {
+        if (!globeView || !satrec || invalidInput()) return;
+        const st = station(), pass = passes[passIndex];
+        const sum = globeView.update({
+            satrec, time, station: st, stations: G.STATIONS, radio: radio(), mask: el('mask').valueAsNumber, pass,
+            period: O.elementsOf(satrec).period, overlay: el('g-overlay').value, lit: el('g-light').checked,
+            name: source.name || 'Spacecraft', trackKey: JSON.stringify(source) + '|' + (pass ? pass.aos.getTime() : '')
+        });
+        if (!sum) return;
+        const ns = v => Math.abs(v).toFixed(1) + '°' + (v >= 0 ? ' N' : ' S'), ew = v => Math.abs(v).toFixed(1) + '°' + (v >= 0 ? ' E' : ' W');
+        text('globe-meta', `Spacecraft over ${ns(sum.lat)}, ${ew(sum.lon)} at ${Math.round(sum.alt).toLocaleString()} km · `
+            + (sum.visible ? `${sum.el.toFixed(1)}° above ${st.name}, margin ${signedDb(sum.margin)}` : `below the horizon at ${st.name}`)
+            + ` · ${sum.inView} of ${G.STATIONS.length} preset stations in view`);
+    }
+    function initGlobe() {
+        try { globeView = new window.RFLinkGlobe(el('globe'), el('globe-tags')); }
+        catch (err) { el('globe-placeholder').hidden = false; text('globe-placeholder', 'WebGL is not available in this browser, so the globe cannot be drawn.'); text('globe-meta', ''); return; }
+        const st = station();
+        globeView.center(st.lat, st.lon, 3.1);
+        fetch('../space/data/land-110m.json').then(r => r.json()).then(land => { globeView.setLand(land); scheduleGlobe(); }).catch(() => {});
+        new ResizeObserver(() => globeView.globe.draw()).observe(el('globe'));
+        scheduleGlobe();
+    }
+    function overlayLegend() {
+        const o = el('g-overlay').value;
+        for (const k of document.querySelectorAll('[data-legend]')) k.hidden = k.dataset.legend !== o;
+        el('globe-note').hidden = o === 'none';
+        text('globe-note', o === 'weather'
+            ? 'Simulated cloud and rain in radar-style colors: finer near the station, coarser under the rest of the spacecraft footprint. Small storm cores can fall between grid points far from the station. Drag to rotate; scroll or pinch to zoom.'
+            : 'The footprint is the margin a ground station with your receiver would have at each point under the spacecraft right now, in the current weather. It shows the spacecraft antenna pattern, the longer slant range toward the horizon, and fades under rain. Drag to rotate; scroll or pinch to zoom.');
+    }
+    el('g-overlay').addEventListener('change', () => { overlayLegend(); scheduleGlobe(); });
+    overlayLegend();
+    el('g-light').addEventListener('change', scheduleGlobe);
+    el('g-center').addEventListener('click', () => { const st = station(); if (globeView) { globeView.follow = false; el('g-follow').setAttribute('aria-pressed', 'false'); globeView.center(st.lat, st.lon); } });
+    el('g-follow').addEventListener('click', () => {
+        if (!globeView) return;
+        globeView.follow = !globeView.follow;
+        el('g-follow').setAttribute('aria-pressed', String(globeView.follow));
+        scheduleGlobe();
+    });
+
     try {
         worker = new Worker('worker.js');
         worker.addEventListener('message', receive);
         worker.addEventListener('error', () => { play(false); status('The link worker stopped. Reload the page to retry.', 'err'); });
-        loadPayload().then(rgb => {
-            sentImage = rgb;
-            payload = rgb.slice();
-            worker.postMessage({ type: 'payload', buffer: payload.buffer }, [payload.buffer]);
-        }).catch(err => { status(err.message, 'err'); text('placeholder', err.message); });
+        choosePayload();
     } catch (err) {
         status('Could not start the link worker. Open this page from a web server.', 'err');
     }
+    initGlobe();
 })();
